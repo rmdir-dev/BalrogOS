@@ -29,7 +29,6 @@ static size_t int_to_string(int i, char* str)
             i /= 10;
             size++;
         }
-        size++;
     }
     
     //zero ended
@@ -73,7 +72,7 @@ int printf(const char* __restrict format, ...)
                         //TODO error
                         return -1;
                     }
-                    if(!print_string(c, 1))
+                    if(!print_string(&c, 1))
                     {
                         //TODO error
                         return -1;

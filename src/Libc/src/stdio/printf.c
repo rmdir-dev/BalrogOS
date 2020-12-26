@@ -129,15 +129,13 @@ int printf(const char* __restrict format, ...)
             default:
                 break;
             }
-
-            //go to the next charcter (continue to read the string).
             index++;
         } else 
         {
             size_t begining_index = index;
             const char* str = &format[begining_index];
 
-            while(format[index + 1] != '%' && format[index] != 0)
+            while(format[index] != '%' && format[index] != 0)
             {
                 index++;
                 if(maxsize < (index - begining_index))
@@ -150,7 +148,6 @@ int printf(const char* __restrict format, ...)
             {
                 return -1;
             }
-            
         }
     }
 

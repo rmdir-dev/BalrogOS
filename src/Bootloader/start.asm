@@ -60,7 +60,7 @@ init:
     call _DiskLoad          ; load the disk data
 
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
-    mov dh, 15              ; we want to read 1 sectors from it
+    mov dh, 9               ; we want to read 1 sectors from it
     mov cl, 0x03            ; read sector 3
     mov bx, 0x0000          ; higher word of the memory address we want to store our data to
     mov es, bx              ; set the higher word of the address into es
@@ -80,8 +80,6 @@ init:
 %include "src/Bootloader/IO/BIOS/print.asm"
 %include "src/Bootloader/IO/BIOS/disk.asm"
 %include "src/Bootloader/A20/A20.asm"
-%include "src/Bootloader/LongMode_x64/longMode.asm"
-%include "src/Bootloader/LongMode_x64/gdt.asm"
 
 BOOT_DRIVE:
     db 0
@@ -114,18 +112,19 @@ _SectorTwoProgram:
     ; PAGING                                                    total paging cover 256TiB of memory
     ; PML4T address 0x1000 pointing to PDPT                     each PML4T hold 512GiB
     ; PDPT  address 0x2000 pointing to PDT                      each PDPT hold 1GiB
-    ; PDT   address 0x3000 pointing to PT                       each PDT hold 2MiB 
-    ; PT    address 0x4000 pointing to 0x00000000 - 0x00200000  each PT hold 4kiB
+    ; PDT   address 0x3000 pointing to PT                       each PDT hold 2MiB
+    ; PT    address 0x4000 pointing to the pages                each PT hold 4kiB (pages)
 
     mov dword [edi], 0x2003     ; Set the addres of the begining of PDPT to the first address of PML4T
                                 ; the two first bytes are the pointer to the next table
+                                ; 2003 3 is for 0b11 = present and writable
     add edi, 0x1000             ; add 0x1000 to edi so now edi point to 0x2000
     mov dword [edi], 0x3003     ; Set the addres of the begining of PDPT to PDT
     add edi, 0x1000             ; add 0x1000 to edi so now edi point to 0x3000
     mov dword [edi], 0x4003     ; Set the addres of the begining of PDT to PT
     add edi, 0x1000             ; add 0x1000 to edi so now edi point to 0x4000
 
-    mov dword ebx, 0x00000003   ; ebx to 0x00000003
+    mov dword ebx, 0x00000003   ; ebx to 0x00000003 3 = present and writable
     mov ecx, 512                ; ecx to 512 will be use as counter
 
 .SetEntry:
@@ -162,6 +161,9 @@ _SectorTwoProgram:
     lgdt [GDT64.Pointer]        ; load gdt
 
     jmp GDT64.Code:LongMode
+
+%include "src/Bootloader/LongMode_x64/longMode.asm"
+%include "src/Bootloader/LongMode_x64/gdt.asm"
 
 [bits 64]                       ; switching to 64bit
 

@@ -82,7 +82,7 @@ bootloader:
 kernel: $(OBJECTS)
 	mkdir -p $(BUILD_DIR)
 	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
-	ld -o $(BUILD_DIR)/kernel.bin -Ttext 0x8000 build/temp/kernel_entry.o $(ALL_OBJECTS64) -flto --oformat binary
+	ld -o $(BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_OBJECTS64) -flto --oformat binary
 
 os:
 	mkdir -p build/os

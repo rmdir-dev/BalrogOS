@@ -1,14 +1,15 @@
 #include "stdio.h"
+#include "Init.h"
 
 /*
 Exemple
 EXECUTE ASM code file from C
 */
-unsigned int addTwo(int a, int b);
+extern int addTwo(int a, int b);
 
 void main()
 {
-	terminal_initialize();
+	initialize_kernel();
 
 	printf("Kernel loading!\n");
 	printf("Test second line %d %s %c\n", -1234, "second string", 'e');

@@ -34,17 +34,23 @@ _DiskLoad:
 
     jc .diskError       ; if the interrupt failed to read the first sector
                         ; jc = jump if carry flag is set
-    
     pop dx              ; recover dx containing the number of sector to read
     cmp dh, al          ; compare if the number of sector read is equal to the requested ones
-    jne .diskError      ; if not jump to diskError
+    jne .sectorReadError; if not jump to diskError
 
     popa                ; recover every register from the stack.
     ret
 
+.sectorReadError:
+    PrintStringNextLine DISK_SECTOR_ERROR_STRING
+    jmp $
+
 .diskError:
     PrintStringNextLine DISK_ERROR_STRING   ; declared in io.inc included into start.asm
     jmp $
+
+DISK_SECTOR_ERROR_STRING:
+    db "Sect Err read disk!",0
 
 DISK_ERROR_STRING:
     db "Err read disk!",0

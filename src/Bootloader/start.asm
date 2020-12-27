@@ -111,11 +111,11 @@ _SectorTwoProgram:
     rep stosd               ; clear the memory from 0x1000 to 0x5000
     mov edi, 0x1000         ; set edi back to 0x1000 (PML4T)
 
-    ; PAGING
-    ; PML4T address 0x1000 pointing to PDPT
-    ; PDPT  address 0x2000 pointing to PDT
-    ; PDT   address 0x3000 pointing to PT
-    ; PT    address 0x4000 pointing to 0x00000000 - 0x00200000
+    ; PAGING                                                    total paging cover 256TiB of memory
+    ; PML4T address 0x1000 pointing to PDPT                     each PML4T hold 512GiB
+    ; PDPT  address 0x2000 pointing to PDT                      each PDPT hold 1GiB
+    ; PDT   address 0x3000 pointing to PT                       each PDT hold 2MiB 
+    ; PT    address 0x4000 pointing to 0x00000000 - 0x00200000  each PT hold 4kiB
 
     mov dword [edi], 0x2003     ; Set the addres of the begining of PDPT to the first address of PML4T
                                 ; the two first bytes are the pointer to the next table
@@ -166,12 +166,25 @@ _SectorTwoProgram:
 [bits 64]                       ; switching to 64bit
 
 LongMode:
-    ;mov rsi, IN_x64_PROTECTED_MODE_MSG
-    ;call _SysPrintString
+    %define VID_MEM 0xb8000
+
+    mov edi, VID_MEM
+    mov eax, 0x0f20
+    mov ecx, 2000
+
+.clearLoop:
+    call _printChar
+    loop .clearLoop
+    mov esi, IN_x64_PROTECTED_MODE_MSG
+    call _SysPrintString
+
     jmp 0x8000
     hlt                         ; halt
     sti                         ; enable interrupt
     ret
+
+
+%include "src/Bootloader/IO/System/print.asm"
 
 IN_x64_PROTECTED_MODE_MSG:
     db "[LOAD] x64 protected mode",0

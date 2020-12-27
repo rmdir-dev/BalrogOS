@@ -7,6 +7,8 @@
 static size_t int_to_string(int i, char* str)
 {
     size_t size = 0;
+    size_t pushed = 0;
+    char buffer[10];
 
     if(i < 0) 
     {
@@ -25,10 +27,16 @@ static size_t int_to_string(int i, char* str)
         while(i != 0)
         {
             to_char = i % 10;
-            str[size] = '0' + to_char;
+            buffer[pushed] = '0' + to_char;
+            pushed++;
             i /= 10;
-            size++;
         }
+    }
+
+    for(size_t i = pushed; i > 0; i--)
+    {
+        str[size] = buffer[i - 1];
+        size++;
     }
     
     //zero ended

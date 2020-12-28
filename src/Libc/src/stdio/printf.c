@@ -45,6 +45,11 @@ static size_t int_to_string(int i, char* str)
     return size;
 }
 
+static int print_pointer(void* ptr)
+{
+    //TODO
+}
+
 static int print_string(const char* str, size_t size)
 {
     terminal_write(str, size);
@@ -131,6 +136,10 @@ int printf(const char* __restrict format, ...)
                 //float
             case 'f':
                 /* TODO */
+                break;
+
+            case 'p':
+                //TODO
                 break;
             
             default:

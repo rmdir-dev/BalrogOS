@@ -15,7 +15,7 @@ void main()
 	printf("Test second line %d %s %c\n", -1234, "second string", 'e');
 
 	int result = addTwo(5, 7);
-	printf("result is: %d", result);
+	printf("result is: %d\n", result);
+	printf("result is: %d\n", &result);
 
-	while(1){}
 }

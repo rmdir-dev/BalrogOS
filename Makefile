@@ -95,6 +95,12 @@ iso:
 	truncate build/exec/Bootloader -s 1200k
 	mkisofs -o build/iso/OS -b build/exec/Bootloader ./build/exec/
 
+run_debug:
+	qemu-system-x86_64 -s -S build/os/os-image
+
+debug:
+	gdb build/os/os-image
+
 ########################################################
 #	GENERAL COMPILATION RULES
 ########################################################

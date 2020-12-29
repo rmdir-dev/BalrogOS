@@ -1,4 +1,4 @@
-ENTRY(_SectorTwoProgram)
+ENTRY(_PrepareKernel)
 
 KERNEL_OFFSET = 0xFFFFFF8000000000;
 KERNEL_START = 0x8000;

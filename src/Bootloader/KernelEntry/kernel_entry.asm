@@ -1,5 +1,5 @@
 [bits 16]                       ; switching to 64bit
-[extern main]
+[extern kernel_main]
 
 %define KERNEL_OFFSET 0xFFFFFF8000000000
 _PrepareKernel:
@@ -74,42 +74,42 @@ _PrepareKernel:
 [bits 64]                       ; switching to 64bit
 
 LongMode:
-    mov eax, 0x0
+    mov eax, 0x0                ; clearing segment register
     mov ss, eax
     mov ds, eax
     mov es, eax
     mov fs, eax
     mov gs, eax
 
-    mov rax, qword Upper_half
+    mov rax, qword Upper_half   ; Upper_half address into rax
     jmp rax
 
 Upper_half:
-    mov rax, KERNEL_OFFSET
-    add rsp, rax
+    mov rax, KERNEL_OFFSET      ; set rsp to higher half
+    add rsp, rax                ; set rsp to higher half
 
-    mov rax, 0
+    mov rax, 0                  ; disable the lower 2MB pages
     mov [0x1000 - KERNEL_OFFSET], qword rax
 
-    mov rax, cr3
-    mov cr3, rax
+    mov rax, cr3                ; update the cr3 register
+    mov cr3, rax                ; to update paging informations
 
-    mov rax, qword GDT64.Pointer 
+    mov rax, qword GDT64.Pointer ; update GDT
     lgdt [rax]
 
     
-    mov rax, 0
+    mov rax, 0                  ; clear the segment registers
     mov ss, rax
     mov ds, rax
     mov es, rax
 
-    mov rax, qword .reload_cs
+    mov rax, qword .reload_cs   ; ensure that we're in higher half
     push qword 0x8
     push rax
     retfq
 .reload_cs:
 
-    mov rax, qword _KernelEntry
+    mov rax, qword _KernelEntry ; call to kernel entry
     call rax
     hlt                         ; halt
     sti                         ; enable interrupt
@@ -123,7 +123,7 @@ IN_x64_PROTECTED_MODE_MSG:
 [bits 64]
 section .text
 _KernelEntry:
-    mov rax, qword main
+    mov rax, qword kernel_main  ; call main
     call rax
     jmp $
     hlt                         ; halt

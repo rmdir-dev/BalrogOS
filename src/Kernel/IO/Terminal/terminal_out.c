@@ -81,39 +81,140 @@ void increase_terminal_column()
 	}
 }
 
-void terminal_putchar(char c, uint8_t color, size_t x, size_t y) 
+void terminal_set_char_for_color(uint8_t hight_intensity, uint8_t color) 
 {
-	switch (c)
+	uint8_t base_color = 0;
+	if(hight_intensity == 1)
 	{
-	case '\n':
-		increase_terminal_row();
-		terminal_column = 0;
+		base_color = 8;
+	}
+	terminal_setcolor(base_color + color);
+}
+
+void terminal_check_color(const char* data, size_t index)
+{
+	uint8_t high_intensity = -1;
+	switch (data[index])
+	{
+	case '3':
+		high_intensity = 0;
 		break;
 
-	case '\r':
-		//TODO
-		break;
-
-	case '\t':
-		//TODO
+	case '9':
+		high_intensity = 1;
 		break;
 	
 	default:
-	{
-		const size_t index = y * VGA_WIDTH + x;
-		terminal_buffer[index] = vga_entry(c, color);
-
-		increase_terminal_column();
-	}
 		break;
 	}
+
+	if(high_intensity != -1)
+	{
+		switch (data[index + 1])
+		{
+		case '0':
+			terminal_set_char_for_color(high_intensity, 0);
+			break;
+		case '1':
+			terminal_set_char_for_color(high_intensity, 1);
+			break;
+		case '2':
+			terminal_set_char_for_color(high_intensity, 2);
+			break;
+		case '3':
+			terminal_set_char_for_color(high_intensity, 3);
+			break;
+		case '4':
+			terminal_set_char_for_color(high_intensity, 4);
+			break;
+		case '5':
+			terminal_set_char_for_color(high_intensity, 5);
+			break;
+		case '6':
+			terminal_set_char_for_color(high_intensity, 6);
+			break;
+		case '7':
+			terminal_set_char_for_color(high_intensity, 7);
+			break;
+		
+		default:
+			break;
+		}
+	}
+}
+
+size_t terminal_check_text(const char* data, size_t start_index)
+{
+	start_index++;
+	size_t color_index = 0;
+
+	if(data[start_index] == '[' && data[start_index + 2] == ';')
+	{
+		switch (data[start_index + 1])
+		{
+		case '0':
+			color_index = start_index + 3;
+			start_index += 4;
+			if(data[color_index + 2] == 'm')
+			{
+				start_index++;
+				terminal_check_color(data, color_index);
+			}
+			break;
+		
+		case '1':
+			/* code */
+			break;
+
+		case '4':
+			/* code */
+			break;
+		
+		default:
+			break;
+		}
+	} else if(data[start_index] == '[' && data[start_index + 1] == '0' && data[start_index + 2] == 'm')
+	{
+		terminal_setcolor(VGA_COLOR_WHITE);
+		start_index += 2;
+	}
+
+	return start_index;
 }
  
 void terminal_write(const char* data, size_t size) 
 {
 	for (size_t i = 0; i < size; i++)
 	{
-		terminal_putchar(data[i], terminal_color, terminal_column, terminal_row);
+		switch (data[i])
+		{
+		case '\n':
+			increase_terminal_row();
+			terminal_column = 0;
+			break;
+
+		case '\r':
+			//TODO
+			break;
+
+		case '\t':
+			//TODO
+			break;
+
+			// COLOR
+		case '\e':
+			i = terminal_check_text(data, i);
+			break;
+		
+		default:
+		{
+			const size_t index = terminal_row * VGA_WIDTH + terminal_column;
+			terminal_buffer[index] = vga_entry(data[i], terminal_color);
+
+			increase_terminal_column();
+		}
+			break;
+		}
 	}
 }
  

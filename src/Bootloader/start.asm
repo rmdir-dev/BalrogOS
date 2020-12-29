@@ -41,6 +41,11 @@ init:
     push ax                 ; save ax
     xor ax, ax              ; clear ax
     int 0x13                ; Reset the disk to be sure that we're starting at the begining
+
+    mov ah, 0x01            ; disabling the cursor
+    mov ch, 0x3f            ;
+    int 0x10                ;
+
     pop ax                  ; recover ax
 
     mov [BOOT_DRIVE], dl    ; the bios store our boot drive id into dl
@@ -72,8 +77,6 @@ init:
                             ; so here 0x00008000
     call _DiskLoad          ; load the disk data
 
-    call _TestA20
-
     mov esp, init - KERNEL_OFFSET ; set the stack pointer to main
 
     call 0x7c00 + 512       ; calling sector 2 function
@@ -83,7 +86,6 @@ init:
 
 %include "src/Bootloader/IO/BIOS/print.asm"
 %include "src/Bootloader/IO/BIOS/disk.asm"
-%include "src/Bootloader/A20/A20.asm"
 
 BOOT_DRIVE:
     db 0
@@ -102,11 +104,13 @@ MSG:
                             ; it will look if there is this number at the end of the first sector
 
 _SectorTwoProgram:
+    call _TestA20
     call _CheckLongMode
 
     jmp 0x8000
 
 
 %include "src/Bootloader/LongMode_x64/longMode.asm"
+%include "src/Bootloader/A20/A20.asm"
 
     times 512-($-$$-512) db 0

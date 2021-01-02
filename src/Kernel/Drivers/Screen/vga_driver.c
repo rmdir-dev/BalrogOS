@@ -61,7 +61,6 @@ void increase_vga_row()
 	if (++vga_row == VGA_HEIGHT)
 	{
 		vga_row = 0;
-		vga_clear();
 	}
 }
 
@@ -185,6 +184,11 @@ void vga_init()
 
 void vga_write(const char* data, size_t size)
 {
+	if(vga_row == 0)
+	{
+		vga_clear();
+	}
+	
     for (size_t i = 0; i < size; i++)
 	{
 		switch (data[i])

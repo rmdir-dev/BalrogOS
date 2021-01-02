@@ -12,8 +12,6 @@ void kernel_main()
 {
 	initialize_kernel();
 
-	printf("test test test test");
-
 	while(1)
 	{
 	}

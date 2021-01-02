@@ -42,7 +42,21 @@ C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*/*.c)
 C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*/*/*.c)
 
 COBJECTS64		:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(C_SRCS))
-ALL_OBJECTS64	:= $(sort $(COBJECTS64))
+
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*.asm)
+ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*/*.asm)
+
+ASMOBJECT64		:= $(patsubst %.asm, $(TEMP_DIR)/obj64/%.asm.o, $(ASM_SRCS))
+
+ALL_OBJECTS64	:= $(sort $(COBJECTS64) $(ASMOBJECT64))
 
 ########################################################
 #	COMPILER
@@ -72,7 +86,7 @@ LD_OPTIMIZATION = -flto
 ########################################################
 #	GENERATE OBJECT FILES
 ########################################################
-OBJECTS = $(C_SRCS:.c=.o)
+OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o)
 
 bootloader:
 	mkdir -p $(BUILD_DIR)
@@ -97,15 +111,16 @@ iso:
 run_debug:
 	qemu-system-x86_64 -s -S build/os/os-image
 
-debug:
-	gdb build/os/os-image
-
 ########################################################
 #	GENERAL COMPILATION RULES
 ########################################################
-.c.o :
+%.o : %.c
 	mkdir -p $(TEMP_DIR)/obj64/$(dir $<)
 	$(CC) $(CFLAGS) $(OPTIMIZATION) -c $< -o $(TEMP_DIR)/obj64/$(<:.c=.o)
+
+%.asm.o : %.asm
+	mkdir -p $(TEMP_DIR)/obj64/$(dir $<)
+	nasm -f elf64 $< -o $(TEMP_DIR)/obj64/$(<:.asm=.asm.o)
 
 ########################################################
 #	CLEAN

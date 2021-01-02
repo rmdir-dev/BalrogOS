@@ -1,4 +1,6 @@
 ; Interupts service routines.
+section .text
+    extern isr_common
 isr0:
     cli
     push 0
@@ -1531,7 +1533,7 @@ isr254:
     
 
 ; ISR VECTOR
-.section .data
+section .data
     global isr_table
 isr_table:
      dq isr0

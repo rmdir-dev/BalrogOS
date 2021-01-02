@@ -1,4 +1,8 @@
 print('; Interupts service routines.')
+print('section .text')
+print('''
+    extern isr_common
+    ''')
 for i in range(255):
     print('''isr{0}:
     cli
@@ -9,7 +13,7 @@ for i in range(255):
 
 print('''
 ; ISR VECTOR
-.section .data
+section .data
     global isr_table
 isr_table:
 ''')

@@ -1,6 +1,7 @@
 #include "vga_driver.h"
 #include <stddef.h>
 #include <stdint.h>
+#include "Kernel/Memory/memory.h"
 #include "string.h"
 
 enum vga_color {
@@ -42,8 +43,6 @@ uint16_t* vga_buffer;
 
 void vga_clear()
 {
-	vga_color = vga_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-	vga_buffer = (uintptr_t) 0xB8000 | 0xFFFFFF8000000000;
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
 			const size_t index = y * VGA_WIDTH + x;
@@ -179,6 +178,8 @@ void vga_init()
 {
     vga_row = 0;
 	vga_column = 0;
+	vga_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+	vga_buffer = PHYSICAL_TO_VIRTUAL(0xb8000);
 	vga_clear();
 }
 

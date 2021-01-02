@@ -12,7 +12,7 @@ void kernel_main()
 {
 	initialize_kernel();
 
-	printf("%x %b %d% %c %s\n", 0x1234, 0b10010101, 25367, 'D', "string");
+	printf("test test test test");
 
 	while(1)
 	{

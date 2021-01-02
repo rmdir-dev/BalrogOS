@@ -113,7 +113,7 @@ int printf(const char* __restrict format, ...)
                     index++;
                 }
                 break;
-            case 'x':
+            case 'x': case 'p':
                 {
                     int nbr = va_arg(parameters, int);
                     putchar('x');

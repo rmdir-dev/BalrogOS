@@ -2,6 +2,9 @@
 [extern kernel_main]
 
 %define KERNEL_OFFSET 0xFFFFFF8000000000
+
+section .text
+    global _PrepareKernel
 _PrepareKernel:
     cli                     ; disable interrupt
 

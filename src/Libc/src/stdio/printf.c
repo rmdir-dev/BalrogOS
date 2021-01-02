@@ -1,14 +1,16 @@
 #include "stdio.h"
 #include "string.h"
 #include <stdarg.h>
+#include <stdint.h>
 #include <limits.h>
-#include "Kernel/IO/Terminal/terminal_io.h"
+#include "Kernel/IO/tty/tty_io.h"
 
-static size_t int_to_string(int i, char* str)
+static size_t int_to_string(int i, uint8_t base, char* str)
 {
     size_t size = 0;
     size_t pushed = 0;
     char buffer[10];
+    char chars[17] = "0123456789abcdef";
 
     if(i < 0) 
     {
@@ -23,13 +25,11 @@ static size_t int_to_string(int i, char* str)
         size++;
     } else 
     {
-        int to_char;
         while(i != 0)
         {
-            to_char = i % 10;
-            buffer[pushed] = '0' + to_char;
+            buffer[pushed] = chars[i % base];
             pushed++;
-            i /= 10;
+            i /= base;
         }
     }
 
@@ -56,6 +56,15 @@ static int print_string(const char* str, size_t size)
     return 1;
 }
 
+static int print_data(const char* str, size_t size, size_t maxsize)
+{
+    if(maxsize < size)
+    {
+        return 0;
+    }
+    print_string(str, size);
+}
+
 int printf(const char* __restrict format, ...)
 {
     va_list parameters;
@@ -64,107 +73,81 @@ int printf(const char* __restrict format, ...)
     int written = 0;
 
     size_t index = 0;
+    size_t base_index = 0;
 
-    while(format[index])
+    while(format[index] != 0)
     {
-        size_t maxsize = INT_MAX - written;
+        size_t maxsize = INT_MAX - written; 
+        size_t length = 0;
 
-        if(format[index] == '%')
+        if(format[index] != '%')
         {
-            //go to next character (check what we want to print)
+            while(format[index] && format[index] != '%')
+            {
+                index++;
+                length++;
+            }
+            print_data(&format[base_index], length, maxsize);
+        } else 
+        {
             index++;
 
             switch (format[index])
             {
-                //Character
-            case 'c':
+            case 'b':
                 {
-                    char c = (char) va_arg(parameters, int);
-                    if(!maxsize)
-                    {
-                        //TODO error
-                        return -1;
-                    }
-                    if(!print_string(&c, 1))
-                    {
-                        //TODO error
-                        return -1;
-                    }
-                    written++;
+                    int nbr = va_arg(parameters, int);
+                    putchar('b');
+                    char str[128];
+                    length = int_to_string(nbr, 2, str);
+                    print_data(str, length, maxsize);
+                    index++;
+                }
+                break;
+            case 'd':
+                {
+                    int nbr = va_arg(parameters, int);
+                    char str[128];
+                    length = int_to_string(nbr, 10, str);
+                    print_data(str, length, maxsize);
+                    index++;
+                }
+                break;
+            case 'x':
+                {
+                    int nbr = va_arg(parameters, int);
+                    putchar('x');
+                    char str[128];
+                    length = int_to_string(nbr, 16, str);
+                    print_data(str, length, maxsize);
+                    index++;
                 }
                 break;
 
-                //String
+            case 'c':
+                length = 1;
+                char c = (char) va_arg(parameters, int);
+                print_data(&c, 1, maxsize);
+                index++;
+                break;
             case 's':
                 {
                     const char* str = va_arg(parameters, const char*);
-                    size_t length = strlen(str);
-                    if(maxsize < length)
-                    {
-                        //TODO error
-                        return -1;
-                    }
-                    if(!print_string(str, length))
-                    {
-                        //TODO error
-                        return -1;
-                    }
-                    written += length;
+                    length = strlen(str);
+                    print_data(str, length, maxsize);
+                    index++;
                 }
-                break;
-
-                //digit
-            case 'd':
-                {
-                    int i = va_arg(parameters, int);
-                    char str[11] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; 
-                    size_t length = int_to_string(i, str);
-                    if(maxsize < length)
-                    {
-                        //TODO error
-                        return -1;
-                    }
-                    if(!print_string(str, length))
-                    {
-                        //TODO error
-                        return -1;
-                    }
-                    written += length;
-                }
-                break;
-
-                //float
-            case 'f':
-                /* TODO */
-                break;
-
-            case 'p':
-                //TODO
                 break;
             
             default:
+                length = 1;
+                print_string("%", length);
+                //index--;
                 break;
             }
-            index++;
-        } else 
-        {
-            size_t begining_index = index;
-            const char* str = &format[begining_index];
-
-            while(format[index] != '%' && format[index] != 0)
-            {
-                index++;
-                if(maxsize < (index - begining_index))
-                {
-                    return -1;
-                }
-            }
-
-            if(!print_string(str, index - begining_index))
-            {
-                return -1;
-            }
         }
+        base_index = index;
+        written += length;
     }
 
     va_end(parameters);

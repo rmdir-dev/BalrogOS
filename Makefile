@@ -19,7 +19,6 @@ INCLUDE_DIR = -I./src\
 ########################################################
 #	SOURCE FILES
 ########################################################
-C_SRCS = $(wildcard *.c)
 C_SRCS += $(wildcard $(KERNEL_SRC)/*.c)
 C_SRCS += $(wildcard $(KERNEL_SRC)/*/*.c)
 C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*.c)
@@ -111,5 +110,7 @@ debug:
 ########################################################
 #	CLEAN
 ########################################################
+REMOVE = rm -Rf
+
 clean:
 	$(REMOVE) build/

@@ -1,5 +1,5 @@
 #include "interrupt.h"
-#include "Kernel/IO/ports/ports.h"
+#include "Kernel/CPU/ports/ports.h"
 #include "string.h"
 #include "stdio.h"
 
@@ -91,6 +91,5 @@ interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler* han
 interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
 {
     printf("interrupt %d \n", stack_frame->interrupt_no);
-    out_byte(0x20, 0x20);
     return stack_frame;
 }

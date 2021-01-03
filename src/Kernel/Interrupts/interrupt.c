@@ -1,4 +1,7 @@
 #include "interrupt.h"
+#include "Kernel/IO/ports/ports.h"
+#include "string.h"
+#include "stdio.h"
 
 extern void _set_idt();
 extern void _load_idt(void* idt);
@@ -20,3 +23,74 @@ struct IDT_Pointer
     uint16_t length;
     uint64_t address;
 } __attribute__ ((packed));
+
+static struct IDT_Gates gates[TOTAL_NBR_INTERRUPT];
+static struct IDT_Pointer idt_ptr = { 0, 0 };
+static interrupt_handler int_handlers[TOTAL_NBR_INTERRUPT];
+
+static set_idt_entry(uint32_t id, void* vector, uint16_t selector, uint8_t ist, uint8_t flags)
+{
+    uintptr_t v = (uintptr_t)vector;
+    gates[id].offset_low = v & 0xffff;
+    gates[id].selector = selector;
+    gates[id].ist = ist;
+    gates[id].flags = flags;
+    gates[id].offset_mid = (v >> 16) & 0xffff;
+    gates[id].offset_hight = (v >> 32) & 0xffffffff;
+}
+
+void init_interrupt()
+{
+    if(!idt_ptr.address)
+    {
+        /*
+        Remap the PIC (Programmable Interrupt Controller)
+        Remap IRQs 0-7    to    ISRs 32-39
+        and   IRQs 8-15   to    ISRs 40-47
+        */
+        out_byte(0x20, 0x11);
+        out_byte(0xA0, 0x11);
+        out_byte(0x21, 0x20);
+        out_byte(0xA1, 0x28);
+        out_byte(0x21, 0x04);
+        out_byte(0xA1, 0x02);
+        out_byte(0x21, 0x01);
+        out_byte(0xA1, 0x01);
+        out_byte(0x21, 0xff);
+        out_byte(0xA1, 0xff);
+        
+        /*
+        Clear gates and handler array
+        Make sure that we don't have any byt
+        */
+        memset(gates, 0, sizeof(gates));
+        memset(int_handlers, 0, sizeof(int_handlers));
+
+        for(uint32_t i = 0; i < TOTAL_NBR_INTERRUPT; i++)
+        {
+            set_idt_entry(i,        // ISR ID
+                isr_table[i],       // poiner to the corresponding ISR
+                0x8,                // kernel segment code offset sector
+                0,                  //
+                (IDT_PRESENT |      // INTERRUPT IS PRESENT = can be use
+                IDT_DPL_0 |         // INTERRUPT privilege level 0 = highest privilege to call this interrupt
+                IDT_INTERRUPT));    // INTERRUPT gate https://wiki.osdev.org/Interrupt_Descriptor_Table#I386_Interrupt_Gate
+        }
+
+        idt_ptr.address = (uint64_t)gates;
+        idt_ptr.length = sizeof(gates) - 1;
+    }
+    _load_idt(&idt_ptr);
+}
+
+interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler* handler)
+{
+
+}
+
+interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
+{
+    printf("interrupt %d \n", stack_frame->interrupt_no);
+    out_byte(0x20, 0x20);
+    return stack_frame;
+}

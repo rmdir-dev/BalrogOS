@@ -129,8 +129,8 @@ _KernelEntry:
     mov rax, qword kernel_main  ; call main
     call rax
     jmp $
-    hlt                         ; halt
     sti                         ; enable interrupt
+    hlt                         ; halt
     ret
 
     global addTwo

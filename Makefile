@@ -71,7 +71,7 @@ OPTIMIZATION =
 ########################################################
 #	COMPILER FLAGS
 ########################################################
-CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding
+CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib
 
 ########################################################
 #	LINKER
@@ -81,7 +81,7 @@ LD= ld
 ########################################################
 #	LINKER OPTIONS
 ########################################################
-LD_OPTIMIZATION = -flto
+LD_OPTIMIZATION = -flto 
 
 ########################################################
 #	GENERATE OBJECT FILES
@@ -95,7 +95,7 @@ bootloader:
 kernel: $(OBJECTS)
 	mkdir -p $(BUILD_DIR)
 	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
-	ld -o $(BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_OBJECTS64) -flto --oformat binary
+	ld -o $(BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_OBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
 
 os:
 	mkdir -p build/os

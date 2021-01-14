@@ -76,7 +76,7 @@ typedef struct interrupt_registers
 typedef interrupt_regs *(*interrupt_handler)(interrupt_regs*);
 
 /**
-* @brief Initialize all 256 ISR
+* @brief Initialize all 256 Interrupt Service Routine
 */
 void init_interrupt();
 
@@ -86,4 +86,4 @@ void init_interrupt();
 * @param handler function pointer to ISR handler handler.
 * @return return the previous ISR handler
 */
-interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler* handler);
+interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler handler);

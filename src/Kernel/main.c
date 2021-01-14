@@ -14,7 +14,7 @@ void kernel_main()
 	initialize_kernel();
 
 	printf("test test test\n");
-
+	
 	while(1)
 	{
 	}

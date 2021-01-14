@@ -83,13 +83,21 @@ void init_interrupt()
     _load_idt(&idt_ptr);
 }
 
-interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler* handler)
+interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler handler)
 {
-
+    interrupt_handler old = int_handlers[id];
+    int_handlers[id] = handler;
+    return old;
 }
 
 interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
 {
-    printf("interrupt %d \n", stack_frame->interrupt_no);
+    if(!int_handlers[stack_frame->interrupt_no])
+    {
+        printf("interrupt %d has no handler!\n", stack_frame->interrupt_no);
+
+        while(1){}
+    }
+    int_handlers[stack_frame->interrupt_no](stack_frame);
     return stack_frame;
 }

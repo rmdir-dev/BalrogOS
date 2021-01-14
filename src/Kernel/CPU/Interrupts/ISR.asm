@@ -6,7 +6,7 @@ isr0:
     push 0
     push 0
     jmp isr_common
-    
+
 isr1:
     cli
     push 0

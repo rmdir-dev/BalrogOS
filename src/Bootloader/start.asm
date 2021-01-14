@@ -67,7 +67,7 @@ init:
     call _DiskLoad          ; load the disk data
 
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
-    mov dh, 24              ; we want to read 1 sectors from it
+    mov dh, 26              ; we want to read 1 sectors from it
     mov cl, 0x03            ; read sector 3
     mov bx, 0x0000          ; higher word of the memory address we want to store our data to
     mov es, bx              ; set the higher word of the address into es

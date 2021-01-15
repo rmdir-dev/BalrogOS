@@ -1,17 +1,15 @@
 ; INPUT dx as an hex value
 _PrintHex:
-    push cx
-    push di
-    push bx
+    pusha
 
     mov si, HEX_OUT             ; set si to HEX_OUT si will be use for _PrintString
-    mov cl, 12                  ; set 12 into cl for the first shifting
+    mov cl, 12                  ; set 12 into cl for the first shifting 0x1234 16 bits shr 12 = 0x1
     mov di, 2                   ; Set the counter to 2
                                 ; HEX_OUT is '0xXXXX' and we don't want to override the two first bytes
 
 .hexToCharLoop:
     mov bx, dx                  ; put the value in dx into bx, to avoid using the original passed value
-    shr bx, cl                  ; shift right bl of value of cl bytes
+    shr bx, cl                  ; shift right bl of value of cl bits
     and bx, 0x000f              ; mask the unwanted values
     mov bx, [bx + HEX_TABLE]    ; mov the correct char into bx
     mov [HEX_OUT + di], bl      ; mov the char in bx to HEX_OUT >> di
@@ -26,9 +24,7 @@ _PrintHex:
 .exit:
     call _PrintString
 
-    pop bx                      ; recover the saved values
-    pop di                      ; recover the saved values
-    pop cx                      ; recover the saved values
+    popa
     ret
 
 HEX_OUT:

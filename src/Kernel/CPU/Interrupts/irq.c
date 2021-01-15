@@ -1,10 +1,12 @@
 #include "irq.h"
 #include "interrupt.h"
 #include "Kernel/CPU/ports/ports.h"
+#include "stdio.h"
 
 static interrupt_regs* temporary_irq_0_handler(interrupt_regs* stack_frame)
 {
     irq_end(INT_IRQ_0);
+    printf("irq 0 \n");
     return stack_frame;
 }
 

@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <limits.h>
-#include "Kernel/IO/tty/tty_io.h"
+#include "Kernel/Drivers/Screen/vga_driver.h"
 
 static size_t int_to_string(int i, uint8_t base, char* str)
 {
@@ -52,7 +52,7 @@ static int print_pointer(void* ptr)
 
 static int print_string(const char* str, size_t size)
 {
-    terminal_write(str, size);
+    vga_write(str, size);
     return 1;
 }
 
@@ -62,7 +62,7 @@ static int print_data(const char* str, size_t size, size_t maxsize)
     {
         return 0;
     }
-    print_string(str, size);
+    return print_string(str, size);
 }
 
 int printf(const char* __restrict format, ...)

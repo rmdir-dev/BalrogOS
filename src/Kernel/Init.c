@@ -1,5 +1,5 @@
 #include "Init.h"
-#include "IO/tty/tty_io.h"
+#include "Drivers/Screen/vga_driver.h"
 #include "Debug/debug_output.h"
 #include "CPU/Interrupts/interrupt.h"
 #include "CPU/Interrupts/irq.h"
@@ -7,7 +7,7 @@
 
 void initialize_kernel()
 {
-    terminal_initialize();
+    vga_init();
     init_interrupt();
     init_irq();
     init_keyboard();

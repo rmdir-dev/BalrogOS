@@ -7,9 +7,12 @@
 
 void initialize_kernel()
 {
+    disable_interrupt();
+
     vga_init();
     init_interrupt();
     init_irq();
     init_keyboard();
-    asm("sti");
+    
+    enable_interrupt();
 }

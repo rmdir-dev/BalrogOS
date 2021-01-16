@@ -87,3 +87,7 @@ void init_interrupt();
 * @return return the previous ISR handler
 */
 interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler handler);
+
+#define disable_interrupt() asm("cli")
+
+#define enable_interrupt() asm("sti")

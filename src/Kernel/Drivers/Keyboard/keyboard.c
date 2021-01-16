@@ -16,11 +16,10 @@ extern void _EnableKeyboard();
  */
 static interrupt_regs* keyboard_int_handler(interrupt_regs* stack_frame)
 {
-    printf("\n----------------------------------\n");
     if(in_byte(0x64) & 1)
     {
-        printf("read key\n");
         unsigned char key = in_byte(0x60);
+        printf("key pressed: %d\n", key);
     }
     irq_end(INT_IRQ_1);
     return stack_frame;

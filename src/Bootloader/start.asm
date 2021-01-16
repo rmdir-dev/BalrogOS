@@ -13,8 +13,6 @@
 
 %include "src/Bootloader/IO/BIOS/io.inc" ; include the macros
 
-%define KERNEL_OFFSET 0xFFFFFF8000000000
-
 section .text
     global _start
 
@@ -64,7 +62,7 @@ init:
                             ; so here 0x00007e00
     call _DiskLoad          ; load the disk data
 
-    mov esp, init - KERNEL_OFFSET ; set the stack pointer to main
+    mov esp, init           ; set the stack pointer to main
 
     call _TestA20
     call _CheckLongMode

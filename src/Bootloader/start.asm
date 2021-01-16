@@ -53,10 +53,8 @@ init:
 
     PrintStringNextLine MSG ; print MSG
 
-    ;PrintHexToLine 0x2af5   ; print an hex number
-
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
-    mov dh, 1               ; we want to read 1 sectors from it
+    mov dh, 25              ; we want to read 1 sectors from it
     mov cl, 0x02            ; read sector 2
     mov bx, 0x0000          ; higher word of the memory address we want to store our data to
     mov es, bx              ; set the higher word of the address into es
@@ -66,26 +64,17 @@ init:
                             ; so here 0x00007e00
     call _DiskLoad          ; load the disk data
 
-    mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
-    mov dh, 25              ; we want to read 1 sectors from it
-    mov cl, 0x03            ; read sector 3
-    mov bx, 0x0000          ; higher word of the memory address we want to store our data to
-    mov es, bx              ; set the higher word of the address into es
-    mov bx, 0x8000          ; lower word of the memory addres into bx
-                            ; 0x200 = 512
-                            ; BIOS will store data at address es:bx
-                            ; so here 0x00008000
-    call _DiskLoad          ; load the disk data
-
     mov esp, init - KERNEL_OFFSET ; set the stack pointer to main
+
+    call _TestA20
+    call _CheckLongMode
 
     call 0x7c00 + 512       ; calling sector 2 function
 
-    jmp $                   ; infinite loop that jump to our current location in memory
-                            ; $ = our current location in memory.
-
 %include "src/Bootloader/IO/BIOS/print.asm"
 %include "src/Bootloader/IO/BIOS/disk.asm"
+%include "src/Bootloader/LongMode_x64/longMode.asm"
+%include "src/Bootloader/A20/A20.asm"
 
 BOOT_DRIVE:
     db 0
@@ -102,15 +91,3 @@ MSG:
     dw 0xaa55               ; this is the magic number.
                             ; when your cpu is looking for a bootloader,
                             ; it will look if there is this number at the end of the first sector
-
-_SectorTwoProgram:
-    call _TestA20
-    call _CheckLongMode
-
-    jmp 0x8000
-
-
-%include "src/Bootloader/LongMode_x64/longMode.asm"
-%include "src/Bootloader/A20/A20.asm"
-
-    times 512-($-$$-512) db 0

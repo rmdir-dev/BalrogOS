@@ -146,10 +146,4 @@ _KernelEntry:
     hlt                         ; halt
     ret
 
-    global addTwo
-addTwo:
-    mov eax, edi
-    add eax, esi
-    ret
-
 %include "src/Bootloader/IO/System/print.asm"

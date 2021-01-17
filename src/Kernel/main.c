@@ -10,13 +10,11 @@ EXECUTE ASM code file from C
 */
 extern int addTwo(int a, int b);
 
-void kernel_main(void* mem_info, void* mem_entries)
+void kernel_main(SMAP_entry* mem_info, uint16_t* mem_entries)
 {
-	initialize_kernel();
-	uint32_t* info = PHYSICAL_TO_VIRTUAL(mem_info);
+	SMAP_entry* info = PHYSICAL_TO_VIRTUAL(mem_info);
 	uint16_t* size = PHYSICAL_TO_VIRTUAL(mem_entries);
-	printf("%x\n", *(info + 4));
-	printf("%x\n", *size);
+	initialize_kernel(info, size);
 	
 	while(1)
 	{

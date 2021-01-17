@@ -125,7 +125,7 @@ Upper_half:
 
 IN_x64_PROTECTED_MODE_MSG:
     db "[LOAD] x64 protected mode",0
-
+    
 MEMORY_INFO:
     dw 0x0000
 

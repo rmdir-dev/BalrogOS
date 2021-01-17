@@ -5,31 +5,34 @@
 #include <limits.h>
 #include "Kernel/Drivers/Screen/vga_driver.h"
 
-static size_t int_to_string(int i, uint8_t base, char* str)
+static size_t int_to_string(unsigned int val, uint8_t base, char* str, uint8_t isSigned)
 {
     size_t size = 0;
     size_t pushed = 0;
     char buffer[10];
     char chars[17] = "0123456789abcdef";
 
-    if(i < 0) 
+    if(isSigned && val > INT_MAX) 
     {
         str[0] = '-';
         size++;
-        i = -i;
+        /*
+        Convert unsigned int to the equivalent int value.
+        */
+        val = -((int)val);
     }
 
-    if(i == 0)
+    if(val == 0)
     {
         str[0] = '0';
         size++;
     } else 
     {
-        while(i != 0)
+        while(val != 0)
         {
-            buffer[pushed] = chars[i % base];
+            buffer[pushed] = chars[val % base];
             pushed++;
-            i /= base;
+            val /= base;
         }
     }
 
@@ -99,7 +102,7 @@ int printf(const char* __restrict format, ...)
                     int nbr = va_arg(parameters, int);
                     putchar('b');
                     char str[128];
-                    length = int_to_string(nbr, 2, str);
+                    length = int_to_string(nbr, 2, str, 0);
                     print_data(str, length, maxsize);
                     index++;
                 }
@@ -108,17 +111,17 @@ int printf(const char* __restrict format, ...)
                 {
                     int nbr = va_arg(parameters, int);
                     char str[128];
-                    length = int_to_string(nbr, 10, str);
+                    length = int_to_string(nbr, 10, str, 1);
                     print_data(str, length, maxsize);
                     index++;
                 }
                 break;
             case 'x': case 'p':
                 {
-                    int nbr = va_arg(parameters, int);
+                    unsigned int nbr = va_arg(parameters, unsigned int);
                     putchar('x');
                     char str[128];
-                    length = int_to_string(nbr, 16, str);
+                    length = int_to_string(nbr, 16, str, 0);
                     print_data(str, length, maxsize);
                     index++;
                 }

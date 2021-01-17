@@ -2,6 +2,7 @@
 #include "Kernel/CPU/ports/ports.h"
 #include "string.h"
 #include "stdio.h"
+#include "Kernel/Debug/debug_output.h"
 
 extern void _set_idt();
 extern void _load_idt(void* idt);
@@ -61,7 +62,7 @@ void init_interrupt()
         
         /*
         Clear gates and handler array
-        Make sure that we don't have any byt
+        Make sure that we don't have any byte not to 0
         */
         memset(gates, 0, sizeof(gates));
         memset(int_handlers, 0, sizeof(int_handlers));

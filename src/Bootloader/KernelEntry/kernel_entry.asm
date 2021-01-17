@@ -8,6 +8,9 @@ section .text
 _PrepareKernel:
     cli                     ; disable interrupt
 
+    mov [MEMORY_INFO - KERNEL_OFFSET], word ax ; recover memory map
+    mov [MEMORY_ENTRIES - KERNEL_OFFSET], word bx
+    
     mov edi, 0x1000 - KERNEL_OFFSET        ; set the destination index to 0x1000
     mov cr3, edi            ; set control register 3 to destination
     xor eax, eax            ; nullify eax
@@ -36,7 +39,7 @@ _PrepareKernel:
 
     mov dword ebx, 0x00000003   ; ebx to 0x00000003 3 = present and writable
     mov ecx, 512                ; ecx to 512 will be use as counter
-
+    
 .SetEntry:
     mov dword [edi], ebx        ; set ebx into edi
     add ebx, 0x1000             ; add 0x1000 to ebx
@@ -123,9 +126,19 @@ Upper_half:
 IN_x64_PROTECTED_MODE_MSG:
     db "[LOAD] x64 protected mode",0
 
+MEMORY_INFO:
+    dw 0x0000
+
+MEMORY_ENTRIES:
+    dw 0x0000
+
 [bits 64]
 section .text
 _KernelEntry:
+    mov rax, qword MEMORY_INFO
+    mov word di, [rax]
+    mov rax, qword MEMORY_ENTRIES
+    mov word si, [rax]
     mov rax, qword kernel_main  ; call main
     call rax
     jmp $

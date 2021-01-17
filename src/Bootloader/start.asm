@@ -52,7 +52,7 @@ init:
     PrintStringNextLine MSG ; print MSG
 
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
-    mov dh, 25              ; we want to read 1 sectors from it
+    mov dh, 27              ; we want to read 1 sectors from it
     mov cl, 0x02            ; read sector 2
     mov bx, 0x0000          ; higher word of the memory address we want to store our data to
     mov es, bx              ; set the higher word of the address into es
@@ -67,7 +67,7 @@ init:
     call _TestA20
     call _CheckLongMode
 
-    call 0x7c00 + 512       ; calling sector 2 function
+    jmp 0x7c00 + 512       ; calling sector 2 function
 
 %include "src/Bootloader/IO/BIOS/print.asm"
 %include "src/Bootloader/IO/BIOS/disk.asm"
@@ -80,6 +80,8 @@ BOOT_DRIVE:
 MSG:    
     db "Loading...",0
 
+
+
     times 510-($-$$) db 0   ; here we fill the rest of our bootloader with 0
                             ; the bootloader size is 512, the last 2 bytes must be 0xaa55
                             ; so here we say that it must set 510 - (our current location - boot loader start location)
@@ -89,3 +91,14 @@ MSG:
     dw 0xaa55               ; this is the magic number.
                             ; when your cpu is looking for a bootloader,
                             ; it will look if there is this number at the end of the first sector
+
+_sector_two:
+    call _DetectMemorySize
+
+    mov ax, MEMORY_SIZE_KB
+    mov bx, MEMORY_ENTRY_COUNT
+    call 0x8000
+
+%include "src/Bootloader/Memory/Memory.asm"
+
+    times 512-($-$$ - 512) db 0

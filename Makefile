@@ -102,14 +102,14 @@ os:
 	cat build/bin/Bootloader $(BUILD_DIR)/kernel.bin > build/os/os-image
 
 run:
-	qemu-system-x86_64 build/os/os-image
+	qemu-system-x86_64 build/os/os-image -monitor stdio
 
 iso:
 	truncate build/exec/Bootloader -s 1200k
 	mkisofs -o build/iso/OS -b build/exec/Bootloader ./build/exec/
 
 run_debug:
-	qemu-system-x86_64 -s -S build/os/os-image
+	qemu-system-x86_64 -s -S build/os/os-image -monitor stdio
 
 ########################################################
 #	GENERAL COMPILATION RULES

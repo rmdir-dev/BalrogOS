@@ -6,6 +6,8 @@
 #include "Drivers/Keyboard/keyboard.h"
 #include "Debug/debug_output.h"
 #include "Memory/memory.h"
+#include "Memory/vmm.h"
+#include "Memory/pmm.h"
 
 void initialize_kernel(void* SMAP, void* size)
 {
@@ -24,21 +26,35 @@ void initialize_kernel(void* SMAP, void* size)
     /*      MEMORY      */
     SMAP_entry* SMAPinfo = PHYSICAL_TO_VIRTUAL(SMAP);
 	uint16_t* SMAPsize = PHYSICAL_TO_VIRTUAL(size);
-
-    uint64_t total_memory = 0;
     
-    for(uint16_t i = 0; i < *SMAPsize; i++)
-    {
-        total_memory += SMAPinfo[i].Length;
-        if(SMAPinfo[i].Length > ONE_MiB)
-        {
-            KERNEL_LOG_INFO("Base address : %x | Length %d MiB", SMAPinfo[i].BaseAddress, BYTE_TO_MiB(SMAPinfo[i].Length));
-        } else 
-        {
-            KERNEL_LOG_INFO("Base address : %x | Length %d kiB", SMAPinfo[i].BaseAddress, BYTE_TO_KiB(SMAPinfo[i].Length));
-        }
-    }
-    KERNEL_LOG_INFO("Total system memory : %dMiB", BYTE_TO_MiB(total_memory));
+    /* Virtual Memory */
+    vmm_init();
+
+    /* Physical Memory */
+    pmm_init(SMAPinfo, SMAPsize);
+
+    uint64_t* test_ptr1 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr1);
+    uint64_t* test_ptr2 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr2);
+    uint64_t* test_ptr3 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr3);
+    uint64_t* test_ptr4 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr4);
+    pmm_free(test_ptr2);
+    uint64_t* test_ptr5 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr5);
+    pmm_free(test_ptr3);
+    pmm_free(test_ptr4);
+    uint64_t* test_ptr6 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr6);
+    uint64_t* test_ptr7 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr7);
+    uint64_t* test_ptr8 = pmm_calloc();
+    KERNEL_LOG_INFO("%x", test_ptr8);
+
+
+    /* Kernel Heap */
 
     /*     KEYBOARD     */
     init_keyboard();

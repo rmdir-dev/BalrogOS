@@ -3,7 +3,7 @@
 ; so if an address that is 21bit long is passed
 ; it will remove that 21st bit.
 ; ex:bx ex = 0x1000 bx = 0x7c00
-; (0x1000 * 16) + 0x7c00
+; (0x1000 << 4) + 0x7c00
 ; 0x10000 + 0x7c00
 ; 0x17c00
 ; This is how 20bits address are accessed.
@@ -11,7 +11,7 @@
 ; but if the address that result is larger than 20bits
 ; with the A20 line disable it will return at the address 0x0000
 ; and start offsetting from there.
-; 0xf800:0x8000 = (0xf800 * 16) + 0x8000 = 0x100000
+; 0xf800:0x8000 = (0xf800 << 4) + 0x8000 = 0x100000
 ; with the A20 line disable the address will stay 0x100000
 ; with the A20 line enable the address will be trunc to 0x00000 so 0x0000
 

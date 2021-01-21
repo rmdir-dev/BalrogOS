@@ -95,7 +95,7 @@ Upper_half:
     add rsp, rax                ; set rsp to higher half
 
     mov rax, 0                  ; disable the lower 2MB pages
-    mov [0x1000 - KERNEL_OFFSET], qword rax
+    mov [0x1000], qword rax
 
     mov rax, cr3                ; update the cr3 register
     mov cr3, rax                ; to update paging informations

@@ -1,4 +1,4 @@
-#include "stdio.h"
+#include <stdio.h>
 #include "BalrogOS/Init.h"
 
 void kernel_main(void* mem_info, void* mem_entries)

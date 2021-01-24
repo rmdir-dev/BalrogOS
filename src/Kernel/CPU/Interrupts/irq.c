@@ -1,7 +1,7 @@
 #include "BalrogOS/CPU/Interrupts/irq.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
-#include "stdio.h"
+#include <stdio.h>
 
 static interrupt_regs* temporary_irq_0_handler(interrupt_regs* stack_frame)
 {

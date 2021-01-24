@@ -1,4 +1,4 @@
-#include "stdio.h"
+#include <stdio.h>
 #include "BalrogOS/Drivers/Screen/vga_driver.h"
 
 int putchar(int c)

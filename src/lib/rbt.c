@@ -9,6 +9,10 @@ rbt_node* rbt_create_node(rbt_node* parent, uint64_t key)
     //TODO first implement malloc!
     rbt_node* ret;// = malloc(sizeof(rbt_node));
 
+    printf("!!!!! MALLOC REQUIRE !!!!!\n");
+    while(1)
+    {}
+
     ret->key = key;
     ret->color = RBT_RED;
     ret->children[RBT_LEFT] = NULL;

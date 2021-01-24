@@ -1,8 +1,8 @@
-#include "vmm.h"
+#include "BalrogOS/Memory/vmm.h"
 #include "memory.h"
-#include "Kernel/CPU/Interrupts/interrupt.h"
-#include "Kernel/Debug/debug_output.h"
-#include "Kernel/Memory/pmm.h"
+#include "BalrogOS/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/Debug/debug_output.h"
+#include "BalrogOS/Memory/pmm.h"
 
 #define STRIP_FLAGS(addr)       (((uintptr_t)addr) & ~PAGE_FLAG_MASK)
 #define ADD_FLAGS(addr, flags)   (((uintptr_t)addr) | (flags & PAGE_FLAG_MASK))

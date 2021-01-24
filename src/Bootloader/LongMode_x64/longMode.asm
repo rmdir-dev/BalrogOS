@@ -24,18 +24,13 @@ _CheckLongMode:
     jz .NoCPUID         ; if they are equal that mean that the CPUID bit
                         ; wasn't flipped, and thus CPUID is not supported
 
-    mov eax, 0x80000000
-    cpuid               ; This returns the CPU's manufacturer ID string 
-                        ;   - a twelve-character ASCII string stored in EBX, EDX, ECX (in that order). 
-                        ;   - The highest basic calling parameter (largest value that EAX can be set to before calling CPUID) is returned in EAX
-    cmp eax, 0x80000001 ; check if eax is 
-    jb .NoLongMode      ; check if eax is greater than 0x80000001 jb = jump below in unsigned mode
-                        ; we can access extended CPU information.
+    mov eax, 0x80000000 ; Get Highest Extended Function Implemented
+    cpuid               ; This returns the highest calling parameter is returned in EAX.
+    cmp eax, 0x80000001 ; check if eax is greater than 0x80000001 jb = jump below in unsigned mode
+    jb .NoLongMode      ; we can access extended CPU information.
 
-    mov eax, 0x80000001 ; 
-    cpuid               ; This returns the CPU's manufacturer ID string 
-                        ;   - a twelve-character ASCII string stored in EBX, EDX, ECX (in that order). 
-                        ;   - The highest basic calling parameter (largest value that EAX can be set to before calling CPUID) is returned in EAX
+    mov eax, 0x80000001 ; Extended Processor Info and Feature Bits
+    cpuid               ; returns extended feature flags in EDX and ECX.
     test edx, 1 << 29   ; test if the 29th bit of edx is set. 
                         ; the 29th bit is the LM-Bit 
     jz .NoLongMode      ; if the 29th bit is not set then longmode is not supported.

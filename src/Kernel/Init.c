@@ -1,13 +1,13 @@
-#include "Init.h"
-#include "Drivers/Screen/vga_driver.h"
-#include "Debug/debug_output.h"
-#include "CPU/Interrupts/interrupt.h"
-#include "CPU/Interrupts/irq.h"
-#include "Drivers/Keyboard/keyboard.h"
-#include "Debug/debug_output.h"
-#include "Memory/memory.h"
-#include "Memory/vmm.h"
-#include "Memory/pmm.h"
+#include "BalrogOS/Init.h"
+#include "BalrogOS/Drivers/Screen/vga_driver.h"
+#include "BalrogOS/Debug/debug_output.h"
+#include "BalrogOS/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/CPU/Interrupts/irq.h"
+#include "BalrogOS/Drivers/Keyboard/keyboard.h"
+#include "BalrogOS/Debug/debug_output.h"
+#include "BalrogOS/Memory/memory.h"
+#include "BalrogOS/Memory/vmm.h"
+#include "BalrogOS/Memory/pmm.h"
 
 void initialize_kernel(void* SMAP, void* size)
 {
@@ -32,27 +32,6 @@ void initialize_kernel(void* SMAP, void* size)
 
     /* Physical Memory */
     pmm_init(SMAPinfo, SMAPsize);
-
-    uint64_t* test_ptr1 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr1);
-    uint64_t* test_ptr2 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr2);
-    uint64_t* test_ptr3 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr3);
-    uint64_t* test_ptr4 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr4);
-    pmm_free(test_ptr2);
-    uint64_t* test_ptr5 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr5);
-    pmm_free(test_ptr3);
-    pmm_free(test_ptr4);
-    uint64_t* test_ptr6 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr6);
-    uint64_t* test_ptr7 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr7);
-    uint64_t* test_ptr8 = pmm_calloc();
-    KERNEL_LOG_INFO("%x", test_ptr8);
-
 
     /* Kernel Heap */
 

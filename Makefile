@@ -13,8 +13,8 @@ BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
 C_LIBS_SRC = src/Libc/src
-INCLUDE_DIR = -I./src\
-	-I./src/Libc/include
+INCLUDE_DIR = -I./include\
+	-I./include/libc
 
 ########################################################
 #	SOURCE FILES

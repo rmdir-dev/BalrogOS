@@ -1,5 +1,5 @@
 [org 0x7c00]                ; say that the code is at that memory address
-                            ; if we don't do that, when using labels the cpu will think
+                            ; if we don't do that, when using labels the assembler will think
                             ; that our base address is 0x0000 in memory and will try access
                             ; labels using that address as the base for the offset.
                             ; so when we try to use a label, it's memory address will be 

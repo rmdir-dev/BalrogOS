@@ -1,8 +1,8 @@
-#include "interrupt.h"
-#include "Kernel/CPU/ports/ports.h"
+#include "BalrogOS/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/CPU/Ports/ports.h"
 #include "string.h"
 #include "stdio.h"
-#include "Kernel/Debug/debug_output.h"
+#include "BalrogOS/Debug/debug_output.h"
 
 extern void _set_idt();
 extern void _load_idt(void* idt);

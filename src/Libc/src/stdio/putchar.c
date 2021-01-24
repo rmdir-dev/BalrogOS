@@ -1,5 +1,5 @@
 #include "stdio.h"
-#include "Kernel/Drivers/Screen/vga_driver.h"
+#include "BalrogOS/Drivers/Screen/vga_driver.h"
 
 int putchar(int c)
 {

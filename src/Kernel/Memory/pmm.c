@@ -1,7 +1,7 @@
-#include "pmm.h"
-#include "Kernel/Debug/debug_output.h"
+#include "BalrogOS/Memory/pmm.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include "string.h"
-#include "vmm.h"
+#include "BalrogOS/Memory/vmm.h"
 
 uint64_t total_memory = 0;
 uint64_t total_usable_memory = 0;

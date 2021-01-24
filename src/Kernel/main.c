@@ -1,7 +1,5 @@
 #include "stdio.h"
-#include "Init.h"
-#include "Debug/debug_output.h"
-#include "CPU/ports/ports.h"
+#include "BalrogOS/Init.h"
 
 void kernel_main(void* mem_info, void* mem_entries)
 {

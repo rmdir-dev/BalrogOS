@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Kernel/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/CPU/Interrupts/interrupt.h"
 
 /**
  * @brief Initialize the keyboard

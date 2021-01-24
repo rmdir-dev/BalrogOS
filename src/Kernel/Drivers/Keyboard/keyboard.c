@@ -1,6 +1,6 @@
-#include "keyboard.h"
-#include "Kernel/CPU/Interrupts/irq.h"
-#include "Kernel/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/Drivers/Keyboard/keyboard.h"
+#include "BalrogOS/CPU/Interrupts/irq.h"
+#include "BalrogOS/CPU/Interrupts/interrupt.h"
 
 /**
  * @brief enable the keyboard found in keyboard.asm

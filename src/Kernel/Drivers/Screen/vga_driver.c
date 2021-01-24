@@ -1,7 +1,7 @@
-#include "vga_driver.h"
+#include "BalrogOS/Drivers/Screen/vga_driver.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "Kernel/Memory/memory.h"
+#include "BalrogOS/Memory/memory.h"
 #include "string.h"
 
 enum vga_color {

@@ -12,7 +12,7 @@ DEFINES 		=
 BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
-C_LIBS_SRC = src/Libc/src
+C_LIBS_SRC = src/Libc/
 INCLUDE_DIR = -I./include\
 	-I./include/libc
 

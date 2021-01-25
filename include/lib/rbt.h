@@ -11,6 +11,7 @@
 typedef struct rbt_node_st
 {
     uint64_t key;
+    void* value;
     uint8_t color;
     struct rbt_node_st* parent;
     struct rbt_node_st* children[2];

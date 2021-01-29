@@ -12,6 +12,8 @@ Contain the physical address of the kernel PML4T
 */
 page_table* KernelPML4T;
 
+uintptr_t p_addr = 0;
+
 static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
 {
     KERNEL_LOG_FAIL("Page fault");
@@ -49,7 +51,7 @@ static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
     return regs;
 }
 
-void vmm_init()
+void init_vmm()
 {
     register_interrupt_handler(INT_PAGE_FAULT, vmm_page_fault_handler);
 
@@ -81,12 +83,12 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
         {
             return 0;
         }
-
+        printf("new PDPT\n");
         uintptr_t p = pmm_calloc();
         PML4T[PML4T_OFFSET(virt_addr)] = PDPT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
 
-    PDPT = PHYSICAL_TO_VIRTUAL(PDPT);
+    PDPT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDPT));
     PDT = PDPT[PDPT_OFFSET(virt_addr)];
     
     if(!PDT)
@@ -98,18 +100,19 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
 
         uintptr_t p = pmm_calloc();
         PDPT[PDPT_OFFSET(virt_addr)] = PDT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        printf("new PDT %p | PDPT %p | INDEX %d \n", p, PDPT, PDPT_OFFSET(virt_addr));
     }
     
-    PDT = PHYSICAL_TO_VIRTUAL(PDT);
+    PDT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDT));
     PT = PDT[PDT_OFFSET(virt_addr)];
-
+    
     if(!PT)
     {
         if(!create)
         {
             return 0;
         }
-
+        //printf("new PT %p\n", PDT);
         uintptr_t p = pmm_calloc();
         PDT[PDT_OFFSET(virt_addr)] = PT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
@@ -123,7 +126,7 @@ uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr)
     {
         PML4T = KernelPML4T;
     }
-
+    
     page_table* PT = vmm_find_page(PML4T, virt_addr, 0);
     
     if(!PT)
@@ -140,8 +143,10 @@ void vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, u
         PML4T = KernelPML4T;
     }
 
+    p_addr = phys_addr;
+
     page_table* PT = vmm_find_page(PML4T, virt_addr, 1);
-    
+
     if(!PT)
     {
         return 0x00;

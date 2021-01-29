@@ -8,6 +8,8 @@
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/vmm.h"
 #include "BalrogOS/Memory/pmm.h"
+#include "BalrogOS/Memory/kheap.h"
+#include "BalrogOS/CPU/Scheduler/Scheduler.h"
 
 void initialize_kernel(void* SMAP, void* size)
 {
@@ -21,22 +23,26 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_INFO("Interrrupts : waiting...");
     init_interrupt();
     KERNEL_LOG_OK("Interrupt initialization : done");
-    init_irq();
+    //init_irq();
 
     /*      MEMORY      */
     SMAP_entry* SMAPinfo = PHYSICAL_TO_VIRTUAL(SMAP);
 	uint16_t* SMAPsize = PHYSICAL_TO_VIRTUAL(size);
     
     /* Virtual Memory */
-    vmm_init();
+    init_vmm();
 
     /* Physical Memory */
-    pmm_init(SMAPinfo, SMAPsize);
+    init_pmm(SMAPinfo, SMAPsize);
 
     /* Kernel Heap */
-
+    init_kernel_heap();
+    
     /*     KEYBOARD     */
     init_keyboard();
+
+    /* SCHEDULER */
+    init_scheduler();
 
     enable_interrupt();
 }

@@ -1,6 +1,6 @@
 #include "BalrogOS/Memory/pmm.h"
 #include "BalrogOS/Debug/debug_output.h"
-#include "string.h"
+#include <string.h>
 #include "BalrogOS/Memory/vmm.h"
 
 uint64_t total_memory = 0;
@@ -54,7 +54,9 @@ uintptr_t* pmm_calloc()
     return p;
 }
 
-void pmm_init(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
+extern void _CR3_TEST();
+
+void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
 {    
     for(uint16_t i = 0; i < *SMAPsize; i++)
     {
@@ -88,7 +90,7 @@ void pmm_init(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
             }
         }
     }
-
+    
     KERNEL_LOG_INFO("Total system memory : %dMiB", BYTE_TO_MiB(total_memory));
     KERNEL_LOG_INFO("Total usable system memory : %dMiB", BYTE_TO_MiB(total_usable_memory));
 }

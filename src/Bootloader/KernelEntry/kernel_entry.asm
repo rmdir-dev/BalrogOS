@@ -19,10 +19,10 @@ _PrepareKernel:
     mov edi, 0x1000 - KERNEL_OFFSET         ; set edi back to 0x1000 (PML4T)
 
     ; PAGING                                                    total paging cover 256TiB of memory
-    ; PML4T address 0x1000 pointing to PDPT                     each PML4T hold 512GiB
-    ; PDPT  address 0x2000 pointing to PDT                      each PDPT hold 1GiB
-    ; PDT   address 0x3000 pointing to PT                       each PDT hold 2MiB
-    ; PT    address 0x4000 pointing to the pages                each PT hold 4kiB (pages)
+    ; PML4T address 0x1000 pointing to PDPT                     each PML4T hold 512GiB / entry total 256TiB
+    ; PDPT  address 0x2000 pointing to PDT                      each PDPT hold 1GiB / entry total 512 MiB
+    ; PDT   address 0x3000 pointing to PT                       each PDT hold 2MiB / entry total 1024MiB
+    ; PT    address 0x4000 pointing to the pages                each PT hold 4kiB / entry total 2MiB
 
     mov dword [edi], 0x2003 - KERNEL_OFFSET     ; Set the addres of the begining of PDPT to the first address of PML4T
     mov edi, 0x2000 - 8 - KERNEL_OFFSET

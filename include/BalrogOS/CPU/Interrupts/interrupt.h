@@ -38,6 +38,14 @@
 #define INT_IRQ_22      0x36
 #define INT_IRQ_23      0x37
 
+#define   INT_APIC_TIMER     0x40
+#define   INT_APIC_THERMAL   0x41
+#define   INT_APIC_PERF      0x42
+#define   INT_APIC_LINT0     0x43
+#define   INT_APIC_LINT1     0x44
+#define   INT_APIC_ERROR     0x45
+#define   INT_APIC_SPUR      0xFF
+
 typedef struct interrupt_registers
 {
     //////////////////////////////////////////////////////////

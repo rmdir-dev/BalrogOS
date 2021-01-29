@@ -27,6 +27,19 @@ addr = 0x101000
             PAGING
 ----------------------------------------------------------------------------------
 */
+/*
+    0xFfedcba987654321
+
+    v                     V PML4 IDX V PDPT IDX v PDT IDX  v PT INDEX  vOFFSET
+    0b1111 1111 1110 1101 1100 1011 1010 1001 1000 0111 0110 0101 0100 0011 0010 0001
+
+    13 to 21 lower bits = the Page Table index 0x654 & 0x1ff = 0x154
+                        each page table contain 512 entries.
+                        0x1ff = 512
+    12 lower bits = the offset 0x321 (1 page is 4KiB so 0x1000 Bytes)
+                    so the offset can go from 0x000 to 0xfff which is the
+                    bottom and top of the page.
+*/
 #define PML4T_OFFSET(addr)  ((((uintptr_t)(addr)) >> 39) & 0x1ff)
 #define PDPT_OFFSET(addr)   ((((uintptr_t)(addr)) >> 30) & 0x1ff)
 #define PDT_OFFSET(addr)    ((((uintptr_t)(addr)) >> 21) & 0x1ff)
@@ -50,6 +63,7 @@ addr = 0x101000
 ----------------------------------------------------------------------------------
 */
 
+#define ONE_GiB 1073741824
 #define ONE_MiB 1048576
 #define ONE_kiB 1024
 

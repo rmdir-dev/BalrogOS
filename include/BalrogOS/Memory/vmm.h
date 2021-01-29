@@ -14,7 +14,7 @@ typedef uintptr_t page_table;
  * @brief 
  * 
  */
-void vmm_init();
+void init_vmm();
 
 /**
  * @brief return the physical address of a given virtual address page

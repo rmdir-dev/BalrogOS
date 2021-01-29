@@ -1,4 +1,4 @@
-#include "string.h"
+#include <string.h>
 
 void* memset(void* pointer, int value, size_t count)
 {

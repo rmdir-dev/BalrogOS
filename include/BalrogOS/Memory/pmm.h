@@ -28,4 +28,4 @@ uintptr_t* pmm_calloc();
  * @param SMAPinfo 
  * @param SMAPsize 
  */
-void pmm_init(SMAP_entry* SMAPinfo, uint16_t* SMAPsize);
+void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize);

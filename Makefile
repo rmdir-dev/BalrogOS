@@ -102,7 +102,7 @@ os:
 	cat build/bin/Bootloader $(BUILD_DIR)/kernel.bin > build/os/os-image
 
 run:
-	qemu-system-x86_64 build/os/os-image -monitor stdio
+	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128
 
 iso:
 	truncate build/exec/Bootloader -s 1200k

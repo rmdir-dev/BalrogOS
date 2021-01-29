@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "BalrogOS/Memory/memory.h"
-#include "string.h"
+#include <string.h>
 
 enum vga_color {
 	VGA_COLOR_BLACK = 0,

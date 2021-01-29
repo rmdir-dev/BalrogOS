@@ -1,4 +1,4 @@
-#include "string.h"
+#include <string.h>
 
 void* memcpy(void* __restrict dest, const void* __restrict source, size_t size)
 {

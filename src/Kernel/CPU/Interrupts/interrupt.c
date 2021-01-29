@@ -1,6 +1,6 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
-#include "string.h"
+#include <string.h>
 #include <stdio.h>
 #include "BalrogOS/Debug/debug_output.h"
 

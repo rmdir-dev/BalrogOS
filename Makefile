@@ -100,13 +100,17 @@ kernel: $(OBJECTS)
 os:
 	mkdir -p build/os
 	cat build/bin/Bootloader $(BUILD_DIR)/kernel.bin > build/os/os-image
+	truncate build/os/os-image -s 1200k
 
 run:
-	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128
+	qemu-system-x86_64 build/os/os-image -monitor stdio -m 1024
 
 iso:
-	truncate build/exec/Bootloader -s 1200k
-	mkisofs -o build/iso/OS -b build/exec/Bootloader ./build/exec/
+	mkdir -p iso
+	cp os-image iso/
+	cd build/os
+	mkisofs -o balrog.iso -V BalrogOS -b os-image iso/
+	cd ../..
 
 run_debug:
 	qemu-system-x86_64 -s -S build/os/os-image -monitor stdio

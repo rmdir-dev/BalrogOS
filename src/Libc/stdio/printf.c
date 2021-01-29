@@ -5,11 +5,11 @@
 #include <limits.h>
 #include "BalrogOS/Drivers/Screen/vga_driver.h"
 
-static size_t int_to_string(unsigned int val, uint8_t base, char* str, uint8_t isSigned)
+static size_t int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
 {
     size_t size = 0;
     size_t pushed = 0;
-    char buffer[10];
+    char buffer[128];
     char chars[17] = "0123456789abcdef";
 
     if(isSigned && val > INT_MAX) 
@@ -99,7 +99,7 @@ int printf(const char* __restrict format, ...)
             {
             case 'b':
                 {
-                    int nbr = va_arg(parameters, long);
+                    long nbr = va_arg(parameters, long);
                     putchar('b');
                     char str[128];
                     length = int_to_string(nbr, 2, str, 0);
@@ -109,7 +109,7 @@ int printf(const char* __restrict format, ...)
                 break;
             case 'd':
                 {
-                    int nbr = va_arg(parameters, long);
+                    long nbr = va_arg(parameters, long);
                     char str[128];
                     length = int_to_string(nbr, 10, str, 1);
                     print_data(str, length, maxsize);
@@ -118,7 +118,7 @@ int printf(const char* __restrict format, ...)
                 break;
             case 'x': case 'p':
                 {
-                    unsigned int nbr = va_arg(parameters, unsigned long);
+                    unsigned long nbr = va_arg(parameters, unsigned long);
                     putchar('x');
                     char str[128];
                     length = int_to_string(nbr, 16, str, 0);

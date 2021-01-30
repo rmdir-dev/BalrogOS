@@ -38,7 +38,7 @@ typedef struct free_block_info_t
 void init_kernel_heap()
 {
     kheap_start = KERNEL_VIRTUAL_START;
-    uintptr_t alloc = pmm_calloc(); 
+    uintptr_t alloc = pmm_calloc();
     vmm_set_page(0, kheap_start, alloc, PAGE_PRESENT | PAGE_WRITE);
 
     free_block_info block;

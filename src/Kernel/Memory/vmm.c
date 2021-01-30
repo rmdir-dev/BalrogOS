@@ -71,7 +71,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
     page_table* PDPT;
     page_table* PDT;
     page_table* PT;
-
+    
     PML4T = PHYSICAL_TO_VIRTUAL(PML4T);
 
     PDPT = PML4T[PML4T_OFFSET(virt_addr)];
@@ -87,7 +87,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
 
     PDPT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDPT));
     PDT = PDPT[PDPT_OFFSET(virt_addr)];
-    
+        
     if(!PDT)
     {
         if(!create)

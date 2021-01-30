@@ -95,8 +95,10 @@ _sector_two:
 
     mov ax, MEMORY_SIZE_KB
     mov bx, MEMORY_ENTRY_COUNT
-    call 0x8000
+
+    call _kernel
 
 %include "src/Bootloader/Memory/Memory.asm"
 
     times 512-($-$$ - 512) db 0
+_kernel:

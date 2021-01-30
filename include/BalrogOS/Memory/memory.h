@@ -5,6 +5,19 @@ ADDRESSES
 */
 #define KERNEL_OFFSET 0xFFFFFF8000000000
 
+/*
+Balrog Memory Map :
+
+    Start			    End			        Size		Use
+    -----------------------------------------------------------------------
+    0000000000000000	ffffff7fffffffff	 255.5TB	user
+    ffffff8000000000	ffffff8fffffffff	 64GB		kernel logical
+    ffffff9000000000	ffffffffffffffff	 448GB		Kernel virtual
+
+Max Memory size :
+    64GiB
+*/
+
 #include <stdint.h>
 
 /*
@@ -67,6 +80,7 @@ addr = 0x101000
 #define ONE_MiB 1048576
 #define ONE_kiB 1024
 
+#define BYTE_TO_GiB(bytes)  (bytes / ONE_GiB)
 #define BYTE_TO_MiB(bytes)  (bytes / ONE_MiB)
 #define BYTE_TO_KiB(bytes)  (bytes / ONE_kiB)
 

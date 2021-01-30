@@ -36,8 +36,9 @@ void initialize_kernel(void* SMAP, void* size)
     init_pmm(SMAPinfo, SMAPsize);
 
     /* Kernel Heap */
-    init_kernel_heap();
-    
+    init_kheap(); // Kernel Logical
+    init_vmheap();  // Kernel Virtual
+
     /*     KEYBOARD     */
     init_keyboard();
 

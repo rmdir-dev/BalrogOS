@@ -93,7 +93,7 @@ LongMode:
 Upper_half:
     mov rax, KERNEL_OFFSET      ; set rsp to higher half
     add rsp, rax                ; set rsp to higher half
-
+    
     mov rax, 0                  ; disable the lower 2MB pages
     mov [0x1000], qword rax
 

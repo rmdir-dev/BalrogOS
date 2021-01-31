@@ -59,10 +59,15 @@ void initialize_kernel(void* SMAP, void* size)
     int* new_var4 = vmalloc(sizeof(int));
     *new_var4 = 523;
     KERNEL_LOG_INFO("new var 4 addr : %p", new_var4);
+    int* new_var5 = vmalloc(sizeof(int) * 50);
+    *new_var5 = 523;
+    KERNEL_LOG_INFO("new var 5 addr : %p", new_var5);
     //KERNEL_LOG_INFO("new var 4 val : %d", *new_var4);
     vmfree(new_var);
+    //vmfree(new_var2);
     vmfree(new_var3);
     vmfree(new_var4);
+    vmfree(new_var5);
     KERNEL_LOG_OK("vmalloc test : done");
 
     /*     KEYBOARD     */

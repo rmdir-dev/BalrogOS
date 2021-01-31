@@ -131,6 +131,16 @@ void vmfree(void* ptr)
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
 
+    if(!block->_is_mmapped)
+    {
+        printf("double free()");
+        while (1)
+        {
+            /* code */
+        }
+    }
+    block->_is_mmapped = 0;
+
     //printf("block size : %d | nb addr : %p | vmh top : %p\n", block->_size, next_block, vmheap_current_top);
     // if previous block is present
     // then coalesce the two blocks
@@ -159,7 +169,10 @@ void vmfree(void* ptr)
                     free._non_arena = block->_non_arena;
                     free._is_mmapped = block->_is_mmapped;
                     free._present = block->_present;
-                    free._size += next_block->_size + sizeof(block_info); 
+                    free._size += next_block->_size + sizeof(block_info);
+
+                    free.next_free = next_block->next_free;
+                    free.previous_free = next_block->previous_free;
 
                     if(free.next_free < vmheap_current_top)
                     {

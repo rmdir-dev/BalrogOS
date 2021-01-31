@@ -26,21 +26,9 @@ typedef struct block_info_t
         uint16_t _is_mmapped : 1;
         uint16_t _present : 1;
     } __attribute__((packed));
+    struct block_info_t* next_free;
+    struct block_info_t* previous_free;
 }__attribute__((packed)) block_info;
-
-struct free_block_info_t;
-
-struct free_block_t
-{
-    struct free_block_info_t* next_free;
-    struct free_block_info_t* previous_free;
-} __attribute__((packed));
-
-typedef struct free_block_info_t
-{
-    struct block_info_t info;
-    struct free_block_t free_blocks;
-} __attribute__((packed)) free_block_info;
 
 void init_vmheap()
 {
@@ -50,42 +38,42 @@ void init_vmheap()
     uintptr_t alloc = pmm_calloc();
     vmm_set_page(0, vmheap_start, alloc, PAGE_PRESENT | PAGE_WRITE);
 
-    free_block_info block;
-    block.info.previous_chunk = 0;
-    block.info._is_mmapped = 0;
-    block.info._non_arena = 0;
-    block.info._present = 0;
-    block.info._size = 0x1000 - sizeof(block_info);
-    block.free_blocks.previous_free = KERNEL_VIRTUAL_START;
-    block.free_blocks.next_free = vmheap_current_top;
+    block_info block;
+    block.previous_chunk = 0;
+    block._is_mmapped = 0;
+    block._non_arena = 0;
+    block._present = 0;
+    block._size = 0x1000 - sizeof(block_info);
+    block.previous_free = KERNEL_VIRTUAL_START;
+    block.next_free = vmheap_current_top;
 
-    free_block_info* first_block = vmheap_start;
+    block_info* first_block = vmheap_start;
     *first_block = block;
 }
 
 void* vmalloc(size_t size)
 {
-    free_block_info* next_block = first_free;
-    
+    block_info* next_block = first_free;
     while(1)
     {
         if(next_block < vmheap_current_top)
         {
-            if(next_block->info._size >= size)
+            if(next_block->_size >= size)
             {
                 uint8_t present = 1;
                 
                 uint8_t* block = next_block;
 
-                if(next_block->info._size == size)
+                if(next_block->_size < size + sizeof(block_info))
                 {
-                    first_free = next_block->free_blocks.next_free;
+                    first_free = next_block->next_free;
+                    size = next_block->_size;
                     present = 0;
                 } else
                 {
                     size_t new_block_size = size + sizeof(block_info);
-                    next_block->info._size -= new_block_size;
-                    block += next_block->info._size + sizeof(block_info);
+                    next_block->_size -= new_block_size;
+                    block += next_block->_size + sizeof(block_info);
                 }
 
                 block_info* new_block = block;
@@ -96,9 +84,17 @@ void* vmalloc(size_t size)
                 new_block->_size = size;
                 new_block->_is_mmapped = 1;
 
+                next_block = block + sizeof(block_info) + size;
+
+                if(next_block < vmheap_current_top)
+                {
+                    next_block->previous_chunk = block;
+                    next_block->_present = 0;
+                }
+
                 return block + sizeof(block_info);
             }
-            next_block = next_block->free_blocks.next_free;
+            next_block = next_block->next_free;
         } else 
         {
             if(vmheap_current_top == KERNEL_VIRTUAL_TOP || size > 4086)
@@ -110,16 +106,16 @@ void* vmalloc(size_t size)
             uintptr_t alloc = pmm_calloc();
             vmm_set_page(0, vmheap_current_top, alloc, PAGE_PRESENT | PAGE_WRITE);
 
-            free_block_info block;
-            block.info.previous_chunk = next_block;
-            block.info._is_mmapped = 0;
-            block.info._non_arena = 0;
-            block.info._present = 0; // Base address of a page can't be coalesce
-            block.info._size = 0x1000 - sizeof(block_info);
-            block.free_blocks.previous_free = next_block;
-            block.free_blocks.next_free = vmheap_current_top + 0x1000;
+            block_info block;
+            block.previous_chunk = next_block;
+            block._is_mmapped = 0;
+            block._non_arena = 0;
+            block._present = 0; // Base address of a page can't be coalesce
+            block._size = 0x1000 - sizeof(block_info);
+            block.previous_free = next_block;
+            block.next_free = vmheap_current_top + 0x1000;
 
-            free_block_info* first_block = vmheap_current_top;
+            block_info* first_block = vmheap_current_top;
 
             *first_block = block;
 
@@ -133,7 +129,7 @@ void* vmalloc(size_t size)
 void vmfree(void* ptr)
 {
     block_info* block = ptr - sizeof(block_info);
-    free_block_info* next_block =  ptr + block->_size;
+    block_info* next_block =  ptr + block->_size;
 
     //printf("block size : %d | nb addr : %p | vmh top : %p\n", block->_size, next_block, vmheap_current_top);
     // if previous block is present
@@ -151,38 +147,41 @@ void vmfree(void* ptr)
         if(next_block < vmheap_current_top)
         {
             // if the next block is mapped
-            if(!next_block->info._is_mmapped)
+            if(!next_block->_is_mmapped)
             {
                 // if block is smaller than 4096 bytes && contiguous
                 // then coalesce the two blocks
                 if(block->_size + sizeof(block_info) < 0x1000 && contiguous)
                 {
-                    free_block_info free;
-                    free.info = *block;
-                    free.info._size += next_block->info._size + sizeof(block_info); 
+                    block_info free;
 
-                    free.free_blocks = next_block->free_blocks;
-                    if(free.free_blocks.next_free < vmheap_current_top)
+                    free.previous_chunk = block->previous_chunk;
+                    free._non_arena = block->_non_arena;
+                    free._is_mmapped = block->_is_mmapped;
+                    free._present = block->_present;
+                    free._size += next_block->_size + sizeof(block_info); 
+
+                    if(free.next_free < vmheap_current_top)
                     {
-                        free.free_blocks.next_free->free_blocks.previous_free = block;
+                        free.next_free->previous_free = block;
                     }
-                    free.free_blocks.previous_free->free_blocks.next_free = block;
+                    free.previous_free->next_free = block;
 
-                    free_block_info* new_free_block = block;
+                    block_info* new_free_block = block;
                     *new_free_block = free;
                 } else 
                 {
-                    free_block_info* free_block = block;
-                    free_block->free_blocks.next_free = next_block;
+                    block_info* free_block = block;
+                    free_block->next_free = next_block;
                     break;
                 }
             }
             contiguous = 0;
-            next_block = ((uint8_t*)next_block) + (next_block->info._size + sizeof(block_info));
+            next_block = ((uint8_t*)next_block) + (next_block->_size + sizeof(block_info));
         } else
         {
-            free_block_info* free_block = block;
-            free_block->free_blocks.next_free = vmheap_current_top;
+            block_info* free_block = block;
+            free_block->next_free = vmheap_current_top;
             break;
         }
     }

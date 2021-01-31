@@ -43,25 +43,26 @@ void initialize_kernel(void* SMAP, void* size)
     //KERNEL_LOG_OK("Kernel heap initialization : done");
 
     KERNEL_LOG_INFO("vmalloc test : waiting...");
-    uint8_t* new_var = vmalloc(4086);
+    int* new_var = vmalloc(sizeof(int));
     *new_var = 55;
-    KERNEL_LOG_INFO("new var addr : %p", new_var);
-    KERNEL_LOG_INFO("new var val : %d", *new_var);
-    long* new_var2 = vmalloc(sizeof(long));
+    KERNEL_LOG_INFO("new var 1 addr : %p", new_var);
+    //KERNEL_LOG_INFO("new var 1 val : %d", *new_var);
+    int* new_var2 = vmalloc(sizeof(int));
     *new_var2 = 7356;
-    KERNEL_LOG_INFO("new var addr : %p", new_var2);
-    KERNEL_LOG_INFO("new var val : %d", *new_var2);
-    int* new_var3 = vmalloc(sizeof(int));
+    KERNEL_LOG_INFO("new var 2 addr : %p", new_var2);
+    //KERNEL_LOG_INFO("new var 2 val : %d", *new_var2);
+    int* new_var3 = vmalloc(4010);
     *new_var3 = 756;
-    KERNEL_LOG_INFO("new var addr : %p", new_var3);
-    KERNEL_LOG_INFO("new var val : %d", *new_var3);
+    KERNEL_LOG_INFO("new var 3 addr : %p", new_var3);
+    //KERNEL_LOG_INFO("new var 3 val : %d", *new_var3);
     vmfree(new_var2);
+    int* new_var4 = vmalloc(sizeof(int));
+    *new_var4 = 523;
+    KERNEL_LOG_INFO("new var 4 addr : %p", new_var4);
+    //KERNEL_LOG_INFO("new var 4 val : %d", *new_var4);
     vmfree(new_var);
     vmfree(new_var3);
-    new_var3 = vmalloc(sizeof(int));
-    *new_var3 = 523;
-    KERNEL_LOG_INFO("new var addr : %p", new_var3);
-    KERNEL_LOG_INFO("new var val : %d", *new_var3);
+    vmfree(new_var4);
     KERNEL_LOG_OK("vmalloc test : done");
 
     /*     KEYBOARD     */

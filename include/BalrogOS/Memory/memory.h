@@ -11,8 +11,8 @@ Balrog Memory Map :
     Start			    End			        Size		Use
     -----------------------------------------------------------------------
     0000000000000000	ffffff7fffffffff	 255.5TB	user
-    ffffff8000000000	ffffff8fffffffff	 64GB		kernel logical
-    ffffff9000000000	ffffffffffffffff	 448GB		Kernel virtual
+    ffffff8000000000	ffffff8fffffffff	 128GB		kernel logical
+    ffffffa000000000	ffffffffffffffff	 384GB		Kernel virtual
 
 Max Memory size :
     64GiB

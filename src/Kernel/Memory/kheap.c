@@ -13,7 +13,7 @@ void init_kheap()
     kheap_start = &kernel_start;
     kheap_end = PHYSICAL_TO_VIRTUAL(0x9fc00);
 
-    KERNEL_LOG_INFO("kernel heap size = %dKiB", BYTE_TO_KiB((uint64_t)(kheap_end - kheap_start)));
+    KERNEL_LOG_INFO("kernel logical heap size = %dKiB", BYTE_TO_KiB((uint64_t)(kheap_end - kheap_start)));
 }
 
 void* kmalloc(size_t size)

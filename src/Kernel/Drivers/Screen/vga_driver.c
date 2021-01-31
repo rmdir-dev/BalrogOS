@@ -184,7 +184,7 @@ void vga_init()
 
 void vga_write(const char* data, size_t size)
 {
-	if(vga_row == 0)
+	if(vga_row == 0 && vga_column ==0)
 	{
 		vga_clear();
 	}
@@ -217,8 +217,8 @@ void vga_write(const char* data, size_t size)
 			vga_buffer[index] = vga_entry(data[i], vga_color);
 
 			increase_vga_column();
-		}
 			break;
+		}
 		}
 	}
 }

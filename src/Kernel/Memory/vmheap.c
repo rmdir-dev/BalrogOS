@@ -5,7 +5,7 @@
 
 /*
 Kernel heap start at KERNEL_OFFSET + 0x2000000000 (128GiB)
-Total kernel heap = 512 GiB - 128GiB = 384
+Total kernel heap = 512 GiB - 128GiB = 384GiB
 */
 
 #define KERNEL_VIRTUAL_START    0xffffffa000000000

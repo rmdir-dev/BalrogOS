@@ -4,6 +4,7 @@
 #include "BalrogOS/Memory/vmm.h"
 
 uint64_t total_memory = 0;
+uint64_t total_memory_used = 0;
 uint64_t total_usable_memory = 0;
 
 /*
@@ -24,6 +25,7 @@ void pmm_free(uintptr_t* addr)
     addr = PHYSICAL_TO_VIRTUAL(addr);
     *addr = last_free_addr;
     last_free_addr = addr;
+    total_memory_used -= 0x1000;
 }
 
 uintptr_t* pmm_alloc()
@@ -51,6 +53,7 @@ uintptr_t* pmm_alloc()
 
         next_addr += PAGE_SIZE;
     }
+    total_memory_used += 0x1000;
     return p;
 }
 

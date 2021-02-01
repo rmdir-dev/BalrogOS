@@ -14,34 +14,36 @@ page_table* KernelPML4T;
 
 static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
 {
-    KERNEL_LOG_FAIL("Page fault");
+    printf(_KERNEL_LOG_FAILURE_MSG);
 
     if(regs->error_code & 0x02)
     {
-        KERNEL_LOG_FAIL("read from");
+        printf("read from ");
     } else if(regs->error_code & 0x0e)
     {
-        KERNEL_LOG_FAIL("execute code from");
+        printf("execute code from ");
     } else 
     {
-        KERNEL_LOG_FAIL("write to");
+        printf("write to ");
     }
 
     if(regs->error_code & 0x08)
     {
-        KERNEL_LOG_FAIL("user mode");
+        printf("user mode ");
     } else
     {
-        KERNEL_LOG_FAIL("kernel mode");
+        printf("kernel mode ");
     }
 
     if(regs->error_code & 0x01)
     {
-        KERNEL_LOG_FAIL("PROTECTION FAULT");
+        printf("PROTECTION FAULT ");
     } else 
     {
-        KERNEL_LOG_FAIL("PAGE MISS");
-    } 
+        printf("PAGE MISS ");
+    }
+
+    printf("0%x\n", regs->rax);
     
     while(1)
     {}

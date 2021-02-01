@@ -7,15 +7,22 @@ ADDRESSES
 
 /*
 Balrog Memory Map :
-
     Start			    End			        Size		Use
     -----------------------------------------------------------------------
     0000000000000000	ffffff7fffffffff	 255.5TB	user
     ffffff8000000000	ffffff8fffffffff	 128GB		kernel logical
     ffffffa000000000	ffffffffffffffff	 384GB		Kernel virtual
 
+Balrog Process memory map :
+    Start			    End			        Size		Use
+    -----------------------------------------------------------------------
+    0000000000400000	000055c0603d2fff	 85TB	    code
+    000055c0603d3000	00007ffd0d812000	 42TB		heap
+    2MB buffer
+    00007ffd0da12000	00007ffd0e212000	 8MB		stack
+
 Max Memory size :
-    64GiB
+    128GiB
 */
 
 #include <stdint.h>

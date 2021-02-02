@@ -3,15 +3,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "BalrogOS/Memory/kheap.h"
 
 rbt_node* rbt_create_node(rbt_node* parent, uint64_t key)
 {
-    //TODO first implement malloc!
-    rbt_node* ret;// = malloc(sizeof(rbt_node));
-
-    printf("!!!!! MALLOC REQUIRE !!!!!\n");
-    while(1)
-    {}
+    rbt_node* ret = vmalloc(sizeof(rbt_node));
 
     ret->key = key;
     ret->color = RBT_RED;
@@ -310,18 +306,16 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
             {
                 promoted->color ^= RBT_RED;
             }
-            //free(to_delete);
-            printf("!!!!! REQUIRE FREE !!!!!\n");
-            while(1){}
+            vmfree(to_delete);
+
             return;
         } else 
         {
             /*
             */
             unbalanced_parent = to_delete->parent;
-            //free(to_delete);
-            printf("!!!!! REQUIRE FREE !!!!!\n");
-            while(1){}
+            vmfree(to_delete);
+
             if(unbalanced_parent)
             {
                 unbalanced_parent->children[dir] = NULL;

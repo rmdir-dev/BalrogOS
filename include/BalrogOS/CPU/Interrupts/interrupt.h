@@ -11,7 +11,8 @@
 
 #define TOTAL_NBR_INTERRUPT 256
 
-#define INT_PAGE_FAULT  0x0e
+#define INT_GENERAL_PROTECTION_FAULT    0x0d
+#define INT_PAGE_FAULT                  0x0e
 
 #define INT_IRQ_0       0x20
 #define INT_IRQ_1       0x21

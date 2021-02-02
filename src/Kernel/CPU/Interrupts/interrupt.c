@@ -97,7 +97,7 @@ interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
     {
         printf("interrupt %d has no handler!\n", stack_frame->interrupt_no);
 
-        while(1){}
+        //while(1){}
     }
     int_handlers[stack_frame->interrupt_no](stack_frame);
     return stack_frame;

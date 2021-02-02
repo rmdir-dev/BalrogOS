@@ -10,20 +10,45 @@
 #include "BalrogOS/Memory/pmm.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/CPU/Scheduler/Scheduler.h"
+#include "BalrogOS/Tasking/tasking.h"
+#include "BalrogOS/Debug/exception.h"
+
+void test()
+{
+    while(1)
+    {
+        printf("test\n");
+        for(uint64_t i = 0; i < 10000000; i++)
+        {
+        }
+    }
+}
+
+void test2()
+{
+    while(1)
+    {
+        printf("something else\n");
+        for(uint64_t i = 0; i < 10000000; i++)
+        {  
+        }
+    }
+}
 
 void initialize_kernel(void* SMAP, void* size)
 {
     disable_interrupt();
     /*      SCREEN      */
     vga_init();
-    printf("Kernel loading : \n");
+    KERNEL_LOG_OK("Kernel loading :");
     KERNEL_LOG_OK("VGA Driver : done");
 
     /*   INTERRRUPTS    */
     KERNEL_LOG_INFO("Interrrupts : waiting...");
     init_interrupt();
     KERNEL_LOG_OK("Interrupt initialization : done");
-    //init_irq();
+
+    init_exception();
 
     /*      MEMORY      */
     SMAP_entry* SMAPinfo = PHYSICAL_TO_VIRTUAL(SMAP);
@@ -47,6 +72,10 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*     KEYBOARD     */
     init_keyboard();
+
+    push_process("test", test);
+    push_process("test2", test2);
+    //KERNEL_LOG_OK("test process no fault");
 
     enable_interrupt();
 }

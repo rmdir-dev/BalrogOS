@@ -1,6 +1,7 @@
 ; Interupts service routines.
 section .text
     extern isr_common
+    extern schedule
 isr0:
     cli
     push 0
@@ -195,9 +196,9 @@ isr31:
     
 isr32:
     cli
-    push 0
-    push 32
-    jmp isr_common
+    ;push 0
+    ;push 32
+    jmp schedule
     
 isr33:
     cli

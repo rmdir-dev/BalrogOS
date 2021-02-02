@@ -71,7 +71,7 @@ OPTIMIZATION =
 ########################################################
 #	COMPILER FLAGS
 ########################################################
-CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib
+CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib -fdiagnostics-color=always
 
 ########################################################
 #	LINKER

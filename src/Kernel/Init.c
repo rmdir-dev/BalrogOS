@@ -17,21 +17,32 @@ void test()
 {
     while(1)
     {
+        asm volatile("cli");
         printf("test\n");
+        asm volatile("sti");
         for(uint64_t i = 0; i < 10000000; i++)
         {
         }
+        asm volatile("cli");
+        printf("and loop now! :D\n");
+        asm volatile("sti");
     }
 }
 
 void test2()
 {
+    uint64_t test = 0;
     while(1)
     {
-        printf("something else\n");
+        asm volatile("cli");
+        printf("something else %d | 0%p\n", test++, &test);
+        asm volatile("sti");
         for(uint64_t i = 0; i < 10000000; i++)
         {  
         }
+        asm volatile("cli");
+        printf("hey I'm there\n");
+        asm volatile("sti");
     }
 }
 

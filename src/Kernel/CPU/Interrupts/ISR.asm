@@ -198,7 +198,9 @@ isr32:
     cli
     ;push 0
     ;push 32
-    jmp schedule
+    ;jmp isr_common
+    call schedule
+    iretq
     
 isr33:
     cli

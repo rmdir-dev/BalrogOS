@@ -10,70 +10,75 @@ process* current_running = NULL;
 
 uint8_t loop = 0;
 
-static inline void _round_robin()
-{
-    asm volatile("add $24, %rsp");
-    asm volatile("push %r15");
-    asm volatile("push %r14");
-    asm volatile("push %r13");
-    asm volatile("push %r12");
-    asm volatile("push %r11");
-    asm volatile("push %r10");
-    asm volatile("push %r9");
-    asm volatile("push %r8");
-    asm volatile("push %rbp");
-    asm volatile("push %rdi");
-    asm volatile("push %rsi");
-    asm volatile("push %rdx");
-    asm volatile("push %rcx");
-    asm volatile("push %rbx");
-    asm volatile("push %rax");
-    asm volatile("mov %%rsp, %%rax":"=a"(current_running->rsp));
-    current_running = current_running->next;
-    asm volatile("out %%al, %%dx": :"d"(0x20), "a"(0x20));
-    asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
-    asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
-    asm volatile("pop %rax");
-    asm volatile("pop %rbx");
-    asm volatile("pop %rcx");
-    asm volatile("pop %rdx");
-    asm volatile("pop %rsi");
-    asm volatile("pop %rdi");
-    asm volatile("pop %rbp");
-    asm volatile("pop %r8");
-    asm volatile("pop %r9");
-    asm volatile("pop %r10");
-    asm volatile("pop %r11");
-    asm volatile("pop %r12");
-    asm volatile("pop %r13");
-    asm volatile("pop %r14");
-    asm volatile("pop %r15");
-    //while(loop){}
-    //loop = 1;
-    asm volatile("iretq");
-}
-
 static void _exec()
 {
-    asm volatile("out %%al, %%dx": :"d"(0x20), "a"(0x20));
+    current_running->exec = 1;
     asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
     asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
-    asm volatile("pop %rax");
-    asm volatile("pop %rbx");
-    asm volatile("pop %rcx");
-    asm volatile("pop %rdx");
-    asm volatile("pop %rsi");
-    asm volatile("pop %rdi");
+    asm volatile("mov %rbp, %rax");
     asm volatile("pop %rbp");
-    asm volatile("pop %r8");
-    asm volatile("pop %r9");
-    asm volatile("pop %r10");
-    asm volatile("pop %r11");
-    asm volatile("pop %r12");
-    asm volatile("pop %r13");
-    asm volatile("pop %r14");
+    asm volatile("mov %rax, %rbp");
     asm volatile("pop %r15");
-    asm volatile("iretq");
+    asm volatile("pop %r14");
+    asm volatile("pop %r13");
+    asm volatile("pop %r12");
+    asm volatile("pop %r11");
+    asm volatile("pop %r10");
+    asm volatile("pop %r9");
+    asm volatile("pop %r8");
+    asm volatile("pop %rdi");
+    asm volatile("pop %rsi");
+    asm volatile("out %%al, %%dx": :"d"(0x20), "a"(0x20));
+    asm volatile("pop %rdx");
+    asm volatile("pop %rcx");
+    asm volatile("pop %rbx");
+    asm volatile("pop %rax");
+    asm volatile("push %%rax": :"a"(current_running->stack_top));
+}
+
+static void _round_robin()
+{
+    asm volatile("push %rax");
+    asm volatile("push %rbx");
+    asm volatile("push %rcx");
+    asm volatile("push %rdx");
+    asm volatile("push %rsi");
+    asm volatile("push %rdi");
+    asm volatile("push %r8");
+    asm volatile("push %r9");
+    asm volatile("push %r10");
+    asm volatile("push %r11");
+    asm volatile("push %r12");
+    asm volatile("push %r13");
+    asm volatile("push %r14");
+    asm volatile("push %r15");
+    asm volatile("push %rbp");
+    asm volatile("mov %%rsp, %%rax":"=a"(current_running->rsp));
+    current_running = current_running->next;
+    if(!current_running->exec)
+    {
+        _exec();
+        return;
+    }
+    asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
+    asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
+    asm volatile("pop %rbp");
+    asm volatile("pop %r15");
+    asm volatile("pop %r14");
+    asm volatile("pop %r13");
+    asm volatile("pop %r12");
+    asm volatile("pop %r11");
+    asm volatile("pop %r10");
+    asm volatile("pop %r9");
+    asm volatile("pop %r8");
+    asm volatile("pop %rdi");
+    asm volatile("pop %rsi");
+    asm volatile("out %%al, %%dx": :"d"(0x20), "a"(0x20));
+    asm volatile("pop %rdx");
+    asm volatile("pop %rcx");
+    asm volatile("pop %rbx");
+    asm volatile("pop %rax");
+
 }
 
 /*
@@ -81,20 +86,21 @@ Will be use as temporary test scheduler.
 */
 static interrupt_regs* round_robin_shedule(interrupt_regs* stack_frame)
 {
-    printf("0%x \n", stack_frame->interrupt_no);
     if(process_queue != NULL)
     {
         if(current_running != NULL)
         {
+            
             _round_robin();
         } else 
         {
+            
             current_running = process_queue;
             _exec();
         }
     } else 
     {
-        printf("Schedule work! 0%x\n", stack_frame->rflags);
+        printf("Schedule work! 0%x\n", stack_frame->rsp);
         irq_end(INT_IRQ_0);
     }
     return stack_frame;

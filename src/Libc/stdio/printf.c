@@ -116,6 +116,15 @@ int printf(const char* __restrict format, ...)
                     index++;
                 }
                 break;
+            case 'u':
+                {
+                    long nbr = va_arg(parameters, unsigned long);
+                    char str[128];
+                    length = int_to_string(nbr, 10, str, 0);
+                    print_data(str, length, maxsize);
+                    index++;
+                }
+                break;
             case 'x': case 'p':
                 {
                     unsigned long nbr = va_arg(parameters, unsigned long);

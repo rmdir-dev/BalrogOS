@@ -199,6 +199,7 @@ isr32:
     ;push 0
     ;push 32
     ;jmp isr_common
+    ; MUST BE A CALL !!!
     call schedule
     iretq
     

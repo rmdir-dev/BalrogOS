@@ -32,12 +32,24 @@ isr_common:
     push qword 0
     popf
 
+    mov rax, [rsp + 152]
+    and rax, 3 << 12
+    jz .kernel_mode
+    swapgs
+
+.kernel_mode:
     mov rdi, rsp
     call kernel_interrupt_handler
-
     mov rdi, rax
+
     mov rsp, rdi
 
+    mov rax, [rsp + 152]
+    and rax, 3 << 12
+    jz .kernel_return
+    swapgs
+
+.kernel_return
     pop rax
     pop rbx
     pop rcx

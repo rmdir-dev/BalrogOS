@@ -12,6 +12,7 @@
 #include "BalrogOS/CPU/Scheduler/Scheduler.h"
 #include "BalrogOS/Tasking/tasking.h"
 #include "BalrogOS/Debug/exception.h"
+#include "BalrogOS/CPU/GDT/gdt.h"
 
 void test()
 {
@@ -37,7 +38,7 @@ void test2()
         asm volatile("cli");
         printf("something else %d | 0%p\n", test++, &test);
         asm volatile("sti");
-        for(uint64_t i = 0; i < 10000000; i++)
+        for(uint64_t i = 0; i < 100000000; i++)
         {  
         }
         asm volatile("cli");
@@ -86,7 +87,10 @@ void initialize_kernel(void* SMAP, void* size)
 
     push_process("test", test);
     push_process("test2", test2);
+    //push_process("test2", test2);
     //KERNEL_LOG_OK("test process no fault");
+
+    init_gdt();
 
     enable_interrupt();
 }

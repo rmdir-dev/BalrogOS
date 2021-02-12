@@ -80,7 +80,6 @@ process* create_process(char* name, uintptr_t addr)
     */
     proc->stack_top = PROCESS_STACK_TOP - 1;
     proc->rsp = PROCESS_STACK_TOP - sizeof(task_register) - 1;
-    printf("0%x\n", proc->rsp);
     virt = PHYSICAL_TO_VIRTUAL(((uint8_t*)phys) + 4095 - sizeof(task_register));
     
     task_register* stack = virt;
@@ -96,7 +95,7 @@ process* create_process(char* name, uintptr_t addr)
 
     Set trap flag and 1 flag (reserved)
     */
-    stack->rflags = 0x00200202;
+    stack->rflags = 0x00000200;
     stack->cs = 0x8;
     stack->rip = proc->rip;
     stack->r15 = 0;

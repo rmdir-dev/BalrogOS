@@ -2,6 +2,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Interrupts/irq.h"
 #include "BalrogOS/Tasking/tasking.h"
+#include "BalrogOS/CPU/TSS/tss.h"
 #include <stdio.h>
 
 process* process_queue = NULL;
@@ -10,14 +11,17 @@ process* current_running = NULL;
 
 uint8_t loop = 0;
 
+extern tss_entry tss;
+
 static void _exec()
 {
     current_running->exec = 1;
     asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
     asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
-    asm volatile("mov %rbp, %rax");
+    tss.rsp0 = current_running->rsp;
+    //asm volatile("mov %rbp, %rax");
     asm volatile("pop %rbp");
-    asm volatile("mov %rax, %rbp");
+    //asm volatile("mov %rax, %rbp");
     asm volatile("pop %r15");
     asm volatile("pop %r14");
     asm volatile("pop %r13");
@@ -55,6 +59,7 @@ static void _round_robin()
     asm volatile("push %rbp");
     asm volatile("mov %%rsp, %%rax":"=a"(current_running->rsp));
     current_running = current_running->next;
+    tss.rsp0 = current_running->rsp;
     if(!current_running->exec)
     {
         _exec();

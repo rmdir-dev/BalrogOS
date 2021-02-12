@@ -47,6 +47,8 @@
 #define   INT_APIC_ERROR     0x45
 #define   INT_APIC_SPUR      0xFF
 
+#define INT_SYSCALL 0x80
+
 typedef struct interrupt_registers
 {
     //////////////////////////////////////////////////////////

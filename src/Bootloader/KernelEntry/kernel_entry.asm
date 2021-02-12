@@ -88,6 +88,7 @@ LongMode:
     mov gs, eax
 
     mov rax, qword Upper_half   ; Upper_half address into rax
+                                ; qword because it needs the virtual address of Upper_half
     jmp rax
 
 Upper_half:
@@ -110,9 +111,9 @@ Upper_half:
     mov es, rax
 
     mov rax, qword .reload_cs   ; ensure that we're in higher half
-    push qword 0x8
-    push rax
-    retfq
+    push qword 0x8              ; by reloading the code segment
+    push rax                    ; 0x8 = code segment index in the GDT
+    retfq                       ; does a long jump CODE:.reload_cs
 .reload_cs:
 
     mov rax, qword _KernelEntry ; call to kernel entry
@@ -120,8 +121,6 @@ Upper_half:
     hlt                         ; halt
     sti                         ; enable interrupt
     ret
-
-;%include "src/Bootloader/IO/System/print.asm"
 
 IN_x64_PROTECTED_MODE_MSG:
     db "[LOAD] x64 protected mode",0

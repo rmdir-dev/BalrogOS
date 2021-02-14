@@ -100,7 +100,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
         proc->rip = PROCESS_TEXT;
         stack->ss = SEG_UDATA | 3;
         stack->rsp = proc->stack_top;
-        stack->rflags = RFLAG_IF | RFLAG_IOPL_3;
+        stack->rflags = RFLAG_IF;
         stack->cs = SEG_UCODE | 3;
     } else
     {

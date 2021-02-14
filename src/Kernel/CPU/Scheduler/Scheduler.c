@@ -20,10 +20,7 @@ static void _exec()
     current_running->exec = 1;
     asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
     asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
-    //tss.rsp0 = current_running->rsp;
-    //asm volatile("mov %rbp, %rax");
     asm volatile("pop %rbp");
-    //asm volatile("mov %rax, %rbp");
     asm volatile("pop %r15");
     asm volatile("pop %r14");
     asm volatile("pop %r13");
@@ -39,7 +36,6 @@ static void _exec()
     asm volatile("pop %rcx");
     asm volatile("pop %rbx");
     asm volatile("pop %rax");
-    //asm volatile("push %%rax": :"a"(current_running->stack_top));
     asm volatile("iretq");
 }
 
@@ -62,7 +58,6 @@ static void _round_robin()
     asm volatile("push %rbp");
     asm volatile("mov %%rsp, %%rax":"=a"(current_running->rsp));
     current_running = current_running->next;
-    //tss.rsp0 = current_running->rsp;
     printf("rsp : 0%p \n", current_running->rsp);
     if(!current_running->exec)
     {

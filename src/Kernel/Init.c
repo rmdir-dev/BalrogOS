@@ -33,6 +33,7 @@ void test()
 void test2()
 {
     uint64_t test = 0;
+
     while(1)
     {
         asm volatile("cli");
@@ -95,12 +96,10 @@ void initialize_kernel(void* SMAP, void* size)
     init_keyboard();
 
     push_process("test2", test_user_mode, 3);
-    push_process("test2", test_user_mode, 3);
-    push_process("test2", test_user_mode, 3);
-    push_process("test2", test_user_mode, 3);
     push_process("test", test, 0);
-    push_process("test2", test_user_mode, 0);
+    push_process("test2", test_user_mode, 3);
     push_process("test2", test2, 0);
+    push_process("test2", test_user_mode, 3);
     //KERNEL_LOG_OK("test process no fault");
 
     init_gdt();

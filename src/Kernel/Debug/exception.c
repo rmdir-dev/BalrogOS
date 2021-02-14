@@ -52,7 +52,7 @@ static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
         printf("write to ");
     }
 
-    if(regs->error_code & 0x08)
+    if(regs->error_code & 0x04)
     {
         printf("user mode ");
     } else

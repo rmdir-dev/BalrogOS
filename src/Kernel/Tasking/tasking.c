@@ -95,18 +95,22 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     
     task_register* stack = virt;
 
+    /*
+    Don't set IOPL to 3
+    IOPL 3 mean that RING 3 will be able to use cli and other kind of restricted instruction.
+    */
+    stack->rflags = RFLAG_IF;
+
     if(mode == 3)
     {
         proc->rip = PROCESS_TEXT;
         stack->ss = SEG_UDATA | 3;
         stack->rsp = proc->stack_top;
-        stack->rflags = RFLAG_IF;
         stack->cs = SEG_UCODE | 3;
     } else
     {
         stack->ss = SEG_KDATA;
         stack->rsp = proc->stack_top;
-        stack->rflags = RFLAG_IF;
         stack->cs = SEG_KCODE;
     }
 

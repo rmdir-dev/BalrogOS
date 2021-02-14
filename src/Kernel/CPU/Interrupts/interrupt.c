@@ -117,9 +117,3 @@ interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
     
     return stack_frame;
 }
-
-void user_mode_print()
-{
-    printf("from user mode !\n");
-    //while(1){}
-}

@@ -34,13 +34,6 @@ isr_common:
     push qword 0
     popf
 
-    ; check if the RFLAGS RING 3 is set (user mode)
-    mov rax, [rsp + 152]
-    and rax, 3 << 12
-    jz .kernel_mode     ; if in usermode then swapgs
-    swapgs
-
-.kernel_mode:
     mov rdi, rsp
     call kernel_interrupt_handler
     mov rdi, rax
@@ -50,13 +43,6 @@ isr_common:
 _isr_return:
     mov rsp, rdi
 
-    ; check if we're comming from user mode
-    mov rax, [rsp + 152]
-    and rax, 3 << 12
-    jz .kernel_return
-    swapgs
-
-.kernel_return:
     pop rax     ; recover all the register state
     pop rbx
     pop rcx

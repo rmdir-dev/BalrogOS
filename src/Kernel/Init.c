@@ -51,6 +51,7 @@ void test2()
 void test_user_mode()
 {
     uint64_t test = 0;
+
     while(1)
     {
         test++;

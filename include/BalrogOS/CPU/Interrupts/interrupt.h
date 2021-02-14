@@ -100,6 +100,10 @@ void init_interrupt();
 */
 interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler handler);
 
-#define disable_interrupt() asm("cli")
+void set_interrupt_routine(uint32_t id, uintptr_t handler);
 
-#define enable_interrupt() asm("sti")
+void _isr_return(interrupt_regs* stack);
+
+#define disable_interrupt() asm volatile("cli")
+
+#define enable_interrupt() asm volatile("sti")

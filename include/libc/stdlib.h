@@ -6,8 +6,25 @@
 extern "C" {
 #endif
 
+/**
+ * @brief 
+ * 
+ */
 void abort();
+
+/**
+ * @brief 
+ * 
+ * @param pointer 
+ */
 void free(void* pointer);
+
+/**
+ * @brief 
+ * 
+ * @param memory_size 
+ * @return void* 
+ */
 void* malloc(size_t memory_size);
 
 #define NULL    0

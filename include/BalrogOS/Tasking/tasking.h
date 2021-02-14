@@ -7,6 +7,9 @@
 #define PROCESS_STATE_ZOMBIE    1
 #define PROCESS_STATE_DEAD      2
 
+#define PROCESS_USER_MODE       3
+#define PROCESS_KERNEL_MODE     0
+
 typedef struct process_t
 {
     struct process_t* prev;
@@ -31,4 +34,11 @@ typedef struct process_t
     struct process_t* next;
 } process;
 
-process* create_process(char* name, uintptr_t func);
+/**
+ * @brief Create a process object
+ * 
+ * @param name 
+ * @param func 
+ * @return process* 
+ */
+process* create_process(char* name, uintptr_t func, uint8_t mode);

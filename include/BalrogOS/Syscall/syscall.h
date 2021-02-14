@@ -1,6 +1,7 @@
 #pragma once
 
-/*
-Initialize system calls
-*/
+/**
+ * @brief Initialize system calls
+ * 
+ */
 void init_syscalls();

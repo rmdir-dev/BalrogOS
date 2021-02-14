@@ -81,6 +81,7 @@ void init_interrupt()
         idt_ptr.address = (uint64_t)gates;
         idt_ptr.length = sizeof(gates) - 1;
     }
+
     _load_idt(&idt_ptr);
 }
 
@@ -91,14 +92,34 @@ interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler hand
     return old;
 }
 
+void set_interrupt_routine(uint32_t id, uintptr_t handler)
+{
+    gates[id].offset_low = handler & 0xffff;
+    gates[id].offset_mid = (handler >> 16) & 0xffff;
+    gates[id].offset_hight = (handler >> 32) & 0xffffffff;
+}
+
 interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
 {
+    /*
+        Check if there is an handler installed on the int_handler array
+    */
     if(!int_handlers[stack_frame->interrupt_no])
     {
+        // if not print a message and loop
         printf("interrupt %d has no handler!\n", stack_frame->interrupt_no);
+        printf("RFLAGS 0%x \n", stack_frame->rflags);
 
-        //while(1){}
+        while(1){}
     }
+    /* execute ISR */
     int_handlers[stack_frame->interrupt_no](stack_frame);
+    
     return stack_frame;
+}
+
+void user_mode_print()
+{
+    printf("from user mode !\n");
+    //while(1){}
 }

@@ -3,6 +3,8 @@
 #include "BalrogOS/Memory/pmm.h"
 #include "BalrogOS/Memory/vmm.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/CPU/GDT/gdt.h"
+#include "BalrogOS/CPU/RFLAGS/rflag.h"
 #include <string.h>
 
 #define PROCESS_STACK_TOP   0x00007ffd0e212000
@@ -45,7 +47,14 @@ typedef struct task_register_t
     //////////////////////////////////////////////////////////
 } __attribute__((packed)) task_register;
 
-process* create_process(char* name, uintptr_t addr)
+/**
+ * @brief Create a process object 
+ * 
+ * @param name 
+ * @param addr 
+ * @return process* 
+ */
+process* create_process(char* name, uintptr_t addr, uint8_t mode)
 {
     process* proc = vmalloc(sizeof(process));
     memset(proc, 0, sizeof(process));
@@ -56,12 +65,14 @@ process* create_process(char* name, uintptr_t addr)
     proc->PML4T = pmm_calloc();
     proc->exec = 0;
     uintptr_t* virt = PHYSICAL_TO_VIRTUAL(proc->PML4T); // Kernel space
-    virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE;
+    virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
     /*
     TEXT
     */
+    uintptr_t text = pmm_calloc();
     uintptr_t phys = VIRTUAL_TO_PHYSICAL(addr);
-    vmm_set_page(proc->PML4T, PROCESS_TEXT, phys, PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_TEXT, text, PAGE_USER | PAGE_PRESENT);
+    memcpy(PHYSICAL_TO_VIRTUAL(text), addr, 4096);
 
     /*
     HEAP
@@ -84,19 +95,21 @@ process* create_process(char* name, uintptr_t addr)
     
     task_register* stack = virt;
 
-    stack->ss = 0;
-    stack->rsp = proc->stack_top;
-    /*
-    RFLAGS
-    Bits	63..32	31	30	29	28	27	26	25	24	23	22	21	20	19	18	17	16	15	14	13..12	11	10	9	8	7	6	5	4	3	2	1	0
-    Drapeaux	-	-	-	-	-	-	-	-	-	-	-	ID	VIP	VIF	AC	VM	RF	0	NT	IOPL	OF	DF	IF	TF	SF	ZF	0	AF	0	PF	1	CF
-                0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   1   0
-                    |           |   |           |   |           |   |           |   |           |   |           |   |           |   |           |
+    if(mode == 3)
+    {
+        proc->rip = PROCESS_TEXT;
+        stack->ss = SEG_UDATA | 3;
+        stack->rsp = proc->stack_top;
+        stack->rflags = RFLAG_IF | RFLAG_IOPL_3;
+        stack->cs = SEG_UCODE | 3;
+    } else
+    {
+        stack->ss = SEG_KDATA;
+        stack->rsp = proc->stack_top;
+        stack->rflags = RFLAG_IF;
+        stack->cs = SEG_KCODE;
+    }
 
-    Set trap flag and 1 flag (reserved)
-    */
-    stack->rflags = 0x00000200;
-    stack->cs = 0x8;
     stack->rip = proc->rip;
     stack->r15 = 0;
     stack->r14 = 0;
@@ -106,7 +119,7 @@ process* create_process(char* name, uintptr_t addr)
     stack->r10 = 0;
     stack->r9 = 0;
     stack->r8 = 0;
-    stack->rbp = &stack->rip;
+    stack->rbp = proc->stack_top;
     stack->rdi = 0;
     stack->rsi = 0;
     stack->rdx = 0;

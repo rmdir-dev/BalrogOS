@@ -23,11 +23,26 @@ enum vga_color {
 	VGA_COLOR_WHITE = 15,
 };
 
+/**
+ * @brief Change the background and foreground color
+ * 		  Both color MUST be selected using the enum vga_color
+ * 
+ * @param fg fore ground color
+ * @param bg background color
+ * @return uint8_t the foregroud and background color combined
+ */
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) 
 {
 	return fg | bg << 4;
 }
- 
+
+/**
+ * @brief print a new character to the screen
+ * 
+ * @param uc the character to print
+ * @param color the color it said character
+ * @return uint16_t return the character and it's color to put into the screen buffer
+ */
 static inline uint16_t vga_entry(unsigned char uc, uint8_t color) 
 {
 	return (uint16_t) uc | (uint16_t) color << 8;
@@ -41,7 +56,11 @@ size_t vga_column;
 uint8_t vga_color;
 uint16_t* vga_buffer;
 
-void vga_clear()
+/**
+ * @brief Clear the screen.
+ * 
+ */
+static void vga_clear()
 {
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
@@ -51,12 +70,21 @@ void vga_clear()
 	}
 }
 
-void vga_setcolor(uint8_t color) 
+/**
+ * @brief Set the new VGA char color
+ * 
+ * @param color new color
+ */
+static inline void vga_setcolor(uint8_t color) 
 {
 	vga_color = color;
 }
 
-void increase_vga_row()
+/**
+ * @brief increase the row on the screen
+ * 
+ */
+static void increase_vga_row()
 {
 	if (++vga_row == VGA_HEIGHT)
 	{
@@ -64,7 +92,11 @@ void increase_vga_row()
 	}
 }
 
-void increase_vga_column()
+/**
+ * @brief increase the screen column
+ * 
+ */
+static void increase_vga_column()
 {
 	if (++vga_column == VGA_WIDTH) {
 		vga_column = 0;
@@ -72,17 +104,23 @@ void increase_vga_column()
 	}
 }
 
-void vga_set_char_for_color(uint8_t hight_intensity, uint8_t color) 
+/**
+ * @brief Set a new character color
+ * 
+ * @param high_intensity 1 if high intensity color
+ * @param color color
+ */
+static inline void vga_set_char_for_color(uint8_t high_intensity, uint8_t color) 
 {
 	uint8_t base_color = 0;
-	if(hight_intensity == 1)
+	if(high_intensity == 1)
 	{
 		base_color = 8;
 	}
 	vga_setcolor(base_color + color);
 }
 
-void vga_check_color(const char* data, size_t index)
+static void vga_check_color(const char* data, size_t index)
 {
 	uint8_t high_intensity = -1;
 	switch (data[index])
@@ -134,7 +172,7 @@ void vga_check_color(const char* data, size_t index)
 	}
 }
 
-size_t vga_check_text(const char* data, size_t start_index)
+static size_t vga_check_text(const char* data, size_t start_index)
 {
 	start_index++;
 	size_t color_index = 0;

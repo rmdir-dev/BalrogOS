@@ -11,8 +11,29 @@ typedef struct __gdt_entry
 	/* Segment address */
 	unsigned short base_low;
 	unsigned char base_middle;
-	/* Access modes */
+	/*
+        Access Mode :
+            1 present : 1 bit
+            1 dpl : 2 bits  value 0 = ring 0 | 1 = ring 1 | 2 = ring 2 | 3 = ring 3
+            1
+            0 zero_for_tss : 1 bit
+            1 code : 1
+            0 expand down : 1
+            0 read_write : 1
+            1 access : 1
+    */
 	unsigned char access;
+	/*
+        Access Mode :
+            1 present : 1 bit
+            1 dpl : 2 bits  value 0 = ring 0 | 1 = ring 1 | 2 = ring 2 | 3 = ring 3
+            1
+            0 zero_for_tss : 1 bit
+            1 code : 1
+            0 expand down : 1
+            0 read_write : 1
+            1 access : 1
+    */
 	unsigned char granularity;
 	unsigned char base_high;
 } __attribute__((packed)) gdt_entry;
@@ -25,9 +46,9 @@ typedef struct __gdt_ptr
 
 #define SEG_KCODE 0x08
 #define SEG_KDATA 0x10
-#define SEG_UDATA 0x18
-#define SEG_UCODE 0x20
-#define   SEG_TSS        0x28
+#define SEG_UCODE 0x18
+#define SEG_UDATA 0x20
+#define	SEG_TSS   0x28
 
 #define   GDT_WRITE      (1LL<<41)
 #define   GDT_EXECUTE    (1LL<<43)
@@ -41,4 +62,9 @@ typedef struct __gdt_ptr
 #define   TSS_BHI(base)  (((base)>>32)&0xFFFFFFFF)
 #define   TSS_LIM(lim)   (((lim)&0xFFFF) | ((((lim)>>16)&0xF)<<48))
 
+/**
+ * @brief Initialize the new GDT. This will allow the OS to switch to
+ * 		and from user mode.
+ * 
+ */
 void init_gdt();

@@ -12,49 +12,8 @@ Contain the physical address of the kernel PML4T
 */
 page_table* KernelPML4T;
 
-static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
-{
-    printf(_KERNEL_LOG_FAILURE_MSG);
-
-    if(regs->error_code & 0x02)
-    {
-        printf("read from ");
-    } else if(regs->error_code & 0x0e)
-    {
-        printf("execute code from ");
-    } else 
-    {
-        printf("write to ");
-    }
-
-    if(regs->error_code & 0x08)
-    {
-        printf("user mode ");
-    } else
-    {
-        printf("kernel mode ");
-    }
-
-    if(regs->error_code & 0x01)
-    {
-        printf("PROTECTION FAULT ");
-    } else 
-    {
-        printf("PAGE MISS ");
-    }
-
-    printf("0%x\n", regs->rax);
-    
-    while(1)
-    {}
-    
-    return regs;
-}
-
 void init_vmm()
 {
-    register_interrupt_handler(INT_PAGE_FAULT, vmm_page_fault_handler);
-
     KernelPML4T = 0x1000;
 }
 

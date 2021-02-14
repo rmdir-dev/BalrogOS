@@ -56,7 +56,20 @@ ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*/*.asm)
 
 ASMOBJECT64		:= $(patsubst %.asm, $(TEMP_DIR)/obj64/%.asm.o, $(ASM_SRCS))
 
-ALL_OBJECTS64	:= $(sort $(COBJECTS64) $(ASMOBJECT64))
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*.S)
+GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*/*.S)
+
+GNU_ASMOBJECT64	:= $(patsubst %.S, $(TEMP_DIR)/obj64/%.S.o, $(GNU_ASM_SRCS))
+
+ALL_OBJECTS64	:= $(sort $(COBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
 
 ########################################################
 #	COMPILER
@@ -86,7 +99,7 @@ LD_OPTIMIZATION = -flto
 ########################################################
 #	GENERATE OBJECT FILES
 ########################################################
-OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o)
+OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
 
 bootloader:
 	mkdir -p $(BUILD_DIR)
@@ -103,7 +116,7 @@ os:
 	truncate build/os/os-image -s 1200k
 
 run:
-	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128
+	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
 
 iso:
 	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b os-image files/
@@ -121,6 +134,10 @@ run_debug:
 %.asm.o : %.asm
 	mkdir -p $(TEMP_DIR)/obj64/$(dir $<)
 	nasm -f elf64 $< -o $(TEMP_DIR)/obj64/$(<:.asm=.asm.o)
+
+%.S.o : %.S
+	mkdir -p $(TEMP_DIR)/obj64/$(dir $<)
+	gcc -c $< -o $(TEMP_DIR)/obj64/$(<:.S=.S.o)
 
 ########################################################
 #	CLEAN

@@ -2,6 +2,7 @@
 section .text
     extern isr_common
     extern schedule
+    extern user_mode_print
 isr0:
     cli
     push 0
@@ -199,8 +200,20 @@ isr32:
     ;push 0
     ;push 32
     ;jmp isr_common
+    mov rax, [rsp + 16]
+    and rax, 3 << 12
+    jz .kernel_irs_entry
+    swapgs
+    call user_mode_print
+.kernel_irs_entry:
     ; MUST BE A CALL !!!
     call schedule
+    ; check if we're comming from user mode
+    mov rax, [rsp + 16]
+    and rax, 3 << 12
+    jz .kernel_return
+    swapgs
+.kernel_return:
     iretq
     
 isr33:

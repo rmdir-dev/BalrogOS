@@ -2,7 +2,9 @@ section .text
     global _set_idt
     global _load_idt
     global isr_common
+    global _isr_return
     extern kernel_interrupt_handler
+    extern user_mode_print
 
 _preset_idt:
     ret
@@ -12,7 +14,7 @@ _load_idt:
     ret
 
 isr_common:
-    push r15
+    push r15    ; push all the registers to the stack
     push r14
     push r13
     push r12
@@ -32,9 +34,10 @@ isr_common:
     push qword 0
     popf
 
+    ; check if the RFLAGS RING 3 is set (user mode)
     mov rax, [rsp + 152]
     and rax, 3 << 12
-    jz .kernel_mode
+    jz .kernel_mode     ; if in usermode then swapgs
     swapgs
 
 .kernel_mode:
@@ -42,15 +45,19 @@ isr_common:
     call kernel_interrupt_handler
     mov rdi, rax
 
+; ISR will be use for context switch
+; We will use it to jump directly here from the new stack at first exec
+_isr_return:
     mov rsp, rdi
 
+    ; check if we're comming from user mode
     mov rax, [rsp + 152]
     and rax, 3 << 12
     jz .kernel_return
     swapgs
 
-.kernel_return
-    pop rax
+.kernel_return:
+    pop rax     ; recover all the register state
     pop rbx
     pop rcx
     pop rdx
@@ -66,7 +73,11 @@ isr_common:
     pop r14
     pop r15
 
-    add rsp, 0x10
+    add rsp, 0x10   ; add 0x10 (16 bytes) to the stack
+                    ; we've push the interrupt nbr and error message
+                    ; both are 8bytes so we add rsp 16 to avoid poping
+                    ; these into registers
+    ;jmp $
 
     iretq    ; interrupt return
     

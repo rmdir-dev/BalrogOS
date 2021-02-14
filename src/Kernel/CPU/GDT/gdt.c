@@ -31,14 +31,18 @@ void gdt_set_gate(int num, unsigned long base, unsigned long limit,
 
 void install_tss(gdt_entry* gdt)
 {
+    /* get the tss base    */
     uint64_t base = (uint64_t) &tss;
+    /* get the tss limit */
     uint32_t limit = sizeof(tss_entry);
 
+    /* setup limit */
     gdt->limit_low = limit & 0xffff;
+    /* setup base */
     gdt->base_low = base & 0xffff;
     gdt->base_middle = (base >> 16) & 0xff;
     gdt->base_high = (base >> 24) & 0xff;
-
+    
     gdt->access = 0b11101001;
     gdt->granularity = 0b0;
 
@@ -60,12 +64,18 @@ void init_gdt()
 
     /* NULL */
     gdt_set_gate(0, 0, 0, 0, 0);
+    /* KERNEL CODE */
     gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xAF);
+    /* KERNEL DATA */
     gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xAF);
+    /* USER CODE */
     gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xAF);
+    /* USER DATA */
     gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xAF);
+    /* install tss on gdt[5] and gdt[6] */
     install_tss(&gdt[5]);
 
+    /* load and flush new gdt and tss to the CPU */
     flush_gdt(&gdtp);
     flush_tss();
 }

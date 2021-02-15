@@ -2,12 +2,12 @@
 
 #include <stdint.h>
 
-#define IDT_CALL        0x0c
-#define IDT_INTERRUPT   0x0e
-#define IDT_TRAP        0x0f
-#define IDT_DPL_0       0x00
-#define IDT_DPL_3       0x60
-#define IDT_PRESENT     0x80
+#define IDT_CALL        0x0c // 0b0000 1100
+#define IDT_INTERRUPT   0x0e // 0b0000 1110
+#define IDT_TRAP        0x0f // 0b0000 1111
+#define IDT_DPL_0       0x00 // 0b0000 0000
+#define IDT_DPL_3       0x60 // 0b0110 0000
+#define IDT_PRESENT     0x80 // 0b1000 0000
 
 #define TOTAL_NBR_INTERRUPT 256
 
@@ -100,9 +100,13 @@ void init_interrupt();
 */
 interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler handler);
 
-void set_interrupt_routine(uint32_t id, uintptr_t handler);
-
-void _isr_return(interrupt_regs* stack);
+/**
+ * @brief Set new interrupt flag into the IDT and reload it.
+ * 
+ * @param id interrupt ID
+ * @param flag intterrupt FLAGS
+ */
+void set_interrupt_flag(uint32_t id, uint8_t flag);
 
 #define disable_interrupt() asm volatile("cli")
 

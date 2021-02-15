@@ -13,6 +13,7 @@
 #include "BalrogOS/Tasking/tasking.h"
 #include "BalrogOS/Debug/exception.h"
 #include "BalrogOS/CPU/GDT/gdt.h"
+#include "BalrogOS/Syscall/syscall.h"
 
 void test()
 {
@@ -51,9 +52,17 @@ void test2()
 void test_user_mode()
 {
     uint64_t test = 0;
+    char test_str[14] = "test syscall\n";
 
     while(1)
     {
+        asm volatile("mov %%rax, %%rsi": :"a"(test_str));
+        asm volatile("mov %%rax, %%rdx": :"a"(13));
+        asm volatile("mov $1, %rax");
+        asm volatile("int $0x80");
+        for(uint64_t i = 0; i < 100000000; i++)
+        {
+        }
         test++;
     }
 }
@@ -72,6 +81,9 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_OK("Interrupt initialization : done");
 
     init_exception();
+
+    /* SYSTEM CALL */
+    init_syscalls();
 
     /*      MEMORY      */
     SMAP_entry* SMAPinfo = PHYSICAL_TO_VIRTUAL(SMAP);
@@ -96,14 +108,15 @@ void initialize_kernel(void* SMAP, void* size)
     /*     KEYBOARD     */
     init_keyboard();
 
+    /* GDT and TSS */
+    init_gdt();
+    
+    /* TEST PROCESS */
     push_process("test2", test_user_mode, 3);
     push_process("test", test, 0);
     push_process("test2", test_user_mode, 3);
     push_process("test2", test2, 0);
     push_process("test2", test_user_mode, 3);
-    //KERNEL_LOG_OK("test process no fault");
-
-    init_gdt();
 
     enable_interrupt();
 }

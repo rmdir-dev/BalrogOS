@@ -92,11 +92,14 @@ interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler hand
     return old;
 }
 
-void set_interrupt_routine(uint32_t id, uintptr_t handler)
+void set_interrupt_flag(uint32_t id, uint8_t flags)
 {
-    gates[id].offset_low = handler & 0xffff;
-    gates[id].offset_mid = (handler >> 16) & 0xffff;
-    gates[id].offset_hight = (handler >> 32) & 0xffffffff;
+    if(id >= INT_SYSCALL && id < INT_APIC_SPUR)
+    {
+        gates[id].flags = flags;
+    }
+
+    //_load_idt(&idt_ptr);
 }
 
 interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)

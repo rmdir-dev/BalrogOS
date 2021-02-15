@@ -18,6 +18,8 @@ extern tss_entry tss;
 static void _exec()
 {
     current_running->exec = 1;
+    tss.rsp0 = current_running->kernel_stack_top;
+    printf("rsp : 0%p \n", tss.rsp0);
     asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
     asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
     asm volatile("pop %rbp");
@@ -57,13 +59,17 @@ static void _round_robin()
     asm volatile("push %r15");
     asm volatile("push %rbp");
     asm volatile("mov %%rsp, %%rax":"=a"(current_running->rsp));
+    
     current_running = current_running->next;
-    printf("rsp : 0%p \n", current_running->rsp);
+
     if(!current_running->exec)
     {
         _exec();
         return;
     }
+
+    tss.rsp0 = current_running->kernel_stack_top;
+
     asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
     asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
     asm volatile("pop %rbp");

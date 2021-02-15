@@ -18,6 +18,7 @@ typedef struct process_t
     uintptr_t rsp;
     uintptr_t rip;
     uintptr_t stack_top;
+    uintptr_t kernel_stack_top;
     uint8_t exec;
     union 
     {
@@ -37,8 +38,9 @@ typedef struct process_t
 /**
  * @brief Create a process object
  * 
- * @param name 
- * @param func 
+ * @param name process name
+ * @param func starting function
+ * @param mode User Mode = 3 | Driver Mode = 2 or 1 | Kernel Mode = 0
  * @return process* 
  */
 process* create_process(char* name, uintptr_t func, uint8_t mode);

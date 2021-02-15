@@ -47,13 +47,6 @@ typedef struct task_register_t
     //////////////////////////////////////////////////////////
 } __attribute__((packed)) task_register;
 
-/**
- * @brief Create a process object 
- * 
- * @param name 
- * @param addr 
- * @return process* 
- */
 process* create_process(char* name, uintptr_t addr, uint8_t mode)
 {
     process* proc = vmalloc(sizeof(process));
@@ -66,6 +59,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     proc->exec = 0;
     uintptr_t* virt = PHYSICAL_TO_VIRTUAL(proc->PML4T); // Kernel space
     virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
+
     /*
     TEXT
     */
@@ -90,8 +84,18 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
         SETUP THE STACK
     */
     proc->stack_top = PROCESS_STACK_TOP - 1;
-    proc->rsp = PROCESS_STACK_TOP - sizeof(task_register) - 1;
-    virt = PHYSICAL_TO_VIRTUAL(((uint8_t*)phys) + 4095 - sizeof(task_register));
+
+    if(mode != 0)
+    {
+        proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(pmm_calloc()) + 4095;
+        virt = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
+    } else 
+    {
+        proc->kernel_stack_top = proc->stack_top;
+        virt = PHYSICAL_TO_VIRTUAL(((uint8_t*)phys) + 4095 - sizeof(task_register));
+    }
+
+    proc->rsp = virt;// PROCESS_STACK_TOP - sizeof(task_register) - 1;
     
     task_register* stack = virt;
 

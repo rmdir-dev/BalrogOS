@@ -44,7 +44,7 @@ rbt_node* rbt_minimum(rbt_node* from)
     return from;
 }
 
-static inline void __rotate(rbt_tree* root, rbt_node* rotating_node, const uint8_t dir)
+static __always_inline void __rotate(rbt_tree* root, rbt_node* rotating_node, const uint8_t dir)
 {
     rbt_node* pivot = rotating_node->children[!dir];
 
@@ -76,7 +76,7 @@ static inline void __rotate(rbt_tree* root, rbt_node* rotating_node, const uint8
  * @param root root node
  * @param ptr the latest entry
  */
-static void __insert_fixup(rbt_tree* root, rbt_node* ptr)
+static __always_inline void __insert_fixup(rbt_tree* root, rbt_node* ptr)
 {
     rbt_node* parent_ptr = NULL;
     rbt_node* grand_parent_ptr = NULL;

@@ -14,7 +14,6 @@ GDT64:                              ; Global Descriptor Table (64-bit).
     db 1                            ; Granularity.
     db 0                            ; Base (high).
     .Code: equ $ - GDT64            ; The code descriptor.
-                                    ; this will contain the code
     dw 0                            ; Limit (low).
     dw 0                            ; Base (low).
     db 0                            ; Base (middle)

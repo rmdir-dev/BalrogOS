@@ -13,8 +13,10 @@ BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
 C_LIBS_SRC = src/Libc/
+C_POSIX_SRC = src/POSIX
 INCLUDE_DIR = -I./include\
-	-I./include/libc
+	-I./include/libc\
+	-I./include/POSIX
 
 ########################################################
 #	SOURCE FILES
@@ -40,6 +42,17 @@ C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*.c)
 C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*.c)
 C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*/*.c)
 C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*/*/*.c)
+
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*/*/*/*.c)
 
 COBJECTS64		:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(C_SRCS))
 

@@ -78,6 +78,6 @@ static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
 
 void init_exception()
 {
-    register_interrupt_handler(INT_GENERAL_PROTECTION_FAULT, general_protection_fault);
-    register_interrupt_handler(INT_PAGE_FAULT, vmm_page_fault_handler);
+    register_interrupt_handler(INT_GP, general_protection_fault);
+    register_interrupt_handler(INT_PF, vmm_page_fault_handler);
 }

@@ -13,11 +13,11 @@ typedef struct __pthread_mutex_t
 } pthread_mutex_t;
 
 /**
- * @brief 
+ * @brief Initialize the mutex (mutual exclusion)
  * 
- * @param lock 
+ * @param lock the lock to initialize
  * @param attr 
- * @return int 
+ * @return int 0 if no error, -1 if any error
  */
 int pthread_mutex_init(pthread_mutex_t* lock, pthread_mutex_attr_t* attr);
 

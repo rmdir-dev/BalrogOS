@@ -38,7 +38,7 @@ void test()
         asm volatile("cli");
         printf("test\n");
         asm volatile("sti");
-        for(uint64_t i = 0; i < 10000000; i++)
+        for(uint64_t i = 0; i < 100000000; i++)
         {
         }
         pthread_mutex_lock(&mutex_test);

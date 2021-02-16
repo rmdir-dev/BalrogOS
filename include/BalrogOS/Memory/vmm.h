@@ -11,26 +11,26 @@ PT = Page table
 typedef uintptr_t page_table;
 
 /**
- * @brief 
+ * @brief initialize virtual memory.
  * 
  */
 void init_vmm();
 
 /**
- * @brief return the physical address of a given virtual address page
+ * @brief get the physical address of a given virtual address
  * 
- * @param PT 
- * @param virt_addr 
- * @return uintptr_t 
+ * @param PML4T the PML4T currently in use, if none then the default (kernel) is use
+ * @param virt_addr virtual address
+ * @return uintptr_t the physical address of a given virtual address page
  */
 uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr);
 
 /**
- * @brief 
+ * @brief Set a physical address into the page table at a given virtual address
  * 
- * @param P4 
- * @param virt_addr 
- * @param phys_addr 
- * @param flags 
+ * @param PML4T the PML4T currently in use, if none then the default (kernel) is use
+ * @param virt_addr the virtual address to set
+ * @param phys_addr the physical address to place into the page table at virt_addr
+ * @param flags Page flags to use.
  */
 void vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags);

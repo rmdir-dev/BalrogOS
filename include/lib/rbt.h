@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 #define RBT_BLACK   0
 #define RBT_RED     1
@@ -50,12 +51,12 @@ rbt_node* rbt_search(rbt_node* root, const uint64_t key);
 rbt_node* rbt_minimum(rbt_node* from);
 
 /**
- * @brief 
+ * @brief binary search tree insert
  * 
- * @param root 
- * @param key 
+ * @param root root node
+ * @param key key to add to the tree
  */
-void rbt_insert(rbt_tree* root, uint64_t key);
+rbt_node* rbt_insert(rbt_tree* root, uint64_t key);
 
 /**
  * @brief 

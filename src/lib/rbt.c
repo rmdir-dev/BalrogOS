@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include "BalrogOS/Memory/kheap.h"
 
+#define RBT_GET_DIR(var)    (var == var->parent->children[RBT_RIGHT])
+#define RBT_IS_RED(var)     (var != NULL && var->color)
+
 rbt_node* rbt_create_node(rbt_node* parent, uint64_t key)
 {
     rbt_node* ret = vmalloc(sizeof(rbt_node));
@@ -44,7 +47,7 @@ rbt_node* rbt_minimum(rbt_node* from)
     return from;
 }
 
-static __always_inline void __rotate(rbt_tree* root, rbt_node* rotating_node, const uint8_t dir)
+static inline void __rotate(rbt_tree* root, rbt_node* rotating_node, const uint8_t dir)
 {
     rbt_node* pivot = rotating_node->children[!dir];
 
@@ -76,7 +79,7 @@ static __always_inline void __rotate(rbt_tree* root, rbt_node* rotating_node, co
  * @param root root node
  * @param ptr the latest entry
  */
-static __always_inline void __insert_fixup(rbt_tree* root, rbt_node* ptr)
+static inline void __insert_fixup(rbt_tree* root, rbt_node* ptr)
 {
     rbt_node* parent_ptr = NULL;
     rbt_node* grand_parent_ptr = NULL;
@@ -117,19 +120,13 @@ static __always_inline void __insert_fixup(rbt_tree* root, rbt_node* ptr)
     root->rb_root->color = RBT_BLACK;
 }
 
-/**
- * @brief binary search tree insert
- * 
- * @param root root node
- * @param key key to add to the tree
- */
-void rbt_insert(rbt_tree* root, uint64_t key)
+rbt_node* rbt_insert(rbt_tree* root, uint64_t key)
 {
     if(!root->rb_root)
     {
         root->rb_root = rbt_create_node(0, key);
         root->rb_root->color = RBT_BLACK;
-        return;
+        return root->rb_root;
     }
 
     rbt_node* parent_branch = NULL;
@@ -142,7 +139,7 @@ void rbt_insert(rbt_tree* root, uint64_t key)
 
         if(current_branch->key == key)
         {
-            return;
+            return current_branch;
         }
 
         dir = ( key > current_branch->key );
@@ -157,9 +154,11 @@ void rbt_insert(rbt_tree* root, uint64_t key)
     }
 
     __insert_fixup(root, current_branch);
+
+    return current_branch;
 }
 
-static __always_inline void __delete_fixup(rbt_tree* root, rbt_node* unbalanced_entry, uint8_t dir)
+static inline void __delete_fixup(rbt_tree* root, rbt_node* unbalanced_entry, uint8_t dir)
 {
     while(unbalanced_entry)
     {
@@ -336,8 +335,8 @@ void rbt_print(rbt_node* root)
 {
     if(root != NULL)
     {
-        rb_print(root->children[RBT_LEFT]);
+        rbt_print(root->children[RBT_LEFT]);
         printf("%lu\n", root->key);
-        rb_print(root->children[RBT_RIGHT]);
+        rbt_print(root->children[RBT_RIGHT]);
     }
 }

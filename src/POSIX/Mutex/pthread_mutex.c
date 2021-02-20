@@ -1,6 +1,6 @@
 #include "Mutex/pthread_mutex.h"
 #include "Mutex/pthread_mutex_attr.h"
-#include <stdio.h>
+#include "plib/park.h"
 
 int pthread_mutex_init(pthread_mutex_t* lock, pthread_mutex_attr_t* attr)
 {

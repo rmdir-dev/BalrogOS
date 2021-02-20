@@ -5,7 +5,7 @@ void setpark()
 {
     //printf("Park \n");
     asm volatile("mov $0, %rdi");
-    asm volatile("mov $202, %rax");
+    asm volatile("mov $203, %rax");
     asm volatile("int $0x80");
 }
 

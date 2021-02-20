@@ -35,13 +35,13 @@ void test()
 {
     while(1)
     {
-        asm volatile("cli");
-        printf("test\n");
-        asm volatile("sti");
+        //asm volatile("cli");
+        //printf("test\n");
+        //asm volatile("sti");
+        pthread_mutex_lock(&mutex_test);
         for(uint64_t i = 0; i < 100000000; i++)
         {
         }
-        pthread_mutex_lock(&mutex_test);
         test_var++;
         //asm volatile("cli");
         printf("and loop now! :D %d \n", test_var);
@@ -54,9 +54,9 @@ void test2()
 {
     while(1)
     {
-        asm volatile("cli");
-        printf("test2\n");
-        asm volatile("sti");
+        //asm volatile("cli");
+        //printf("test2\n");
+        //asm volatile("sti");
         for(uint64_t i = 0; i < 100000000; i++)
         {
         }
@@ -66,6 +66,24 @@ void test2()
         printf("TEST 2 NOW :D %d \n", test_var);
         //asm volatile("sti");
         pthread_mutex_unlock(&mutex_test);
+    }
+}
+
+void test_user_mode()
+{
+    uint64_t test = 0;
+    char test_str[14] = "test syscall\n";
+
+    while(1)
+    {
+        asm volatile("mov %%rax, %%rsi": :"a"(test_str));
+        asm volatile("mov %%rax, %%rdx": :"a"(13));
+        asm volatile("mov $1, %rax");
+        asm volatile("int $0x80");
+        for(uint64_t i = 0; i < 100000000; i++)
+        {
+        }
+        test++;
     }
 }
 
@@ -100,16 +118,16 @@ void initialize_kernel(void* SMAP, void* size)
     
     /* Virtual Memory */
     init_vmm();
-    KERNEL_LOG_OK("Virtual memory initialization : done");
+    //KERNEL_LOG_OK("Virtual memory initialization : done");
 
     /* Physical Memory */
     init_pmm(SMAPinfo, SMAPsize);
-    KERNEL_LOG_OK("Physical memory initialization : done");
+    //KERNEL_LOG_OK("Physical memory initialization : done");
 
     /* Kernel Heap */
     init_kheap(); // Kernel Logical
     init_vmheap();  // Kernel Virtual
-    KERNEL_LOG_OK("Kernel heap initialization : done");
+    //KERNEL_LOG_OK("Kernel heap initialization : done");
 
     /* SCHEDULER */
     init_scheduler();
@@ -122,8 +140,9 @@ void initialize_kernel(void* SMAP, void* size)
     
     /* TEST PROCESS */
     test_init();
-    push_process("test", test2, 0);
     push_process("test", test, 0);
+    push_process("test", test2, 0);
+    push_process("test", test_user_mode, 3);
 
     enable_interrupt();
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "pthread_mutex_attr.h"
+#include "plib/unsafe_queue.h"
 #include <stdint.h>
 
 typedef struct __pthread_mutex_t
@@ -10,6 +11,8 @@ typedef struct __pthread_mutex_t
     uint8_t flag;
     /* counting waiting threads    */
     unsigned int count;
+    /* a queue of currently waiting process */
+    unsafe_queue_t wait_queue;
 } pthread_mutex_t;
 
 /**

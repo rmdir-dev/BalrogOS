@@ -12,6 +12,7 @@ DEFINES 		=
 BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
+LIB_SRC = src/lib
 C_LIBS_SRC = src/Libc/
 C_POSIX_SRC = src/POSIX
 INCLUDE_DIR = -I./include\
@@ -31,6 +32,17 @@ C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*.c)
 C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*.c)
 C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*.c)
 C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*/*.c)
+
+C_SRCS += $(wildcard $(LIB_SRC)/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*/*/*.c)
+C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*/*/*/*.c)
 
 C_SRCS += $(wildcard $(C_LIBS_SRC)/*.c)
 C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*.c)

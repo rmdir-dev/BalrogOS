@@ -1,6 +1,14 @@
 #include "plib/park.h"
 #include <stdio.h>
 
+void setpark()
+{
+    //printf("Park \n");
+    asm volatile("mov $0, %rdi");
+    asm volatile("mov $202, %rax");
+    asm volatile("int $0x80");
+}
+
 void park()
 {
     //printf("Park \n");

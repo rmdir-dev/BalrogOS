@@ -13,8 +13,6 @@ int pthread_mutex_init(pthread_mutex_t* lock, pthread_mutex_attr_t* attr)
 
 int pthread_mutex_lock(pthread_mutex_t* lock)
 {
-    /* currently a spin lock. 
-       futex and or park/unpark syscalls */
     /* 
         while test and set return 1 
         Test and set put 1 into the memory address of lock
@@ -38,7 +36,11 @@ int pthread_mutex_lock(pthread_mutex_t* lock)
         __atomic_clear(&lock->lock, 0);
     } else 
     {
+        /*
+        add process to parked list.
+        */
         unsafe_queue_enqueue(&lock->wait_queue, getpid());
+        setpark();
         __atomic_clear(&lock->lock, 0);
         park();
     }
@@ -53,11 +55,18 @@ int pthread_mutex_unlock(pthread_mutex_t* lock)
     while(__atomic_test_and_set(&lock->lock, 0))
     {}
 
+    /*
+    if the queue is empty then flag == 0 no one is parked
+    */
     if(unsafe_queue_empty(&lock->wait_queue))
     {
         lock->flag = 0;
     } else 
     {
+        /*
+        unpark front the queue process
+        wake up the process
+        */
         unpark(unsafe_queue_remove(&lock->wait_queue));
     }
 

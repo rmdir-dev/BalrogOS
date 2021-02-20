@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "type_traits": "c",
-        "pthread_mutex_attr.h": "c"
+        "pthread_mutex_attr.h": "c",
+        "stdio.h": "c"
     }
 }

@@ -12,6 +12,10 @@
     get the currently running process ID.
 60	    sys_exit	        int error_code
     exit the currently running program with an error code (0 for no error)
+202     sys_park            uint64 pid
+    park the current process if pid == 0 else unpark the process with that pid
+203     sys_setpark         
+    prepare to park the current process, if the current process is unparked in between the setpark and park call, then it won't be parked at all.
 */
 
 #define SYS_READ        0
@@ -20,6 +24,7 @@
 #define SYS_EXIT        60
 #define SYS_FUTEX       202
 #define SYS_PARK        202 // TODO switch to futex
+#define SYS_SETPARK     203 // TODO switch to futex
 
 /**
  * @brief Initialize system calls

@@ -3,21 +3,25 @@
 
 #include <stdio.h>
 
-extern void sys_write(unsigned fd, const char* str, size_t count);
+extern void sys_write(interrupt_regs* stack_frame);
+extern uint64_t sys_getpid(interrupt_regs* stack_frame);
+extern void sys_park(interrupt_regs* stack_frame);
+
+static int (*syscall[])(interrupt_regs*) = 
+{
+    [SYS_WRITE] sys_write,
+    [SYS_GETPID] sys_getpid,
+    [SYS_PARK] sys_park,
+};
 
 static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
 {
     /*
         Syscall dispatcher
     */
-    switch (stack_frame->rax)
+    if(syscall[stack_frame->rax])
     {
-    case 1:
-        sys_write(stack_frame->rdi, stack_frame->rsi, stack_frame->rdx);
-        break;
-    
-    default:
-        break;
+        stack_frame->rax = syscall[stack_frame->rax](stack_frame);
     }
     
     return stack_frame;

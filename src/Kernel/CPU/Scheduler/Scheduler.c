@@ -5,13 +5,11 @@
 #include "BalrogOS/CPU/TSS/tss.h"
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
+#include "BalrogOS/Tasking/process.h"
 #include <stdio.h>
 
-process* process_queue = NULL;
-process* last_process = NULL;
+extern process_list rdy_proc_list;
 process* current_running = NULL;
-
-uint8_t loop = 0;
 
 extern tss_entry tss;
 
@@ -92,14 +90,14 @@ static void _round_robin()
 
 void schedule()
 {
-    if(process_queue != NULL)
+    if(rdy_proc_list.head != NULL)
     {
         if(current_running != NULL)
         {
             _round_robin();
         } else 
         {
-            current_running = process_queue;
+            current_running = rdy_proc_list.head;
             _exec();
         }
     } else 
@@ -121,19 +119,7 @@ uintptr_t push_process(char* name, uintptr_t func, uint8_t mode)
 {
     process* proc = create_process(name, func, mode);
     
-    if(process_queue == NULL)
-    {
-        process_queue = proc;
-        proc->next = proc;
-        proc->prev = proc;
-    } else
-    {
-        proc->next = process_queue;
-        last_process->next = proc;
-        proc->prev = last_process;
-    }
-
-    last_process = proc;
+    proc_insert_to_ready_queue(proc);
 
     return proc->pid;
 }

@@ -54,7 +54,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     proc->name = name;
     proc->pid = ++next_pid;
     proc->rip = addr;
-    proc->state = PROCESS_STATE_ALIVE;
+    proc->state = PROCESS_STATE_READY;
     proc->PML4T = pmm_calloc();
     proc->exec = 0;
     uintptr_t* virt = PHYSICAL_TO_VIRTUAL(proc->PML4T); // Kernel space

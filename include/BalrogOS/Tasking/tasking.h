@@ -3,9 +3,11 @@
 #include <stdint.h>
 #include "BalrogOS/Memory/vmm.h"
 
-#define PROCESS_STATE_ALIVE     0
-#define PROCESS_STATE_ZOMBIE    1
-#define PROCESS_STATE_DEAD      2
+#define PROCESS_STATE_READY     0
+#define PROCESS_STATE_RUNNING   1
+#define PROCESS_STATE_WAITING   2
+#define PROCESS_STATE_DEAD      3
+#define PROCESS_STATE_ZOMBIE    4
 
 #define PROCESS_USER_MODE       3
 #define PROCESS_KERNEL_MODE     0
@@ -14,7 +16,7 @@ typedef struct process_t
 {
     struct process_t* prev;
     char* name;
-    uintptr_t pid;
+    uint64_t pid;
     uintptr_t rsp;
     uintptr_t rip;
     uintptr_t stack_top;

@@ -1,4 +1,4 @@
-#include "lib/rbt.h"
+#include "lib/DataStructure/rbt.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -21,9 +21,9 @@ rbt_node* rbt_create_node(rbt_node* parent, uint64_t key)
     return ret;
 }
 
-rbt_node* rbt_search(rbt_node* root, const uint64_t key)
+rbt_node* rbt_search(rbt_tree* root, const uint64_t key)
 {
-    rbt_node* current_node = root;
+    rbt_node* current_node = root->rb_root;
 
     while(current_node)
     {
@@ -38,8 +38,9 @@ rbt_node* rbt_search(rbt_node* root, const uint64_t key)
     return NULL;
 }
 
-rbt_node* rbt_minimum(rbt_node* from)
+rbt_node* rbt_minimum(rbt_tree* root)
 {
+    rbt_node* from = root->rb_root;
     while(from->children[RBT_LEFT])
     {
         from = from->children[RBT_LEFT];

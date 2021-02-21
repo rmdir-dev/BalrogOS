@@ -25,30 +25,30 @@ typedef struct rbt_container_st
 } rbt_tree;
 
 /**
- * @brief 
+ * @brief create a new node.
  * 
- * @param parent 
- * @param key 
+ * @param parent the parent node
+ * @param key the key value
  * @return rbt_node* 
  */
 rbt_node* rbt_create_node(rbt_node* parent, uint64_t key);
 
 /**
- * @brief 
+ * @brief search a key into a tree.
  * 
- * @param root 
- * @param key 
+ * @param root the tree root
+ * @param key the key to search into the tree
  * @return rbt_node* 
  */
-rbt_node* rbt_search(rbt_node* root, const uint64_t key);
+rbt_node* rbt_search(rbt_tree* root, const uint64_t key);
 
 /**
- * @brief 
+ * @brief return the minimum value into the RBT.
  * 
- * @param from 
- * @return rbt_node* 
+ * @param root the node from which check the minimum
+ * @return rbt_node* the node with the smallest value
  */
-rbt_node* rbt_minimum(rbt_node* from);
+rbt_node* rbt_minimum(rbt_tree* root);
 
 /**
  * @brief binary search tree insert
@@ -59,24 +59,24 @@ rbt_node* rbt_minimum(rbt_node* from);
 rbt_node* rbt_insert(rbt_tree* root, uint64_t key);
 
 /**
- * @brief 
+ * @brief delete a node from the RBT root
  * 
- * @param root 
- * @param to_delete 
+ * @param root the root of the tree containing that node
+ * @param to_delete the node to delete
  */
 void rbt_delete(rbt_tree* root, rbt_node* to_delete);
 
 /**
- * @brief 
+ * @brief delete a key from the RBT 
  * 
- * @param root 
- * @param key 
+ * @param root the rbt root
+ * @param key the key to delete
  */
 void rbt_delete_key(rbt_tree* root, uint64_t key);
 
 /**
- * @brief 
+ * @brief print the rbt from one of it's node
  * 
- * @param root 
+ * @param root the root node to print from.
  */
 void rbt_print(rbt_node* root);

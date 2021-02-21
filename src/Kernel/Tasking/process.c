@@ -1,5 +1,5 @@
 #include "BalrogOS/Tasking/process.h"
-#include "lib/rbt.h"
+#include "lib/DataStructure/rbt.h"
 #include <stdlib.h>
 
 rbt_tree process_tree = { NULL, NULL };
@@ -101,6 +101,6 @@ void proc_transfert_to_ready(uint64_t pid)
 
 process* proc_get_process(uint64_t pid)
 {
-    rbt_node* proc_node = rbt_search(process_tree.rb_root, pid);
+    rbt_node* proc_node = rbt_search(&process_tree, pid);
     return (process*) proc_node->value;
 }

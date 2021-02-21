@@ -8,24 +8,39 @@ uint64_t total_memory_used = 0;
 uint64_t total_usable_memory = 0;
 
 /*
-Pointer to last address allocated | increment this at each new alloc (if no memory was a freed one)
-Pointer to last address freed -> contain the last address freed before
+Pointer to last address allocated | increment this at each new alloc (if no memory was a freed)
 */
 uintptr_t next_addr = 0;
+/*
+Pointer to the top most 32 bit address.
+*/
 uintptr_t top_32_addr = 0;
+/*
+Pointer to the top most address.
+*/
 uintptr_t top_addr = 0;
+/*
+Pointer to last address freed -> contain the last address freed before
+*/
 uintptr_t last_free_addr = 0x0;
 
 void pmm_free(uintptr_t* addr)
 {
+    // if addr is greater than next_addr
+    // then it should not be freed because next_addr is not
+    // at addr yet.
     if(next_addr < addr)
     {
         return;
     }
+
     addr = PHYSICAL_TO_VIRTUAL(addr);
+    // addr now point to last_free_addr
     *addr = last_free_addr;
+    // free addr and set last_free_addr to addr.
     last_free_addr = addr;
-    total_memory_used -= 0x1000;
+    // decrease total memory used by one page
+    total_memory_used -= PAGE_SIZE;
 }
 
 uintptr_t* pmm_alloc()
@@ -39,11 +54,14 @@ uintptr_t* pmm_alloc()
 
     } else 
     {
-        if(next_addr == top_addr)
+        // if the next address is equal to the top address then return 0
+        if(next_addr >= top_addr)
         {
+            printf("next : %p | top : %p ", next_addr, top_addr);
             return 0x0;
         }
 
+        // if next address exceed 32bit addressing then switch to the 64bit address.
         if(next_addr >= top_32_addr - 0x1000 && next_addr < 0x100000000)
         {
             next_addr = 0x100000000;
@@ -51,9 +69,11 @@ uintptr_t* pmm_alloc()
 
         p = next_addr;
 
+        // increase next_addr to point to the next page.
         next_addr += PAGE_SIZE;
     }
-    total_memory_used += 0x1000;
+    // increase total memory used by a page.
+    total_memory_used += PAGE_SIZE;
     return p;
 }
 
@@ -61,6 +81,7 @@ uintptr_t* pmm_calloc()
 {
     uintptr_t* p = pmm_alloc();
 
+    // set the bits inside the page to 0.
     memset(PHYSICAL_TO_VIRTUAL(p), 0, PAGE_SIZE);
     
     return p;
@@ -90,6 +111,7 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
             {
                 next_addr = start;
                 top_32_addr = end;
+                top_addr = end;
             } else 
             {
                 top_addr = end;

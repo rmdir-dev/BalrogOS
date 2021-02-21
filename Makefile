@@ -12,8 +12,8 @@ DEFINES 		=
 BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
-LIB_SRC = src/lib
-C_LIBS_SRC = src/Libc/
+KLIB_SRC = src/lib
+C_LIB_SRC = src/Libc/
 C_POSIX_SRC = src/POSIX
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
@@ -22,78 +22,25 @@ INCLUDE_DIR = -I./include\
 ########################################################
 #	SOURCE FILES
 ########################################################
-C_SRCS += $(wildcard $(KERNEL_SRC)/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*/*.c)
+# Kernel
+C_SRCS += $(shell find $(KERNEL_SRC) -name *.c)
+ASM_SRCS += $(shell find $(KERNEL_SRC) -name *.asm)
+GNU_ASM_SRCS += $(shell find $(KERNEL_SRC) -name *.S)
+C_SRCS += $(shell find $(KLIB_SRC) -name *.c)
 
-C_SRCS += $(wildcard $(LIB_SRC)/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(LIB_SRC)/*/*/*/*/*/*/*/*/*/*.c)
+# libc 
+C_SRCS += $(shell find $(C_LIB_SRC) -name *.c)
 
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_LIBS_SRC)/*/*/*/*/*/*/*/*/*/*.c)
+# pthread
+C_SRCS += $(shell find $(C_POSIX_SRC) -name *.c)
 
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*/*/*.c)
-C_SRCS += $(wildcard $(C_POSIX_SRC)/*/*/*/*/*/*/*/*/*/*.c)
+########################################################
+#	OBJECT FILES
+########################################################
 
 COBJECTS64		:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(C_SRCS))
-
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*.asm)
-ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*/*.asm)
-
 ASMOBJECT64		:= $(patsubst %.asm, $(TEMP_DIR)/obj64/%.asm.o, $(ASM_SRCS))
-
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*.S)
-GNU_ASM_SRCS += $(wildcard $(KERNEL_SRC)/*/*/*/*/*/*/*/*/*/*.S)
-
 GNU_ASMOBJECT64	:= $(patsubst %.S, $(TEMP_DIR)/obj64/%.S.o, $(GNU_ASM_SRCS))
-
 ALL_OBJECTS64	:= $(sort $(COBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
 
 ########################################################

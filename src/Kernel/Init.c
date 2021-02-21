@@ -118,16 +118,16 @@ void initialize_kernel(void* SMAP, void* size)
     
     /* Virtual Memory */
     init_vmm();
-    //KERNEL_LOG_OK("Virtual memory initialization : done");
+    KERNEL_LOG_OK("Virtual memory initialization : done");
 
     /* Physical Memory */
     init_pmm(SMAPinfo, SMAPsize);
-    //KERNEL_LOG_OK("Physical memory initialization : done");
+    KERNEL_LOG_OK("Physical memory initialization : done");
 
     /* Kernel Heap */
     init_kheap(); // Kernel Logical
     init_vmheap();  // Kernel Virtual
-    //KERNEL_LOG_OK("Kernel heap initialization : done");
+    KERNEL_LOG_OK("Kernel heap initialization : done");
 
     /* SCHEDULER */
     init_scheduler();

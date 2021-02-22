@@ -56,7 +56,7 @@ OPTIMIZATION =
 ########################################################
 #	COMPILER FLAGS
 ########################################################
-CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib -fdiagnostics-color=always #-Werror
+CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int
 
 ########################################################
 #	LINKER

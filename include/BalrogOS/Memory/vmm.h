@@ -32,5 +32,6 @@ uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr);
  * @param virt_addr the virtual address to set
  * @param phys_addr the physical address to place into the page table at virt_addr
  * @param flags Page flags to use.
+ * @return the newly setted page
  */
-void vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags);
+void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags);

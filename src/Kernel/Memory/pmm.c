@@ -1,7 +1,9 @@
 #include "BalrogOS/Memory/pmm.h"
 #include "BalrogOS/Debug/debug_output.h"
-#include <string.h>
 #include "BalrogOS/Memory/vmm.h"
+
+#include <stdio.h>
+#include <string.h>
 
 uint64_t total_memory = 0;
 uint64_t total_memory_used = 0;
@@ -29,7 +31,7 @@ void pmm_free(uintptr_t* addr)
     // if addr is greater than next_addr
     // then it should not be freed because next_addr is not
     // at addr yet.
-    if(next_addr < addr)
+    if((uintptr_t*) next_addr < addr)
     {
         return;
     }

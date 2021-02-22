@@ -48,11 +48,6 @@ static size_t int_to_string(unsigned long val, uint8_t base, char* str, uint8_t 
     return size;
 }
 
-static int print_pointer(void* ptr)
-{
-    //TODO
-}
-
 static int print_string(const char* str, size_t size)
 {
     vga_write(str, size);

@@ -3,12 +3,12 @@
 
 static int _ata_wait_400ns()
 {
-
+    return 0;
 }
 
 static int _ata_send_command()
 {
-
+    return 0;
 }
 
 void init_ata_drive()

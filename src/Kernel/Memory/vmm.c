@@ -92,7 +92,7 @@ uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr)
     return PT[PT_OFFSET(virt_addr)];
 }
 
-void vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags)
+void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags)
 {
     if(!PML4T)
     {

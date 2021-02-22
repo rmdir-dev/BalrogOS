@@ -3,6 +3,8 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 
+#include <stdio.h>
+
 /**
  * @brief enable the keyboard found in keyboard.asm
  * 

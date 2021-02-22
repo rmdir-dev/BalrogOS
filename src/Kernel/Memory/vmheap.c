@@ -1,6 +1,7 @@
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/pmm.h"
+#include "BalrogOS/Memory/vmm.h"
 #include "BalrogOS/Debug/debug_output.h"
 
 /*
@@ -58,7 +59,7 @@ void* vmalloc(size_t size)
         /*  if the next block is smaller than the current top
             then try to allocate the new block
         */
-        if(current_block < vmheap_current_top)
+        if(current_block < (block_info*) vmheap_current_top)
         {
             /*  check if the block is large enough 
                 if yes allocate the new block of memory here.
@@ -111,7 +112,7 @@ void* vmalloc(size_t size)
                 current_block = block + sizeof(block_info) + size;
 
                 // check if the current top is not the virtual heap top
-                if(current_block < vmheap_current_top)
+                if(current_block < (block_info*) vmheap_current_top)
                 {
                     // if not then set the previous block to block and the present bit to 0
                     current_block->previous_chunk = block;
@@ -187,7 +188,7 @@ void vmfree(void* ptr)
 
     while(1)
     {
-        if(next_block < vmheap_current_top)
+        if(next_block < (block_info*) vmheap_current_top)
         {
             // if the next block is not mapped
             if(!next_block->_is_mmapped)
@@ -230,7 +231,7 @@ void vmfree(void* ptr)
 
     // if the freed block is smaller than fist_free then 
     // set first free to block.
-    if(first_free > block)
+    if((block_info*) first_free > block)
     {
         first_free = block;
     }

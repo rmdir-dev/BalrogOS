@@ -27,7 +27,7 @@ void free(void* pointer);
  */
 void* malloc(size_t memory_size);
 
-#define NULL    0
+#define NULL ((void *)0)
 
 #ifdef __cplusplus
 }

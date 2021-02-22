@@ -29,7 +29,7 @@ static struct IDT_Gates gates[TOTAL_NBR_INTERRUPT];
 static struct IDT_Pointer idt_ptr = { 0, 0 };
 static interrupt_handler int_handlers[TOTAL_NBR_INTERRUPT];
 
-static set_idt_entry(uint32_t id, void* vector, uint16_t selector, uint8_t ist, uint8_t flags)
+static void set_idt_entry(uint32_t id, void* vector, uint16_t selector, uint8_t ist, uint8_t flags)
 {
     uintptr_t v = (uintptr_t)vector;
     gates[id].offset_low = v & 0xffff;

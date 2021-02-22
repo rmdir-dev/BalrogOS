@@ -3,5 +3,5 @@
 
 void init_file_system()
 {
-
+    init_ata();
 }

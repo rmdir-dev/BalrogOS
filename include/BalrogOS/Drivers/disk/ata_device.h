@@ -49,8 +49,13 @@
 #define ATA_DEV_CTR_PRIMARY     0x3f6   // Primary control base register
 #define ATA_DEV_CTR_SECONDARY   0x376   // Secondary control base register
 
-#define ATA_REG_R_CTR(reg)      (reg)   // Read Alternate Status Register	A duplicate of the Status Register which does not affect interrupts.
-#define ATA_REG_W_CTR(reg)      (reg)   // Write Device Control Register    Used to reset the bus or enable/disable interrupts.	
+/* MUST SUPPLY CTR REG
+Read Alternate Status Register	A duplicate of the Status Register which does not affect interrupts. */
+#define ATA_REG_R_CTR(reg)      (reg)
+
+/* MUST SUPPLY CTR REG
+ Write Device Control Register    Used to reset the bus or enable/disable interrupts.	 */
+#define ATA_REG_W_CTR(reg)      (reg)
 
 /*
     ERROR REG
@@ -72,6 +77,40 @@
 #define ATA_CHS_LBA_ADDR(reg)   (reg & 0b1111) // In CHS addressing, bits 0 to 3 of the head. In LBA addressing, bits 24 to 27 of the block number
 #define ATA_DRV         0b00010000  // selected drive number
 #define ATA_USE_LBA     0b01000000  // use LBA addressing if set, else CHS
+
+/*
+    STATUS REG (I/O base + 7)
+*/
+
+#define ATA_STATUS_ERR  0b00000001  // Indicates an error occurred. Send a new command to clear it (or nuke it with a Software Reset).
+#define ATA_STATUS_IDX  0b00000010  // Index. Always set to zero.
+#define ATA_STATUS_CORR 0b00000100  // Corrected data. Always set to zero.
+#define ATA_STATUS_DRQ  0b00001000  // Set when the drive has PIO data to transfer, or is ready to accept PIO data.
+#define ATA_STATUS_SRV  0b00010000  // Overlapped Mode Service Request.
+#define ATA_STATUS_DF   0b00100000  // Drive Fault Error (does not set ERR).
+#define ATA_STATUS_RDY  0b01000000  // Bit is clear when drive is spun down, or after an error. Set otherwise.
+#define ATA_STATUS_BSY  0b10000000  // Indicates the drive is preparing to send/receive data (wait for it to clear). 
+                                    // In case of 'hang' (it never clears), do a software reset.
+
+/*
+    CONTROL REGISTER (Control base + 0)
+*/
+
+#define ATA_CTR_nIEN    0b00000010  // Set this to stop the current device from sending interrupts.
+#define ATA_CTR_SRST    0b00000100  // Set, then clear (after 5us), this to do a "Software Reset" on all ATA drives on a bus, if one is misbehaving.
+#define ATA_CTR_HOB     0b10000000  // Set this to read back the High Order Byte of the last LBA48 value sent to an IO port.
+
+/*
+    DRIVE ADDRESS REGISTER (Control base + 1)
+*/
+
+#define ATA_DRV_ADDR_DS0    0b00000001  // Drive 0 select. Clears when drive 0 selected.
+#define ATA_DRV_ADDR_DS1    0b00000010  // Drive 1 select. Clears when drive 1 selected.
+#define ATA_DRV_ADDR_HS0    0b00000100  // One's compliment representation of the currently selected head.
+#define ATA_DRV_ADDR_HS1    0b00001000  // One's compliment representation of the currently selected head.
+#define ATA_DRV_ADDR_HS2    0b00010000  // One's compliment representation of the currently selected head.
+#define ATA_DRV_ADDR_HS3    0b00100000  // One's compliment representation of the currently selected head.
+#define ATA_DRV_ADDR_WTG    0b01000000  // Write gate; goes low while writing to the drive is in progress.
 
 /*
     OTHER

@@ -14,6 +14,7 @@
 #include "BalrogOS/Debug/exception.h"
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/Syscall/syscall.h"
+#include "BalrogOS/FileSystem/filesystem.h"
 
 /* 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -143,6 +144,8 @@ void initialize_kernel(void* SMAP, void* size)
     push_process("test", test2, 0);
     push_process("test", test, 0);
     push_process("test", test_user_mode, 3);
+
+    init_file_system();
 
     enable_interrupt();
 }

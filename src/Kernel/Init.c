@@ -130,15 +130,18 @@ void initialize_kernel(void* SMAP, void* size)
     init_vmheap();  // Kernel Virtual
     KERNEL_LOG_OK("Kernel heap initialization : done");
 
+    /* GDT and TSS */
+    init_gdt();
+    KERNEL_LOG_OK("GDT and TSS : done");
+
     /* SCHEDULER */
     init_scheduler();
+    KERNEL_LOG_OK("CPU scheduler initialization : done");
 
     /*     KEYBOARD     */
     init_keyboard();
+    KERNEL_LOG_OK("Keyboard initialization : done");
 
-    /* GDT and TSS */
-    init_gdt();
-    
     /* TEST PROCESS */
     test_init();
     push_process("test", test2, 0);

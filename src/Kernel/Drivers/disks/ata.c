@@ -25,6 +25,7 @@ static int _ata_wait_400ns(uint16_t bus)
 
 static uint8_t _ata_send_command(ata_cmd* command)
 {
+    // select the device
     out_byte(ATA_REG_W_DEV(command->bus), command->device | (command->lba_sep[3] &0xf));
     _ata_wait_400ns(command->bus);
 
@@ -69,53 +70,47 @@ static void _ata_init_drive(ata_drive* drive)
 {
     uint16_t io_bus = drive->io_bus;
 
+    /* select the drive */
+    out_byte(ATA_REG_W_DEV(io_bus), 0xa0 | drive->master);
+
     out_byte(ATA_REG_W_S_COUNT(io_bus), 0);
     out_byte(ATA_REG_W_LBA_L(io_bus), 0);
     out_byte(ATA_REG_W_LBA_M(io_bus), 0);
     out_byte(ATA_REG_W_LBA_H(io_bus), 0);
 
-    uint8_t val_1 = in_byte(ATA_REG_R_LBA_L(io_bus));
-    out_byte(ATA_REG_W_LBA_L(io_bus), (~val_1) & 0xff);
-    uint8_t val_2 = in_byte(ATA_REG_R_LBA_L(io_bus));
-    if(val_2 != ((~val_1) & 0xff))
-    {
-        KERNEL_LOG_FAIL("fail to read drive 0%x | %s", io_bus, drive->master == 0x10 ? "slave" : "master");
-        return;
-    }
-
-    out_byte(ATA_REG_W_DEV(io_bus), 0xa0 | drive->master);
-    if(!(_ata_wait_400ns(io_bus) & ATA_STATUS_RDY))
-    {
-        KERNEL_LOG_FAIL("drive is not ready! 0%x | %s", io_bus, drive->master == 0x10 ? "slave" : "master");
-        return;
-    }
-
     // do a software rest
     out_byte(ATA_REG_W_CTR(drive->ctr_bus), ATA_CTR_SRST);
     // clear the reset bit
     out_byte(ATA_REG_W_CTR(drive->ctr_bus), 0);
-
+    
     // get logical block address
     uint64_t lba = (in_byte(ATA_REG_R_LBA_H(io_bus)) << 16) | (in_byte(ATA_REG_R_LBA_H(io_bus)) << 8) | in_byte(ATA_REG_R_LBA_L(io_bus));
-
+    
+    /* prepare the first command to be sent, 
+    the first command will wake up the sleeping drives */
     ata_cmd command;
     command.bus = io_bus;
     command.device = 0xa0 | drive->master;
     command.command = ATA_CMD_IDENT_DEV;
     command.wait_status = ATA_STATUS_DRQ;
+
+    /* check if the drive is ATAPI */
     if(lba == ATAPI_LBA_MAGIC)
     {
         KERNEL_LOG_OK("drive is ATAPI, 0%x", io_bus);
         drive->atapi = 1;
-
+        command.command = ATA_CMD_IDENT_PCK_DEV;
     }
 
+    // send the command if the device is asleep
+    // the first command will wake it up.
     if(!_ata_send_command(&command))
     {
-        KERNEL_LOG_FAIL("fail to exectue command");
+        //KERNEL_LOG_FAIL("fail to exectue command");
         return;
     }
 
+    // fill the buffer with the content asked by the previous command.
     _ata_fill_buffer(io_bus, (void*) &drive->id);
 
     KERNEL_LOG_OK("drive 0%x %s load successfully.", io_bus, drive->master == 0x10 ? "slave" : "master");
@@ -125,22 +120,28 @@ static void _ata_init_drive(ata_drive* drive)
 
 static inline int _ata_read_sector(uint8_t* buffer, uint64_t lba, ata_drive* device)
 {
+    // number of tries.
     int retries = 5;
     while(retries--)
     {
+        // create a command
         ata_cmd command;
-        command.bus = device->io_bus;
-        command.count = 1;
-        command.lba = lba & 0xffffff;
-        command.device = 0xe0 | device->master | ((lba >> 24) & 0xf);
-        command.command = ATA_CMD_READ_SEC_RETRY;
+        command.bus = device->io_bus;   // bus to use
+        command.count = 1;              // number of sector to read (1)
+        command.lba = lba & 0xffffff;   // set the logical block address.
+        command.device = 0xe0 | device->master | ((lba >> 24) & 0xf);   // set the device.
+        command.command = ATA_CMD_READ_SEC_RETRY;   // read an retry.
 
+        // send the command
         int status = _ata_send_command(&command);
+
+        // if the command failed to read then retry 
         if(status & (ATA_STATUS_DF | ATA_STATUS_ERR) || !(status & ATA_STATUS_DRQ))
         {
             continue;
         }
 
+        // fill the buffer
         _ata_fill_buffer(device->io_bus, buffer);
         return 0;
     }
@@ -162,6 +163,9 @@ void ata_write(uint8_t* buffer, uint64_t lba, uint64_t len, ata_drive* device)
 
 }
 
+/*
+FOR TEST ONLY REMOVE AFTERWARD!!!!
+*/
 uint16_t buffer[256];
 
 void init_ata()
@@ -197,5 +201,5 @@ void init_ata()
     {
         KERNEL_LOG_INFO("read success 0%p | magic number : 0%x", &buffer, buffer[255]);
     }
-
+    
 }

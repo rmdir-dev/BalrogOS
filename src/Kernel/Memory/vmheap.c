@@ -128,8 +128,8 @@ void* vmalloc(size_t size)
         {
             // if the current virtual heap top is equal to KERNEL_VIRTUAL_TOP
             // then we don't have any space left in memory.
-            // We also don't allow to allocate a block larger than 4086 bytes atm.
-            if(vmheap_current_top == KERNEL_VIRTUAL_TOP || size > 4086)
+            // We also don't allow to allocate a block larger than 4072 bytes atm.
+            if(vmheap_current_top == KERNEL_VIRTUAL_TOP || size > 0x1000 - sizeof(block_info))
             {
                 //Kernel heap full
                 return 0;

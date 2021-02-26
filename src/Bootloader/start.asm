@@ -52,14 +52,15 @@ init:
     PrintStringNextLine MSG ; print MSG
 
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
-    mov dh, 600             ; we want to read 600 sectors from it 600 * 512B = 300KiB
-    mov cl, 0x02            ; read sector 2
+    mov dh, 127             ; we want to read 128 sectors from it 128 * 512B = 65KiB
+    mov di, 0x1ea0          ; read sector 2
     mov bx, 0x0000          ; higher word of the memory address we want to store our data to
     mov es, bx              ; set the higher word of the address into es
     mov bx, 0x7c00 + 512    ; lower word of the memory addres into bx
                             ; 0x200 = 512
                             ; BIOS will store data at address es:bx
                             ; so here 0x00007e00
+
     call _DiskLoad          ; load the disk data
 
     mov esp, init           ; set the stack pointer to main
@@ -91,13 +92,14 @@ MSG:
                             ; it will look if there is this number at the end of the first sector
 
 _sector_two:
+    PrintStringNextLine SEC_TWO_MSG 
     call _DetectMemorySize
-
     mov ax, MEMORY_SIZE_KB
     mov bx, MEMORY_ENTRY_COUNT
 
     call _kernel
-
+SEC_TWO_MSG:
+    db "test sec 2",0
 %include "src/Bootloader/Memory/Memory.asm"
 
     times 512-($-$$ - 512) db 0

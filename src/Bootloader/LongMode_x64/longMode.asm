@@ -50,10 +50,10 @@ _CheckLongMode:
     jmp $
 
 NO_CUPID_MSG:
-    db "Err CUPID!",0
+    db "CUPID",0
 
 NO_LM_MSG:
-    db "Err x64",0
+    db "x64",0
 
 LM_SUPPORTED:
-    db "Long mode supported!", 0
+    db "LM ok!", 0

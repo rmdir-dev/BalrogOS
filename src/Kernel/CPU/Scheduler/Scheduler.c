@@ -102,7 +102,7 @@ void schedule()
         }
     } else 
     {
-        printf("Schedule work!\n");
+        //printf("Schedule work!\n");
         irq_end(INT_IRQ_0);
     }
 }

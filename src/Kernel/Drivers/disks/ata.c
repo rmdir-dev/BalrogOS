@@ -197,7 +197,7 @@ void init_ata()
     /*
         TEST PURPOSE ONLY check if we can read the first sector of the boot drive.
     */
-    if(_ata_read_sector(&buffer, 0, &drives[0]) == 0)
+    if(!_ata_read_sector(&buffer, 0, &drives[0]))
     {
         KERNEL_LOG_INFO("read success 0%p | magic number : 0%x", &buffer, buffer[255]);
     }

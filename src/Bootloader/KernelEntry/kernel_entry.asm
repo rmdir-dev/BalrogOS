@@ -1,5 +1,4 @@
 [bits 16]                       ; switching to 64bit
-[extern kernel_main]
 
 %define KERNEL_OFFSET 0xFFFFFF8000000000
 
@@ -17,7 +16,7 @@ _PrepareKernel:
     mov ecx, 4096           ; set ecx to 4096 (will be use as a counter)
     rep stosd               ; clear the memory from 0x1000 to 0x5000
     mov edi, 0x1000 - KERNEL_OFFSET         ; set edi back to 0x1000 (PML4T)
-
+    
     ; PAGING                                                    total paging cover 256TiB of memory
     ; PML4T address 0x1000 pointing to PDPT                     each PML4T hold 512GiB / entry total 256TiB
     ; PDPT  address 0x2000 pointing to PDT                      each PDPT hold 1GiB / entry total 512 MiB
@@ -45,6 +44,7 @@ _PrepareKernel:
     add ebx, 0x1000             ; add 0x1000 to ebx
     add edi, 8                  ; add 8 to edi (shift 8 byte so to the next address)
     loop .SetEntry              ; loop while ecx is not equal to 0
+    
                                 ; the map the first 2MB of memory
                                 ; so it will map the memory from 0x00000000 to 0x00200000
 
@@ -70,7 +70,6 @@ _PrepareKernel:
                                 ;   - to 0 = real mode
                                 ;   - to 1 = protected mode
     mov cr0, eax                ; set the new value to cr0
-
     lgdt [GDT64.Pointer - KERNEL_OFFSET]        ; load gdt
 
     jmp GDT64.Code:(LongMode - KERNEL_OFFSET)
@@ -78,6 +77,7 @@ _PrepareKernel:
 %include "src/Bootloader/LongMode_x64/gdt.asm"
 
 [bits 64]                       ; switching to 64bit
+[extern kernel_main]
 
 LongMode:
     mov eax, 0x0                ; clearing segment register
@@ -111,15 +111,25 @@ Upper_half:
     mov es, rax
 
     mov rax, qword .reload_cs   ; ensure that we're in higher half
-    push qword 0x8              ; by reloading the code segment
+    push 0x8              ; by reloading the code segment
     push rax                    ; 0x8 = code segment index in the GDT
     retfq                       ; does a long jump CODE:.reload_cs
 .reload_cs:
-
     mov rax, qword _KernelEntry ; call to kernel entry
-    call rax
+    call _KernelEntry
     hlt                         ; halt
     sti                         ; enable interrupt
+    ret
+_KernelEntry:
+    mov rax, qword MEMORY_INFO
+    mov word di, [rax]
+    mov rax, qword MEMORY_ENTRIES
+    mov word si, [rax]
+
+    call kernel_main
+    jmp $
+    sti                         ; enable interrupt
+    hlt                         ; halt
     ret
 
 IN_x64_PROTECTED_MODE_MSG:
@@ -130,19 +140,3 @@ MEMORY_INFO:
 
 MEMORY_ENTRIES:
     dw 0x0000
-
-[bits 64]
-section .text
-_KernelEntry:
-    mov rax, qword MEMORY_INFO
-    mov word di, [rax]
-    mov rax, qword MEMORY_ENTRIES
-    mov word si, [rax]
-    mov rax, qword kernel_main  ; call main
-    call rax
-    jmp $
-    sti                         ; enable interrupt
-    hlt                         ; halt
-    ret
-
-%include "src/Bootloader/IO/System/print.asm"

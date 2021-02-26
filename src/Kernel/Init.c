@@ -144,9 +144,9 @@ void initialize_kernel(void* SMAP, void* size)
 
     /* TEST PROCESS */
     test_init();
-    push_process("test", test2, 0);
-    push_process("test", test, 0);
-    push_process("test", test_user_mode, 3);
+    //push_process("test", test2, 0);
+    //push_process("test", test, 0);
+    //push_process("test", test_user_mode, 3);
 
     init_file_system();
 

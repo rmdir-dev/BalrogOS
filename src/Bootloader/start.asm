@@ -52,7 +52,7 @@ init:
     PrintStringNextLine MSG ; print MSG
 
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
-    mov dh, 127             ; we want to read 128 sectors from it 128 * 512B = 65KiB
+    mov dh, 128             ; we want to read 128 sectors from it 128 * 512B = 65KiB
     mov di, 0x1ea0          ; read sector 2
     mov bx, 0x0000          ; higher word of the memory address we want to store our data to
     mov es, bx              ; set the higher word of the address into es

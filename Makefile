@@ -86,8 +86,10 @@ os:
 	mkdir -p build/os
 	cat build/bin/Bootloader $(BUILD_DIR)/kernel.bin > build/os/os-image.bin
 	truncate build/os/os-image.bin -s 1200k
-	dd if=build/os/os-image.bin of=build/os/os-image bs=512 count=1 conv=notrunc
-	dd if=build/os/os-image.bin of=build/os/os-image bs=1 skip=512 seek=4014080 conv=notrunc
+	dd if=build/os/os-image.bin of=files/filesys.dd bs=512 count=1 conv=notrunc
+	dd if=build/os/os-image.bin of=files/filesys.dd bs=1 skip=512 seek=4014080 conv=notrunc
+	cp files/filesys.dd build/os/os-image
+	VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 run:
 	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown

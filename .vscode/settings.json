@@ -3,6 +3,7 @@
         "type_traits": "c",
         "pthread_mutex_attr.h": "c",
         "stdio.h": "c",
-        "park.h": "c"
+        "park.h": "c",
+        "cstddef": "c"
     }
 }

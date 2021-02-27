@@ -4,4 +4,6 @@
 void init_file_system()
 {
     init_ata();
+    fs_device dev;
+    ata_get_boot_device(&dev);
 }

@@ -1,6 +1,8 @@
 #include "BalrogOS/Drivers/disk/ata.h"
+#include "BalrogOS/Drivers/disk/ata_device.h"
 #include "BalrogOS/Drivers/disk/ata_command.h"
 #include "BalrogOS/CPU/Ports/ports.h"
+#include "BalrogOS/Memory/kheap.h"
 
 #include "BalrogOS/Debug/debug_output.h"
 
@@ -118,7 +120,7 @@ static void _ata_init_drive(ata_drive* drive)
     drive->exist = 1;
 }
 
-static inline int _ata_read_sector(uint8_t* buffer, uint64_t lba, ata_drive* device)
+static inline int _ata_read_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
 {
     // number of tries.
     int retries = 5;
@@ -131,6 +133,7 @@ static inline int _ata_read_sector(uint8_t* buffer, uint64_t lba, ata_drive* dev
         command.lba = lba & 0xffffff;   // set the logical block address.
         command.device = 0xe0 | device->master | ((lba >> 24) & 0xf);   // set the device.
         command.command = ATA_CMD_READ_SEC_RETRY;   // read an retry.
+        command.wait_status = 0;
 
         // send the command
         int status = _ata_send_command(&command);
@@ -140,7 +143,7 @@ static inline int _ata_read_sector(uint8_t* buffer, uint64_t lba, ata_drive* dev
         {
             continue;
         }
-
+        
         // fill the buffer
         _ata_fill_buffer(device->io_bus, buffer);
         return 0;
@@ -148,25 +151,40 @@ static inline int _ata_read_sector(uint8_t* buffer, uint64_t lba, ata_drive* dev
     return -1;
 }
 
-void ata_read(uint8_t* buffer, uint64_t lba, uint64_t len, ata_drive* device)
+void ata_read(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
 
 }
 
-static inline void _ata_write_sector(uint8_t* buffer, uint64_t lba, ata_drive* device)
+static inline void _ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
 {
 
 }
 
-void ata_write(uint8_t* buffer, uint64_t lba, uint64_t len, ata_drive* device)
+void ata_write(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
 
 }
 
-/*
-FOR TEST ONLY REMOVE AFTERWARD!!!!
-*/
-uint16_t buffer[256];
+
+void ata_get_boot_device(fs_device* device)
+{
+    uint16_t* buffer = vmalloc(512);
+    KERNEL_LOG_INFO("vmalloc : 0%p", buffer);
+    for(size_t i = 0; i < 4; i++)
+    {
+        KERNEL_LOG_INFO("searching boot device. %d", i);
+        if(!_ata_read_sector(&drives[i], buffer, 0))
+        {
+            KERNEL_LOG_INFO("read success 0%p | magic number : 0%x", buffer, buffer[255]);
+            if(buffer[255] == 0xaa55)
+            {
+                device->unique_id = i;
+                return;
+            }
+        }
+    }
+}
 
 void init_ata()
 {
@@ -193,13 +211,4 @@ void init_ata()
     drives[3].exist = 0;
     drives[3].master = ATA_SLAVE;
     _ata_init_drive(&drives[3]);
-
-    /*
-        TEST PURPOSE ONLY check if we can read the first sector of the boot drive.
-    */
-    if(!_ata_read_sector(&buffer, 0, &drives[0]))
-    {
-        KERNEL_LOG_INFO("read success 0%p | magic number : 0%x", &buffer, buffer[255]);
-    }
-    
 }

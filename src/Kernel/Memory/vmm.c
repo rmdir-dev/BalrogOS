@@ -1,5 +1,5 @@
 #include "BalrogOS/Memory/vmm.h"
-#include "memory.h"
+#include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/pmm.h"

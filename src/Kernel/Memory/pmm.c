@@ -20,7 +20,7 @@ uintptr_t top_32_addr = 0;
 /*
 Pointer to the top most address.
 */
-uintptr_t top_addr = 0;
+uintptr_t pmm_top_addr = 0;
 /*
 Pointer to last address freed -> contain the last address freed before
 */
@@ -57,9 +57,9 @@ uintptr_t* pmm_alloc()
     } else 
     {
         // if the next address is equal to the top address then return 0
-        if(next_addr >= top_addr)
+        if(next_addr >= pmm_top_addr)
         {
-            printf("next : %p | top : %p ", next_addr, top_addr);
+            printf("next : %p | top : %p ", next_addr, pmm_top_addr);
             return 0x0;
         }
 
@@ -113,10 +113,10 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
             {
                 next_addr = start;
                 top_32_addr = end;
-                top_addr = end;
+                pmm_top_addr = end;
             } else 
             {
-                top_addr = end;
+                pmm_top_addr = end;
             }
         }
 

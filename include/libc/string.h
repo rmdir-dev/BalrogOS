@@ -54,6 +54,43 @@ void* memset(void* pointer, int value, size_t count);
  */
 size_t strlen(const char* str);
 
+/**
+ * @brief Copy the content of source to dest.
+ * 
+ * @param dest 
+ * @param source 
+ * @return char* 
+ */
+char* strcpy(void* __restrict dest, const void* __restrict source);
+
+/**
+ * @brief Breaks string str into a series of tokens using the delimiter delim.
+ * 
+ * @param str 
+ * @param delim 
+ * @return char* 
+ */
+char* strtok(char * __restrict str, const char delim);
+
+/**
+ * @brief Returns a pointer to a null-terminated byte string, 
+ * which is a duplicate of the string pointed to by str1. 
+ * The returned pointer must be passed to free to avoid a memory leak.
+ * 
+ * @param str 
+ * @return char* 
+ */
+char* strdup(char* str1);
+
+/**
+ * @brief Compare two strings
+ * 
+ * @param first 
+ * @param second 
+ * @return int 
+ */
+int strcmp(const char* first, const char* second);
+
 #ifdef __cplusplus
 }
 #endif

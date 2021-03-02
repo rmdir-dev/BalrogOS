@@ -3,6 +3,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/pmm.h"
+#include <string.h>
 
 #define STRIP_FLAGS(addr)       (((uintptr_t)addr) & ~PAGE_FLAG_MASK)
 #define ADD_FLAGS(addr, flags)   (((uintptr_t)addr) | (flags & PAGE_FLAG_MASK))

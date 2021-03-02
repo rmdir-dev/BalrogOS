@@ -1,5 +1,4 @@
 #pragma once
+#include <stdint.h>
 
-#define NULL 0
-
-typedef unsigned long size_t;
+#define NULL ((void *)0)

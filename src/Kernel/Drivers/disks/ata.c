@@ -90,11 +90,16 @@ static void _ata_init_drive(ata_drive* drive)
     
     /* prepare the first command to be sent, 
     the first command will wake up the sleeping drives */
-    ata_cmd command;
-    command.bus = io_bus;
-    command.device = 0xa0 | drive->master;
-    command.command = ATA_CMD_IDENT_DEV;
-    command.wait_status = ATA_STATUS_DRQ;
+    ata_cmd command = {
+        .bus = io_bus,
+        .device = 0xa0 | drive->master,
+        .command = ATA_CMD_IDENT_DEV,
+        .wait_status = ATA_STATUS_DRQ
+    };
+    //command.bus = io_bus;
+    //command.device = 0xa0 | drive->master;
+    //command.command = ATA_CMD_IDENT_DEV;
+    //command.wait_status = ATA_STATUS_DRQ;
 
     /* check if the drive is ATAPI */
     if(lba == ATAPI_LBA_MAGIC)
@@ -127,13 +132,13 @@ static inline int _ata_read_sector(ata_drive* device, uint8_t* buffer, uint64_t 
     while(retries--)
     {
         // create a command
-        ata_cmd command;
-        command.bus = device->io_bus;   // bus to use
-        command.count = 1;              // number of sector to read (1)
-        command.lba = lba & 0xffffff;   // set the logical block address.
-        command.device = 0xe0 | device->master | ((lba >> 24) & 0xf);   // set the device.
-        command.command = ATA_CMD_READ_SEC_RETRY;   // read an retry.
-        command.wait_status = 0;
+        ata_cmd command = {
+            .bus = device->io_bus,
+            .count = 1,
+            .lba = lba & 0xffffff,
+            .device = 0xe0 | device->master | ((lba >> 24) & 0xf),
+            .command = ATA_CMD_READ_SEC_RETRY
+        };
 
         // send the command
         int status = _ata_send_command(&command);
@@ -153,7 +158,12 @@ static inline int _ata_read_sector(ata_drive* device, uint8_t* buffer, uint64_t 
 
 void ata_read(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
-
+    ata_drive* drive = &drives[device->unique_id];
+    for(size_t i = 0; i < len; i++)
+    {
+        _ata_read_sector(drive, buffer, lba + i);
+        buffer += 512;
+    }
 }
 
 static inline void _ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
@@ -180,6 +190,8 @@ void ata_get_boot_device(fs_device* device)
             if(buffer[255] == 0xaa55)
             {
                 device->unique_id = i;
+                device->read = ata_read;
+                device->write = ata_write;
                 return;
             }
         }

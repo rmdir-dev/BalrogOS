@@ -99,8 +99,8 @@ void initialize_kernel(void* SMAP, void* size)
     disable_interrupt();
     /*      SCREEN      */
     vga_init();
-    KERNEL_LOG_OK("Kernel loading :");
-    KERNEL_LOG_OK("VGA Driver : done");
+    //KERNEL_LOG_OK("Kernel loading :");
+    //KERNEL_LOG_OK("VGA Driver : done");
 
     /*   INTERRRUPTS    */
     KERNEL_LOG_INFO("Interrrupts : waiting...");

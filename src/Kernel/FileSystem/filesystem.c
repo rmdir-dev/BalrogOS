@@ -20,5 +20,4 @@ void init_file_system()
     printf("buffer : 0%p\n", buffer);
     dev.fs->list(&dev, "/", buffer);
     dev.fs->list(&dev, "/boot", buffer);
-    printf("dir listed\n");
 }

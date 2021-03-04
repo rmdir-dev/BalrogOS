@@ -89,8 +89,8 @@ os:
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=512 count=1 conv=notrunc
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=1 skip=512 seek=4014080 conv=notrunc
 	cp files/filesys.dd build/os/os-image
-	rm VBox/os-image.vdi || true
-	VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
+	#rm VBox/os-image.vdi || true
+	#VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 run:
 	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown

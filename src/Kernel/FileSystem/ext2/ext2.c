@@ -49,6 +49,7 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
     count += last_delimiter < (src + strlen(src) - 1);
 
     count++;
+    //printf("count : %d \n", count);
 
     ret = vmalloc(sizeof(char*) * count);
 
@@ -61,6 +62,7 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
         {
             if(idx < count)
             {
+                //printf("has token %s | 0%p \n", token, src);
                 *(ret + idx++) = token;
                 token = strtok(NULL, "/");
             }
@@ -147,6 +149,8 @@ static uint32_t _ext2_find_higher_half_free_blocks(fs_device* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
+    /* TODO update superblock */
+    //printf("number of blocks : %d/%d\n", fs_data->sb.unalloc_blocks, fs_data->sb.blocks);
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
     uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, 
@@ -164,6 +168,8 @@ static uint32_t _ext2_find_free_blocks(fs_device* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
+    /* TODO update superblock */
+    //printf("number of blocks : %d/%d\n", fs_data->sb.unalloc_blocks, fs_data->sb.blocks);
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
     uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, fs_data->sec_per_block, 0);
@@ -184,7 +190,7 @@ static uint32_t _ext2_find_free_inode(fs_device* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
-    printf("number of inode : %d/%d\n", fs_data->sb.unalloc_inodes, fs_data->sb.inodes);
+    //printf("number of inode : %d/%d\n", fs_data->sb.unalloc_inodes, fs_data->sb.inodes);
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
     uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_inode_usage_bitmap, fs_data->sec_per_block, 0);
@@ -217,6 +223,7 @@ static ext2_inode _ext2_get_inode(fs_device* dev, uint32_t inode_idx)
     dev->read(dev, inode_table, (fs_data->blk_grp_desc.block_addr_of_inode_table + tbl_str_blc_addr) * fs_data->sec_per_block, 8);
 
     ext2_inode ret = inode_table[(inode_idx - 1) % 32];
+    //printf("inode %d info mode : %d | 0%p \n", ((inode_idx - 1) % 32), ret.mode, inode_table);
     pmm_free(VIRTUAL_TO_PHYSICAL(inode_table));
     return ret;
 }
@@ -587,7 +594,7 @@ static uint8_t _ext2_list_dir(uint8_t* dir)
         next_entry = dir_ptr + entry->entry_size;
         strcpy(&name_buffer, &entry->name);
         name_buffer[entry->name_length] = 0;
-        printf("name : %s \t \t | inode %d \t | entry size : %d | idx : %d \n", &name_buffer, entry->inode, entry->entry_size, idx++);
+        printf("%s \n", &name_buffer);
         dir_ptr += entry->entry_size;
         memset(&name_buffer, 0, 255);
     } while(next_entry->inode);   
@@ -682,7 +689,7 @@ static int ext2_copy(fs_device* dev, const char* filename, uint8_t* buffer, uint
 
 static int ext2_list(fs_device* dev, char* dirname, uint8_t* buffer)
 {
-    printf("%s\n", dirname);
+    printf("$ ls %s\n", dirname);
     size_t index;
     uint8_t from_root;
     char** path = _ext2_get_path(dirname, '/', &index, &from_root);

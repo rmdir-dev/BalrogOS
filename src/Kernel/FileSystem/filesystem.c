@@ -31,6 +31,4 @@ void init_file_system()
     vmm_set_page(0, PHYSICAL_TO_VIRTUAL(pmm_top_addr) + (4096 * 14), pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
     dev.fs->list(&dev, "/", buffer);
     dev.fs->list(&dev, "/boot", buffer);
-    //dev.fs->open(&dev, "/filesys.c", buffer);
-    printf("dir listed\n");
 }

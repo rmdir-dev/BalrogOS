@@ -111,3 +111,24 @@ void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, 
     
     return PT[PT_OFFSET(virt_addr)];
 }
+
+void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
+{
+    if(!PML4T)
+    {
+        PML4T = KernelPML4T;
+    }
+
+    page_table* PT = vmm_find_page(PML4T, virt_addr, 1);
+
+    if(!PT)
+    {
+        return;
+    }
+
+    if(PT[PT_OFFSET(virt_addr)])
+    {
+        pmm_free(STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]));
+        PT[PT_OFFSET(virt_addr)] = 0;
+    }
+}

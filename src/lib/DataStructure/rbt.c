@@ -341,3 +341,20 @@ void rbt_print(rbt_node* root)
         rbt_print(root->children[RBT_RIGHT]);
     }
 }
+
+void _rbt_clear(rbt_node* root)
+{
+    if(root != NULL)
+    {
+        _rbt_clear(root->children[RBT_LEFT]);
+        _rbt_clear(root->children[RBT_RIGHT]);
+        vmfree(root->value);
+        vmfree(root);
+        root = NULL;
+    }
+}
+
+void rbt_clear_tree(rbt_tree* root)
+{
+    _rbt_clear(root->rb_root);
+}

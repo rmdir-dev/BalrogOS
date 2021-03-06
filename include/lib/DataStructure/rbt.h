@@ -80,3 +80,10 @@ void rbt_delete_key(rbt_tree* root, uint64_t key);
  * @param root the root node to print from.
  */
 void rbt_print(rbt_node* root);
+
+/**
+ * @brief Delete all element in the RBT
+ * 
+ * @param root 
+ */
+void rbt_clear_tree(rbt_tree* root);

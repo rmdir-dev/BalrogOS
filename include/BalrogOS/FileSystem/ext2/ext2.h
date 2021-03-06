@@ -144,6 +144,18 @@ typedef struct _ext2_fs_data
     uint32_t sec_per_block;
 } __attribute__((packed)) ext2_fs_data;
 
+typedef struct _ext2_idata
+{
+    // the inode nbr
+    uint32_t inode_nbr;
+    // the file inode
+    ext2_inode inode;
+    // 1 if opened else 0
+    uint8_t open;
+    // file id in the open file table
+    uint64_t file_id;
+} __attribute__((packed)) ext2_idata;
+
 enum ext2_dir_entry_type
 {
     EXT2_TYPE_UNKNOWN_TYPE = 0,

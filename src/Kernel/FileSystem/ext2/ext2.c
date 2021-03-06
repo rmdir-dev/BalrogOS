@@ -1,4 +1,5 @@
 #include "BalrogOS/FileSystem/ext2/ext2.h"
+#include "BalrogOS/FileSystem/ext2/ext2_cache/ext2_cache.h"
 #include "BalrogOS/Drivers/disk/ata.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
@@ -215,7 +216,7 @@ static int _ext2_update_inode_table(fs_device* dev, uint32_t inode_idx, ext2_ino
     return 0;
 }
 
-static ext2_inode _ext2_get_inode(fs_device* dev, uint32_t inode_idx)
+ext2_inode ext2_get_inode(fs_device* dev, uint32_t inode_idx)
 {
     uint32_t tbl_str_blc_addr = inode_idx / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
@@ -232,7 +233,7 @@ static uint32_t _ext2_create_new_inode(fs_device* dev, uint16_t file_size, uint1
 {
     uint32_t new_id_inode = _ext2_find_free_inode(dev);
     
-    ext2_inode new_inode = _ext2_get_inode(dev, new_id_inode);
+    ext2_inode new_inode = ext2_get_inode(dev, new_id_inode);
     new_inode.mode = mode;
     new_inode.user_id = 0;
     new_inode.size = file_size;
@@ -539,8 +540,8 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     }
 
     char* buffer = PHYSICAL_TO_VIRTUAL(pmm_calloc());
-    ext2_inode root_itable = _ext2_get_inode(dev, 2);
-    _ext2_read_file(dev, buffer, &root_itable);
+    ext2_idata* root_itable = ext2_cache_search_inode(dev, 2);
+    _ext2_read_file(dev, buffer, &root_itable->inode);
 
     entry_read_dir_entries entries;
     uint32_t inode_id = 0;
@@ -550,9 +551,9 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     {
         if(!_ext2_read_dir_entry(buffer, &entries, *path))
         {
-            root_itable = _ext2_get_inode(dev, entries.entry->inode);
+            root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
             inode_id = entries.entry->inode;
-            _ext2_read_file(dev, buffer, &root_itable);
+            _ext2_read_file(dev, buffer, &root_itable->inode);
             size++;
         }
         path++;
@@ -619,9 +620,8 @@ static int ext2_read(fs_device* dev, char* filename, uint8_t* buffer)
     char** path = _ext2_get_path(filename, '/', &index, &from_root);
     uint32_t file_inode_nbr = _ext2_find_directory(dev, path, &index, 0);
 
-    ext2_inode file_inode = _ext2_get_inode(dev, file_inode_nbr);
-    printf("inode : %d\n", file_inode_nbr);
-    _ext2_read_file(dev, buffer, &file_inode);
+    ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
+    _ext2_read_file(dev, buffer, &file_inode->inode);
 
     printf("%s\n", buffer);
     vmfree(path);
@@ -644,10 +644,12 @@ static int ext2_touch(fs_device* dev, char* filename)
         return -1;
     }
 
-    ext2_inode root_itable = _ext2_get_inode(dev, file_inode_nbr);
+    ext2_idata* root_itable = ext2_cache_search_inode(dev, file_inode_nbr);
     
-    _ext2_read_file(dev, buffer, &root_itable);
-    _ext2_create_new_dir_entry(dev, buffer, path[index], &root_itable, 0, EXT2_TYPE_REGULAR_FILE);
+    _ext2_read_file(dev, buffer, &root_itable->inode);
+    _ext2_create_new_dir_entry(dev, buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
+
+    vmfree(buffer);
     vmfree(path);
     return 0;
 }
@@ -664,9 +666,9 @@ static int ext2_write(fs_device* dev, char* filename, uint8_t* buffer, uint64_t 
         return -1;
     }
 
-    ext2_inode file_inode = _ext2_get_inode(dev, file_inode_nbr);
+    ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
 
-    _ext2_write(dev, buffer, offset, len, &file_inode, file_inode_nbr);
+    _ext2_write(dev, buffer, offset, len, &file_inode->inode, file_inode_nbr);
 
     vmfree(path);
     return 0;
@@ -694,9 +696,10 @@ static int ext2_list(fs_device* dev, char* dirname, uint8_t* buffer)
     uint8_t from_root;
     char** path = _ext2_get_path(dirname, '/', &index, &from_root);
     uint32_t inode = _ext2_find_directory(dev, path, &index, 0);
-    ext2_inode root_itable = _ext2_get_inode(dev, inode);
-    _ext2_read_file(dev, buffer, &root_itable);
+    ext2_idata* root_itable = ext2_cache_search_inode(dev, inode);
+    _ext2_read_file(dev, buffer, &root_itable->inode);
     _ext2_list_dir(buffer);
+
     vmfree(path);
     return 0;
 }
@@ -719,13 +722,16 @@ static int ext2_mkdir(fs_device* dev, char* dirname)
     }
 
     char* buffer = vmalloc(4096 * 1024);
-    ext2_inode root_itable = _ext2_get_inode(dev, prev_inode);
-    _ext2_read_file(dev, buffer, &root_itable);
+    
+    ext2_idata* root_itable = ext2_cache_search_inode(dev, prev_inode);
+    _ext2_read_file(dev, buffer, &root_itable->inode);
     uint32_t inode = _ext2_create_new_dir_entry(dev, buffer, path[index], &root_itable, 4096, EXT2_TYPE_DIRECTORY);
 
-    ext2_inode file_inode = _ext2_get_inode(dev, inode);
-    _ext2_read_file(dev, buffer, &file_inode);
-    _ext2_initialize_dir(dev, buffer, &file_inode, inode, &root_itable, prev_inode);
+    ext2_idata* file_inode = ext2_cache_search_inode(dev, inode);
+    _ext2_read_file(dev, buffer, &file_inode->inode);
+    _ext2_initialize_dir(dev, buffer, &file_inode->inode, inode, &root_itable->inode, prev_inode);
+
+    vmfree(buffer);
     vmfree(path);
     return 0;
 }

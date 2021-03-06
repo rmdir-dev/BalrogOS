@@ -24,11 +24,28 @@ typedef struct _file_system
     char* name;
     int (*probe)(fs_device* device);
     int (*open)(fs_device* dev, const char* filename, uint8_t* buffer);
+    int (*read)(fs_device* dev, const char* filename, uint8_t* buffer, uint64_t offset, uint64_t len);
     int (*write)(fs_device* dev, const char* filename, uint8_t* buffer, uint64_t offset, uint64_t len);
     int (*touch)(fs_device* dev, const char* filename);
     int (*list)(fs_device* dev, const char* dirname, uint8_t* buffer);
     int (*mkdir)(fs_device* dev, const char* dirname);
     void* fs_data;
 } __attribute__((packed)) file_system;
+
+typedef struct _fs_file
+{
+    // full name of the file (real path)
+    char* name;
+    // pointer to the datas.
+    void* data;
+    // file size
+    uint64_t size;
+    // read write
+    uint8_t protection;
+    // reference count.
+    uint32_t reference;
+    // Current offset pointer
+    uint8_t* offset;
+} __attribute__((packed)) fs_file;
 
 void init_file_system();

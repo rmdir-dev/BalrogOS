@@ -1,5 +1,6 @@
 #include "BalrogOS/FileSystem/ext2/ext2.h"
 #include "BalrogOS/FileSystem/ext2/ext2_cache/ext2_cache.h"
+#include "BalrogOS/FileSystem/fs_cache.h"
 #include "BalrogOS/Drivers/disk/ata.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
@@ -613,6 +614,27 @@ static uint8_t _ext2_list_dir(uint8_t* dir)
 /*
     REGULAR FILE
 */
+static int ext2_open(fs_device* dev, char* filename)
+{
+    size_t index;
+    uint8_t from_root;
+    char** path = _ext2_get_path(filename, '/', &index, &from_root);
+    uint32_t file_inode_nbr = _ext2_find_directory(dev, path, &index, 0);
+
+    ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
+    uint8_t* buffer = fs_cache_get_new_buffer(file_inode->inode.size);
+    _ext2_read_file(dev, buffer, &file_inode->inode);
+
+    vmfree(path);
+    return 0;
+}
+
+static int ext2_close(fs_device* dev, uint32_t index)
+{
+    fs_cache_close_file(index);
+    return 0;
+}
+
 static int ext2_read(fs_device* dev, char* filename, uint8_t* buffer)
 {
     size_t index;
@@ -782,6 +804,7 @@ int ext2_probe(fs_device* dev)
     dev->fs = vmalloc(sizeof(file_system));
     dev->fs->probe = ext2_probe;
     dev->fs->open = ext2_read;
+    dev->fs->read = ext2_read;
     dev->fs->write = ext2_write;
     dev->fs->touch = ext2_touch;
     dev->fs->list = ext2_list;

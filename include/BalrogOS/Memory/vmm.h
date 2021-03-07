@@ -35,3 +35,11 @@ uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr);
  * @return the newly setted page
  */
 void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags);
+
+/**
+ * @brief 
+ * 
+ * @param PML4T 
+ * @param virt_addr 
+ */
+void vmm_free_page(page_table* PML4T, uintptr_t virt_addr);

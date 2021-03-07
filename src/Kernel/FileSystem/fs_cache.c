@@ -1,19 +1,21 @@
 #include "BalrogOS/FileSystem/fs_cache.h"
 #include "BalrogOS/FileSystem/fs_config.h"
+#include "BalrogOS/Memory/memory.h"
+#include "BalrogOS/Memory/vmm.h"
 #include <stddef.h>
 
-fs_file open_file_array[FS_MAX_FILE] = {};
-uint8_t free_buffer_map[4096] = {};
+static fs_file file_table[FS_MAX_FILE] = {};
+static uint8_t free_buffer_map[4096] = {};
 
 uint32_t _fs_cache_add_file_array(const char* filename, uint8_t* buffer, uint64_t size)
 {
     for(size_t i = 0; i < FS_MAX_FILE; i++)
     {
-        if(open_file_array[i].size == 0)
+        if(file_table[i].size == 0)
         {
-            open_file_array[i].name = filename;
-            open_file_array[i].data = buffer;
-            open_file_array[i].size = size;
+            file_table[i].name = filename;
+            file_table[i].data = buffer;
+            file_table[i].size = size;
             return i;
         }
     }
@@ -34,10 +36,10 @@ int fs_cache_add_file(const char* filename, uint8_t* buffer, uint64_t size, uint
 
 uint8_t* fs_cache_get_file(uint32_t index)
 {
-    return open_file_array[index].data;
+    return file_table[index].data;
 }
 
-uint8_t* fs_cache_new_get_buffer(uint64_t size)
+uint8_t* fs_cache_get_new_buffer(uint64_t size)
 {
     uint64_t start_buffer_index = 0;
     uint64_t buffer_size = 0;
@@ -69,14 +71,38 @@ uint8_t* fs_cache_new_get_buffer(uint64_t size)
     if(buffer_size >= size)
     {
         uint64_t end_block_buffer = start_buffer_index + (buffer_size / FS_BUFFER_SIZE);
+        uint64_t addr = (FS_CACHE_OFFSET | (start_buffer_index * FS_BUFFER_SIZE));
 
         for(size_t i = start_buffer_index; i < end_block_buffer; i++)
         {
+            vmm_set_page(0, addr + ((i - start_buffer_index) * PAGE_SIZE), pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
             free_buffer_map[i] = 1;
         }
 
-        return (FS_CACHE_OFFSET | (start_buffer_index * FS_BUFFER_SIZE));
+        return addr;
     }
 
+    return 0;
+}
+
+static int _fs_cache_free_buffer(uint32_t index)
+{
+    uint64_t buf_size = (file_table[index].size / FS_BUFFER_SIZE);
+    uint64_t buf_idx = (((uintptr_t)file_table[index].data) & ~FS_CACHE_OFFSET);
+    buf_idx = (buf_idx / FS_BUFFER_SIZE);
+
+    for(size_t i = buf_idx; i < (buf_idx + buf_size); i++)
+    {
+        vmm_free_page(0, file_table[index].data + ((i - buf_idx) * PAGE_SIZE));
+        free_buffer_map[i] = 0;
+    }
+
+    return 0;
+}
+
+int fs_cache_close_file(uint32_t index)
+{
+    _fs_cache_free_buffer(index);
+    file_table[index].size = 0;
     return 0;
 }

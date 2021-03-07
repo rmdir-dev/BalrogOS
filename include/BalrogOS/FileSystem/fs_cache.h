@@ -73,4 +73,12 @@ uint8_t* fs_cache_get_file(uint32_t index);
  * @param size the size of the buffer in byte
  * @return uint8_t* the buffer, return 0 if there are no memory left. 
  */
-uint8_t* fs_cache_new_get_buffer(uint64_t size);
+uint8_t* fs_cache_get_new_buffer(uint64_t size);
+
+/**
+ * @brief Free the buffer
+ * 
+ * @param index 
+ * @return int 
+ */
+int fs_cache_close_file(uint32_t index);

@@ -57,7 +57,7 @@
  * @param filename 
  * @return int 
  */
-int fs_cache_add_file(const char* filename, uint8_t* buffer, uint64_t size, uint32_t* index);
+int fs_cache_add_file(const char* filename, uint8_t* buffer, uint32_t inbr, uint64_t size, uint32_t* index);
 
 /**
  * @brief 
@@ -65,7 +65,7 @@ int fs_cache_add_file(const char* filename, uint8_t* buffer, uint64_t size, uint
  * @param index 
  * @return uint8_t* 
  */
-uint8_t* fs_cache_get_file(uint32_t index);
+fs_file* fs_cache_get_file(uint32_t index);
 
 /**
  * @brief Return a new buffer into the file system memory

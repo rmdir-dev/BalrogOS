@@ -7,7 +7,7 @@
 static fs_file file_table[FS_MAX_FILE] = {};
 static uint8_t free_buffer_map[4096] = {};
 
-uint32_t _fs_cache_add_file_array(const char* filename, uint8_t* buffer, uint64_t size)
+uint32_t _fs_cache_add_file_array(const char* filename, uint32_t inbr, uint8_t* buffer, uint64_t size)
 {
     for(size_t i = 0; i < FS_MAX_FILE; i++)
     {
@@ -16,15 +16,16 @@ uint32_t _fs_cache_add_file_array(const char* filename, uint8_t* buffer, uint64_
             file_table[i].name = filename;
             file_table[i].data = buffer;
             file_table[i].size = size;
+            file_table[i].inode_nbr = inbr;
             return i;
         }
     }
     return 100;
 }
 
-int fs_cache_add_file(const char* filename, uint8_t* buffer, uint64_t size, uint32_t* index)
+int fs_cache_add_file(const char* filename, uint8_t* buffer, uint32_t inbr, uint64_t size, uint32_t* index)
 {
-    *index = _fs_cache_add_file_array(filename, buffer, size);
+    *index = _fs_cache_add_file_array(filename, inbr, buffer, size);
 
     if(*index > 100) 
     {
@@ -34,9 +35,9 @@ int fs_cache_add_file(const char* filename, uint8_t* buffer, uint64_t size, uint
     return 0;
 }
 
-uint8_t* fs_cache_get_file(uint32_t index)
+fs_file* fs_cache_get_file(uint32_t index)
 {
-    return file_table[index].data;
+    return &file_table[index];
 }
 
 uint8_t* fs_cache_get_new_buffer(uint64_t size)

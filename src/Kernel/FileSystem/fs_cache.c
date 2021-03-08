@@ -75,10 +75,14 @@ uint8_t* fs_cache_get_new_buffer(uint64_t size)
 
         for(size_t i = start_buffer_index; i < end_block_buffer; i++)
         {
-            vmm_set_page(0, addr + ((i - start_buffer_index) * PAGE_SIZE), pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
             free_buffer_map[i] = 1;
         }
-
+        
+        for(size_t i = 0; i < size; i += PAGE_SIZE)
+        {
+            vmm_set_page(0, addr + i, pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
+        }
+        
         return addr;
     }
 
@@ -93,8 +97,12 @@ static int _fs_cache_free_buffer(uint32_t index)
 
     for(size_t i = buf_idx; i < (buf_idx + buf_size); i++)
     {
-        vmm_free_page(0, file_table[index].data + ((i - buf_idx) * PAGE_SIZE));
         free_buffer_map[i] = 0;
+    }
+
+    for(size_t i = 0; i < file_table[index].size; i += PAGE_SIZE)
+    {
+        vmm_free_page(0, file_table[index].data + i);
     }
 
     return 0;

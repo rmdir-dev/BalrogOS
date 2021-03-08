@@ -234,5 +234,15 @@ void vmfree(void* ptr)
     if((block_info*) first_free > block)
     {
         first_free = block;
+    } else 
+    {
+        block_info* first = first_free;
+
+        while(first->next_free != block->next_free)
+        {
+            first = first->next_free;
+        }
+
+        first->next_free = block;
     }
 }

@@ -620,7 +620,7 @@ static uint8_t _ext2_list_dir(uint8_t* dir)
 /*
     REGULAR FILE
 */
-static int ext2_open(fs_device* dev, char* filename)
+static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
 {
     size_t index;
     uint8_t from_root;
@@ -633,16 +633,23 @@ static int ext2_open(fs_device* dev, char* filename)
     {
         uint8_t* buffer = fs_cache_get_new_buffer(file_inode->inode.size);
         _ext2_read_file(dev, buffer, &file_inode->inode);
-        fs_cache_add_file(filename, buffer, file_inode_nbr, file_inode->inode.size, &file_inode->file_id);
+        ext2_add_file_to_cache(filename, file_inode, buffer);
+        file_inode->open = 1;
     }
 
+    fs_cache_increase_ref(file_inode->file_id);
+    fd->ftable_idx = file_inode->file_id;
+    fd->offset = 0;
+    fd->inode_nbr = file_inode->inode_nbr;
+
     vmfree(path);
-    return file_inode->file_id;
+    return 0;
 }
 
-static int ext2_close(fs_device* dev, uint32_t index)
+static int ext2_close(fs_device* dev, fs_fd* fd)
 {
-    fs_cache_close_file(index);
+    ext2_idata* file_inode = ext2_cache_search_inode(dev, fd->inode_nbr);
+    ext2_close_file_from_cache(file_inode, fd);
     return 0;
 }
 
@@ -650,7 +657,6 @@ static int ext2_touch(fs_device* dev, char* filename)
 {
     int i = 0;
     int last_part = 0;
-    char* buffer = vmalloc(4096 * 1024);
 
     size_t index;
     uint8_t from_root;
@@ -664,23 +670,29 @@ static int ext2_touch(fs_device* dev, char* filename)
 
     ext2_idata* root_itable = ext2_cache_search_inode(dev, file_inode_nbr);
     
+    char* buffer = fs_cache_get_new_buffer(root_itable->inode.size);
     _ext2_read_file(dev, buffer, &root_itable->inode);
     _ext2_create_new_dir_entry(dev, buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
 
-    vmfree(buffer);
+    // TODO FREE buffer
     vmfree(path);
+
     return 0;
 }
 
-static int ext2_read(fs_device* dev, uint8_t* buffer, uint32_t index, uint64_t offset, uint64_t len)
+static int ext2_read(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
-    fs_file* file = fs_cache_get_file(index);
+    fs_file* file = fs_cache_get_file(fd->ftable_idx);
     ext2_idata* inode =  ext2_cache_search_inode(dev, file->inode_nbr);
-    _ext2_read(dev, file->data, buffer, offset, len);
+    if(inode->open == 0)
+    {
+        return -1;
+    }
+    _ext2_read(dev, file->data, buffer, fd->offset, len);
     return 0;
 }
 
-static int ext2_write(fs_device* dev, char* filename, uint8_t* buffer, uint64_t offset, uint64_t len)
+static int ext2_write(fs_device* dev, char* filename, uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
     // TODO
     return 0;
@@ -793,7 +805,8 @@ int ext2_probe(fs_device* dev)
 
     dev->fs = vmalloc(sizeof(file_system));
     dev->fs->probe = ext2_probe;
-    dev->fs->open = ext2_read;
+    dev->fs->open = ext2_open;
+    dev->fs->close = ext2_close;
     dev->fs->read = ext2_read;
     dev->fs->write = ext2_write;
     dev->fs->touch = ext2_touch;

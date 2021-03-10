@@ -1,4 +1,5 @@
 #include "BalrogOS/FileSystem/ext2/ext2_cache/ext2_cache.h"
+#include "BalrogOS/FileSystem/fs_config.h"
 #include "lib/DataStructure/rbt.h"
 #include "BalrogOS/Memory/kheap.h"
 
@@ -46,13 +47,18 @@ int ext2_cache_delete_inode(uint32_t inode_nbr)
     return 0;
 }
 
-int ext2_add_file_to_cache(fs_device* dev, ext2_idata* inode, const char* filename)
+int ext2_add_file_to_cache(const char* filename, ext2_idata* inode, uint8_t* buffer)
 {
+    fs_cache_add_file(filename, buffer, inode->inode_nbr, inode->inode.size, &inode->file_id);
     return 0;
 }
 
-int ext2_delete_file_from_cache(ext2_idata* inode)
+int ext2_close_file_from_cache(ext2_idata* inode, fs_fd* fd)
 {
+    if(fs_cache_close_file(fd->ftable_idx) == 0)
+    {
+        inode->open = 0;
+    }
     return 0;
 }
 

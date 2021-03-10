@@ -63,6 +63,13 @@ int fs_cache_add_file(const char* filename, uint8_t* buffer, uint32_t inbr, uint
  * @brief 
  * 
  * @param index 
+ */
+void fs_cache_increase_ref(uint32_t index);
+
+/**
+ * @brief 
+ * 
+ * @param index 
  * @return uint8_t* 
  */
 fs_file* fs_cache_get_file(uint32_t index);

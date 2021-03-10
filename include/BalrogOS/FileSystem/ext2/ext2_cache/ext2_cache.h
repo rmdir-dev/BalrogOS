@@ -36,7 +36,7 @@ int ext2_cache_delete_inode(uint32_t inode_nbr);
  * @param inode 
  * @return int 
  */
-int ext2_add_file_to_cache(fs_device* dev, ext2_idata* inode, const char* filename);
+int ext2_add_file_to_cache(const char* filename, ext2_idata* inode, uint8_t* buffer);
 
 /**
  * @brief 
@@ -44,7 +44,7 @@ int ext2_add_file_to_cache(fs_device* dev, ext2_idata* inode, const char* filena
  * @param inode 
  * @return int 
  */
-int ext2_delete_file_from_cache(ext2_idata* inode);
+int ext2_close_file_from_cache(ext2_idata* inode, fs_fd* fd);
 
 /**
  * @brief Clear the ext2 cache

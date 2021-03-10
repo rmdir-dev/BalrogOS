@@ -35,6 +35,11 @@ int fs_cache_add_file(const char* filename, uint8_t* buffer, uint32_t inbr, uint
     return 0;
 }
 
+void fs_cache_increase_ref(uint32_t index)
+{
+    file_table[index].reference++;
+}
+
 fs_file* fs_cache_get_file(uint32_t index)
 {
     return &file_table[index];
@@ -111,7 +116,11 @@ static int _fs_cache_free_buffer(uint32_t index)
 
 int fs_cache_close_file(uint32_t index)
 {
-    _fs_cache_free_buffer(index);
-    file_table[index].size = 0;
-    return 0;
+    if(--file_table[index].reference == 0)
+    {
+        _fs_cache_free_buffer(index);
+        file_table[index].size = 0;
+        return 0;
+    }
+    return -1;
 }

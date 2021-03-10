@@ -74,3 +74,30 @@ typedef struct _file_system
 } __attribute__((packed)) file_system;
 
 void init_file_system();
+
+/**
+ * @brief 
+ * 
+ * @param name 
+ * @param fd 
+ * @return int 
+ */
+int fs_open(const char* name, fs_fd* fd);
+
+/**
+ * @brief 
+ * 
+ * @param buffer 
+ * @param len 
+ * @param fd 
+ * @return int 
+ */
+int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd);
+
+/**
+ * @brief 
+ * 
+ * @param fd 
+ * @return int 
+ */
+int fs_close(fs_fd* fd);

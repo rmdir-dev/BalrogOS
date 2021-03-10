@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "BalrogOS/Memory/vmm.h"
+#include "BalrogOS/FileSystem/filesystem.h"
 
 #define PROCESS_STATE_READY     0
 #define PROCESS_STATE_RUNNING   1
@@ -32,7 +33,9 @@ typedef struct process_t
             cr3 register content
         */
         uintptr_t cr3;
-    };    
+    };
+    uint8_t fd_size;
+    fs_fd fd_table[10];
     uint8_t state;
     struct process_t* next;
 } process;

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 
-extern uintptr_t pmm_top_addr;
+fs_device dev;
 
 void test_print_dir(uint8_t* entires)
 {
@@ -25,10 +25,24 @@ void test_print_dir(uint8_t* entires)
     }
 }
 
+int fs_open(const char* name, fs_fd* fd)
+{
+    return dev.fs->open(&dev, name, fd);
+}
+
+int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd)
+{
+    return dev.fs->read(&dev, buffer, len, fd);
+}
+
+int fs_close(fs_fd* fd)
+{
+    return dev.fs->close(&dev, fd);
+}
+
 void init_file_system()
 {
     init_ata();
-    fs_device dev;
     ata_get_boot_device(&dev);
     ext2_probe(&dev);
     char* buffer = fs_cache_get_new_buffer(PAGE_SIZE * 14);

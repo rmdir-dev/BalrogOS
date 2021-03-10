@@ -8,6 +8,10 @@
     read input from FD (file descriptor)
 1	    sys_write	        unsigned int fd	    const char *buf	        size_t count
     write data into FD (file descriptor)
+2	    sys_open	        const char *fname	int flags	            int mode
+    open a file/pipe
+3	    sys_close	        unsigned int fd
+    close a file/pipe
 39      sys_getpid
     get the currently running process ID.
 60	    sys_exit	        int error_code
@@ -20,6 +24,8 @@
 
 #define SYS_READ        0
 #define SYS_WRITE       1
+#define SYS_OPEN        2
+#define SYS_CLOSE       3
 #define SYS_GETPID      39
 #define SYS_EXIT        60
 #define SYS_FUTEX       202

@@ -52,7 +52,7 @@ void _test_print_dir(uint8_t* entires)
 void test_file()
 {
     kprint("test file open \n");
-    int fd = open("/boot", 001);
+    int fd = open("/", 001);
     buf[4096] = 0;
     kprint("test file read \n");
     read(fd, buf, 4096);
@@ -122,14 +122,15 @@ void initialize_kernel(void* SMAP, void* size)
     init_keyboard();
     KERNEL_LOG_OK("Keyboard initialization : done");
 
+    /* FILE SYSTEM */
+    init_file_system();
+
     /* TEST PROCESS */
     test_init();
     //push_process("test", test2, 0);
     //push_process("test", test, 0);test_file
     push_process("test", test_file, 0);
     push_process("test", test_user_mode, 3);
-
-    init_file_system();
 
     enable_interrupt();
 }

@@ -297,7 +297,7 @@ static uint32_t _ext2_get_entry_inode_idx(fs_device* dev, ext2_dir_entry* dir, c
     FILES
 */
 
-static int _ext2_read(fs_device* dev, uint8_t* data, uint8_t* buffer, uint64_t offset, uint64_t len)
+static int _ext2_read(uint8_t* data, uint8_t* buffer, uint64_t offset, uint64_t len)
 {
     memcpy(buffer, &data[offset], len);
     return 0;
@@ -418,6 +418,7 @@ static int _ext2_update_dir_entry(fs_device* dev, ext2_inode* dir_inode, ext2_di
             dev->write(dev, dir, dir_inode->dbp[i]  * fs_data->sec_per_block, 8);
         }
     }
+
     return 0;
 }
 
@@ -431,10 +432,12 @@ static int _ext2_read_dir_entry(uint8_t* dir_ptr, entry_read_dir_entries* read_e
         read_entries->next_entry = dir_ptr + read_entries->entry->entry_size;
         strcpy(&name_buffer, &read_entries->entry->name);
         name_buffer[read_entries->entry->name_length] = 0;
+
         if(read_entries->entry->type != 0 && !strcmp(&name_buffer, filename))
         {
             return 0;
         }
+
         dir_ptr += read_entries->entry->entry_size;
     } while(read_entries->next_entry->inode);
 
@@ -605,7 +608,8 @@ static uint8_t _ext2_list_dir(uint8_t* dir)
         printf("%s \n", &name_buffer);
         dir_ptr += entry->entry_size;
         memset(&name_buffer, 0, 255);
-    } while(next_entry->inode);   
+    } while(next_entry->inode);
+
     return 0;
 }
 
@@ -684,11 +688,14 @@ static int ext2_read(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
     fs_file* file = fs_cache_get_file(fd->ftable_idx);
     ext2_idata* inode =  ext2_cache_search_inode(dev, file->inode_nbr);
+
     if(inode->open == 0)
     {
         return -1;
     }
-    _ext2_read(dev, file->data, buffer, fd->offset, len);
+
+    _ext2_read(file->data, buffer, fd->offset, len);
+
     return 0;
 }
 

@@ -3,7 +3,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 
-#include <stdio.h>
+#include "lib/IO/kprint.h"
 
 /**
  * @brief enable the keyboard found in keyboard.asm
@@ -22,7 +22,7 @@ static interrupt_regs* keyboard_int_handler(interrupt_regs* stack_frame)
     if(in_byte(0x64) & 1)
     {
         unsigned char key = in_byte(0x60);
-        printf("key pressed: %d | rsp : 0%p\n", key, stack_frame->rsp);
+        kprint("key pressed: %d | rsp : 0%p\n", key, stack_frame->rsp);
     }
     irq_end(INT_IRQ_1);
     return stack_frame;

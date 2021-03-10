@@ -2,7 +2,7 @@
 #include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/vmm.h"
 
-#include <stdio.h>
+#include "lib/IO/kprint.h"
 #include <string.h>
 
 uint64_t total_memory = 0;
@@ -59,7 +59,7 @@ uintptr_t* pmm_alloc()
         // if the next address is equal to the top address then return 0
         if(next_addr >= pmm_top_addr)
         {
-            printf("next : %p | top : %p ", next_addr, pmm_top_addr);
+            kprint("next : %p | top : %p ", next_addr, pmm_top_addr);
             return 0x0;
         }
 

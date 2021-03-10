@@ -168,7 +168,7 @@ void vmfree(void* ptr)
 
     if(!block->_is_mmapped)
     {
-        printf("double free()");
+        kprint("double free()");
         while (1)
         {
             /* code */

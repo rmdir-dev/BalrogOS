@@ -6,7 +6,8 @@
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
 #include "BalrogOS/Tasking/process.h"
-#include <stdio.h>
+#include "lib/IO/kprint.h"
+#include <stddef.h>
 
 extern process_list rdy_proc_list;
 process* current_running = NULL;
@@ -17,7 +18,7 @@ static void _exec()
 {
     current_running->exec = 1;
     tss.rsp0 = current_running->kernel_stack_top;
-    //printf("rsp : 0%p \n", tss.rsp0);
+    //kprint("rsp : 0%p \n", tss.rsp0);
     asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
     asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
     asm volatile("pop %rbp");
@@ -102,7 +103,7 @@ void schedule()
         }
     } else 
     {
-        //printf("Schedule work!\n");
+        //kprint("Schedule work!\n");
         irq_end(INT_IRQ_0);
     }
 }

@@ -1,7 +1,7 @@
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/TSS/tss.h"
 #include "BalrogOS/Memory/memory.h"
-#include <stdio.h>
+#include "lib/IO/kprint.h"
 
 gdt_entry gdt[7];
 gdt_ptr gdtp;

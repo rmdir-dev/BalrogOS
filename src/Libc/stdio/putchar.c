@@ -1,11 +1,11 @@
 #include <stdio.h>
-#include "BalrogOS/Drivers/Screen/vga_driver.h"
+#include <stdlib.h>
 
 int putchar(int c)
 {
     char out_c =  (char) c;
     
-    vga_write(&out_c, 1);
+    write(0, &out_c, 1);
 
     return 1;
 }

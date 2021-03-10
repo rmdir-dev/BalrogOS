@@ -1,7 +1,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 #include <string.h>
-#include <stdio.h>
+#include "lib/IO/kprint.h"
 #include "BalrogOS/Debug/debug_output.h"
 
 extern void _set_idt();
@@ -110,8 +110,8 @@ interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
     if(!int_handlers[stack_frame->interrupt_no])
     {
         // if not print a message and loop
-        printf("interrupt %d has no handler!\n", stack_frame->interrupt_no);
-        printf("RFLAGS 0%x \n", stack_frame->rflags);
+        kprint("interrupt %d has no handler!\n", stack_frame->interrupt_no);
+        kprint("RFLAGS 0%x \n", stack_frame->rflags);
 
         while(1){}
     }

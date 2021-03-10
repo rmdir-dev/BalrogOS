@@ -29,19 +29,21 @@ GNU_ASM_SRCS += $(shell find $(KERNEL_SRC) -name *.S)
 C_SRCS += $(shell find $(KLIB_SRC) -name *.c)
 
 # libc 
-C_SRCS += $(shell find $(C_LIB_SRC) -name *.c)
+LIBC_SRCS += $(shell find $(C_LIB_SRC) -name *.c)
 
 # pthread
-C_SRCS += $(shell find $(C_POSIX_SRC) -name *.c)
+PTHREADC_SRCS += $(shell find $(C_POSIX_SRC) -name *.c)
 
 ########################################################
 #	OBJECT FILES
 ########################################################
 
 COBJECTS64		:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(C_SRCS))
+LIBC_OBJECTS64 	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(LIBC_SRCS))
+PSXC_OBJECTS64 	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PTHREADC_SRCS))
 ASMOBJECT64		:= $(patsubst %.asm, $(TEMP_DIR)/obj64/%.asm.o, $(ASM_SRCS))
 GNU_ASMOBJECT64	:= $(patsubst %.S, $(TEMP_DIR)/obj64/%.S.o, $(GNU_ASM_SRCS))
-ALL_OBJECTS64	:= $(sort $(COBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
+ALL_KOBJECTS64	:= $(sort $(COBJECTS64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
 
 ########################################################
 #	COMPILER
@@ -71,16 +73,16 @@ LD_OPTIMIZATION = -flto
 ########################################################
 #	GENERATE OBJECT FILES
 ########################################################
-OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
+K_OBJECTS = $(C_SRCS:.c=.o) $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
 
 bootloader:
 	mkdir -p $(BUILD_DIR)
 	nasm -fbin src/Bootloader/start.asm -o build/bin/Bootloader
 
-kernel: $(OBJECTS)
+kernel: $(K_OBJECTS)
 	mkdir -p $(BUILD_DIR)
 	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
-	ld -o $(BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_OBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
+	ld -o $(BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
 
 os:
 	mkdir -p build/os

@@ -3,7 +3,7 @@
 
 void setpark()
 {
-    //printf("Park \n");
+    //kprint("Park \n");
     asm volatile("mov $0, %rdi");
     asm volatile("mov $203, %rax");
     asm volatile("int $0x80");
@@ -11,7 +11,7 @@ void setpark()
 
 void park()
 {
-    //printf("Park \n");
+    //kprint("Park \n");
     asm volatile("mov $0, %rdi");
     asm volatile("mov $202, %rax");
     asm volatile("int $0x80");
@@ -19,7 +19,7 @@ void park()
 
 void unpark(uint64_t pid)
 {
-    //printf("Unpark : %d \n", pid);
+    //kprint("Unpark : %d \n", pid);
     asm volatile("mov %%rax, %%rdi": :"a"(pid));
     asm volatile("mov $202, %rax");
     asm volatile("int $0x80");

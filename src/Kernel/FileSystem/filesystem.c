@@ -7,7 +7,7 @@
 #include "BalrogOS/Memory/vmm.h"
 #include "BalrogOS/Memory/pmm.h"
 #include <string.h>
-#include <stdio.h>
+#include "lib/IO/kprint.h"
 
 fs_device dev;
 
@@ -19,7 +19,7 @@ void test_print_dir(uint8_t* entires)
     {
         memcpy(name, &entry->name, entry->name_len);
         name[entry->name_len] = 0;
-        printf("%s \n", name);
+        kprint("%s \n", name);
         entires += entry->entry_size;
         entry = entires;
     }

@@ -37,7 +37,7 @@ void test()
     while(1)
     {
         //asm volatile("cli");
-        //printf("test\n");
+        //kprint("test\n");
         //asm volatile("sti");
         pthread_mutex_lock(&mutex_test);
         for(uint64_t i = 0; i < 100000000; i++)
@@ -45,7 +45,7 @@ void test()
         }
         test_var++;
         //asm volatile("cli");
-        printf("and loop now! :D %d \n", test_var);
+        kprint("and loop now! :D %d \n", test_var);
         //asm volatile("sti");
         pthread_mutex_unlock(&mutex_test);
     }
@@ -56,7 +56,7 @@ void test2()
     while(1)
     {
         //asm volatile("cli");
-        //printf("test2\n");
+        //kprint("test2\n");
         //asm volatile("sti");
         for(uint64_t i = 0; i < 100000000; i++)
         {
@@ -64,7 +64,7 @@ void test2()
         pthread_mutex_lock(&mutex_test);
         test_var++;
         //asm volatile("cli");
-        printf("TEST 2 NOW :D %d \n", test_var);
+        kprint("TEST 2 NOW :D %d \n", test_var);
         //asm volatile("sti");
         pthread_mutex_unlock(&mutex_test);
     }

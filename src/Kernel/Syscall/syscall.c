@@ -1,7 +1,7 @@
 #include "BalrogOS/Syscall/syscall.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 
-#include <stdio.h>
+#include "lib/IO/kprint.h"
 
 extern void sys_read(interrupt_regs* stack_frame);
 extern void sys_write(interrupt_regs* stack_frame);

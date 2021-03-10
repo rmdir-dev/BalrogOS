@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include "lib/IO/kprint.h"
 #include "BalrogOS/Memory/kheap.h"
 
 #define RBT_GET_DIR(var)    (var == var->parent->children[RBT_RIGHT])
@@ -337,7 +337,7 @@ void rbt_print(rbt_node* root)
     if(root != NULL)
     {
         rbt_print(root->children[RBT_LEFT]);
-        printf("%lu\n", root->key);
+        kprint("%lu\n", root->key);
         rbt_print(root->children[RBT_RIGHT]);
     }
 }

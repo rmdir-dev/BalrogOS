@@ -13,7 +13,7 @@ extern "C" {
  * @param ... 
  * @return int 
  */
-int printf(const char* __restrict format, ...);
+int kprint(const char* __restrict format, ...);
 
 /**
  * @brief 

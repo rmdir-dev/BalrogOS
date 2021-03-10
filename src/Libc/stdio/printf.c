@@ -1,9 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <limits.h>
-#include "BalrogOS/Drivers/Screen/vga_driver.h"
 
 static size_t int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
 {
@@ -50,7 +50,7 @@ static size_t int_to_string(unsigned long val, uint8_t base, char* str, uint8_t 
 
 static int print_string(const char* str, size_t size)
 {
-    vga_write(str, size);
+    write(0, str, size);
     return 1;
 }
 

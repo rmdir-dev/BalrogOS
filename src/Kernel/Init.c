@@ -23,6 +23,7 @@
 */
 
 #include <pthread.h>
+#include <stdlib.h>
 
 unsigned test_var = 0;
 pthread_mutex_t mutex_test;
@@ -32,60 +33,39 @@ void test_init()
     pthread_mutex_init(&mutex_test, NULL);
 }
 
-void test()
+char buf[4096 * 2];
+
+void _test_print_dir(uint8_t* entires)
 {
-    while(1)
+    fs_dir_entry* entry = entires;
+    char* name = vmalloc(255);
+    while(entry->inbr)
     {
-        //asm volatile("cli");
-        //kprint("test\n");
-        //asm volatile("sti");
-        pthread_mutex_lock(&mutex_test);
-        for(uint64_t i = 0; i < 100000000; i++)
-        {
-        }
-        test_var++;
-        //asm volatile("cli");
-        kprint("and loop now! :D %d \n", test_var);
-        //asm volatile("sti");
-        pthread_mutex_unlock(&mutex_test);
+        memcpy(name, &entry->name, entry->name_len);
+        name[entry->name_len] = 0;
+        kprint("%s \n", name);
+        entires += entry->entry_size;
+        entry = entires;
     }
 }
 
-void test2()
+void test_file()
 {
-    while(1)
-    {
-        //asm volatile("cli");
-        //kprint("test2\n");
-        //asm volatile("sti");
-        for(uint64_t i = 0; i < 100000000; i++)
-        {
-        }
-        pthread_mutex_lock(&mutex_test);
-        test_var++;
-        //asm volatile("cli");
-        kprint("TEST 2 NOW :D %d \n", test_var);
-        //asm volatile("sti");
-        pthread_mutex_unlock(&mutex_test);
-    }
+    kprint("test file open \n");
+    int fd = open("/boot", 001);
+    buf[4096] = 0;
+    kprint("test file read \n");
+    read(fd, buf, 4096);
+    _test_print_dir(buf);
+    kprint("test file close \n");
+    close(fd);
+
+    while(1){}
 }
 
 void test_user_mode()
 {
-    uint64_t test = 0;
-    char test_str[14] = "test syscall\n";
-
-    while(1)
-    {
-        asm volatile("mov %%rax, %%rsi": :"a"(test_str));
-        asm volatile("mov %%rax, %%rdx": :"a"(13));
-        asm volatile("mov $1, %rax");
-        asm volatile("int $0x80");
-        for(uint64_t i = 0; i < 100000000; i++)
-        {
-        }
-        test++;
-    }
+    while(1){}
 }
 
 /* 
@@ -145,8 +125,9 @@ void initialize_kernel(void* SMAP, void* size)
     /* TEST PROCESS */
     test_init();
     //push_process("test", test2, 0);
-    //push_process("test", test, 0);
-    //push_process("test", test_user_mode, 3);
+    //push_process("test", test, 0);test_file
+    push_process("test", test_file, 0);
+    push_process("test", test_user_mode, 3);
 
     init_file_system();
 

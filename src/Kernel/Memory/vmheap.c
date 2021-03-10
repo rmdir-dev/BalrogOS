@@ -54,6 +54,7 @@ void* vmalloc(size_t size)
 {
     block_info* current_block = first_free;
     uint8_t first_block = 1;
+    
     while(1)
     {
         /*  if the next block is smaller than the current top
@@ -237,12 +238,15 @@ void vmfree(void* ptr)
     } else 
     {
         block_info* first = first_free;
-
+        
         while(first->next_free != block->next_free)
         {
             first = first->next_free;
         }
 
-        first->next_free = block;
+        if(first != block)
+        {
+            first->next_free = block;
+        }
     }
 }

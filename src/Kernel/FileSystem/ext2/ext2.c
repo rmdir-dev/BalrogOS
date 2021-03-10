@@ -547,15 +547,16 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     {
         return 2;
     }
-
-    char* buffer = PHYSICAL_TO_VIRTUAL(pmm_calloc());
     ext2_idata* root_itable = ext2_cache_search_inode(dev, 2);
+    char* buffer = PHYSICAL_TO_VIRTUAL(pmm_calloc());
+
     _ext2_read_file(dev, buffer, &root_itable->inode);
 
     entry_read_dir_entries entries;
     uint32_t inode_id = 0;
    
     size_t size = 0;
+
     while(*path)
     {
         if(!_ext2_read_dir_entry(buffer, &entries, *path))
@@ -644,7 +645,7 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
     fd->ftable_idx = file_inode->file_id;
     fd->offset = 0;
     fd->inode_nbr = file_inode->inode_nbr;
-
+    
     vmfree(path);
     return 0;
 }

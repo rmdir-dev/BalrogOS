@@ -2,7 +2,9 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "BalrogOS/Tasking/process.h"
+#include "lib/IO/kprint.h"
 #include <stdint.h>
+#include <string.h>
 
 extern process* current_running;
 
@@ -11,8 +13,11 @@ int sys_open(interrupt_regs* stack_frame)
     if(current_running)
     {
         fs_fd* fd = &current_running->fd_table[0];
-        fs_open(stack_frame->rdi, fd);
-        
+        char name[255] = {};
+        uint8_t len = strlen(stack_frame->rdi);
+        memcpy(name, stack_frame->rdi, len);
+        name[len] = 0;
+        fs_open(name, fd);
         return 0;
     }
     return -1;

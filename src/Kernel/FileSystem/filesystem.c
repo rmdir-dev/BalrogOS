@@ -15,6 +15,7 @@ void test_print_dir(uint8_t* entires)
 {
     fs_dir_entry* entry = entires;
     char* name = vmalloc(255);
+    
     while(entry->inbr)
     {
         memcpy(name, &entry->name, entry->name_len);
@@ -50,6 +51,11 @@ void init_file_system()
     //dev.fs->list(&dev, "/boot", buffer);
     fs_fd fd;
     dev.fs->open(&dev, "/", &fd);
+    memset(buffer, 0, PAGE_SIZE * 14);
+    dev.fs->read(&dev, buffer, 4096, &fd);
+    test_print_dir(buffer);
+    dev.fs->close(&dev, &fd);
+    dev.fs->open(&dev, "/boot", &fd);
     memset(buffer, 0, PAGE_SIZE * 14);
     dev.fs->read(&dev, buffer, 4096, &fd);
     test_print_dir(buffer);

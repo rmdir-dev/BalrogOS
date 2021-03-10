@@ -79,6 +79,9 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     */
     phys = pmm_calloc();
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x1000, phys, PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x2000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x3000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x4000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
 
     /*
         SETUP THE STACK

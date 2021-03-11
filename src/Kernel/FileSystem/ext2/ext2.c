@@ -657,6 +657,17 @@ static int ext2_close(fs_device* dev, fs_fd* fd)
     return 0;
 }
 
+static int ext2_stat(fs_device* dev, fs_fd* fd, fs_file_stat* stat)
+{
+    ext2_idata* file_inode = ext2_cache_search_inode(dev, fd->inode_nbr);
+    stat->mode = file_inode->inode.mode;
+    stat->size = file_inode->inode.size;
+    stat->uid = file_inode->inode.user_id;
+    stat->gid = file_inode->inode.group_id;
+    stat->hard_link = file_inode->inode.hard_link_count;
+    return 0;
+}
+
 static int ext2_touch(fs_device* dev, char* filename)
 {
     int i = 0;

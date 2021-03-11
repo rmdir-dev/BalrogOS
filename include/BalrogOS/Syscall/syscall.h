@@ -12,6 +12,8 @@
     open a file/pipe
 3	    sys_close	        unsigned int fd
     close a file/pipe
+4	    sys_stat	        const char *fname   struct stat *statbuf				
+5	    sys_fstat	        unsigned int fd	    struct stat *statbuf
 39      sys_getpid
     get the currently running process ID.
 60	    sys_exit	        int error_code
@@ -26,6 +28,8 @@
 #define SYS_WRITE       1
 #define SYS_OPEN        2
 #define SYS_CLOSE       3
+#define SYS_STAT        4
+#define SYS_FSTAT       5
 #define SYS_GETPID      39
 #define SYS_EXIT        60
 #define SYS_FUTEX       202

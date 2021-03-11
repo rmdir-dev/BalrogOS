@@ -32,6 +32,15 @@ void sys_close(interrupt_regs* stack_frame)
     }
 }
 
+void sys_fstat(interrupt_regs* stack_frame)
+{
+    if(current_running)
+    {
+        fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
+        fs_fstat(fd, stack_frame->rsi);
+    }
+}
+
 void sys_read(interrupt_regs* stack_frame)
 {
     if(current_running)

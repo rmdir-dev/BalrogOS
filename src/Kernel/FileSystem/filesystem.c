@@ -26,6 +26,11 @@ int fs_close(fs_fd* fd)
     return dev.fs->close(&dev, fd);
 }
 
+int fs_fstat(fs_fd* fd, fs_file_stat* stat)
+{
+    return dev.fs->stat(&dev, fd, stat);
+}
+
 void init_file_system()
 {
     init_ata();

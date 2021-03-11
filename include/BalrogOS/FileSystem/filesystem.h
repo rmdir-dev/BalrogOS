@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "balrog/fs/fs_struct.h"
 
 struct _file_system;
 
@@ -35,20 +36,6 @@ typedef struct _fs_fd
     uint8_t* offset;
 } __attribute__((packed)) fs_fd;
 
-typedef struct _fs_dir_entry
-{
-    // inode nbr
-    uint32_t inbr;
-    // entry size
-    uint16_t entry_size;
-    // name length
-    uint8_t name_len;
-    // type (dir, regular file, link)
-    uint8_t type;
-    // file name
-    char* name;
-} fs_dir_entry;
-
 typedef struct _fs_device
 {
     char* name;
@@ -65,6 +52,7 @@ typedef struct _file_system
     int (*probe)(fs_device* device);
     int (*open)(fs_device* dev, const char* filename, fs_fd* fd);
     int (*close)(fs_device* dev, fs_fd* fd);
+    int (*stat)(fs_device* dev, fs_fd* fd, fs_file_stat* stat);
     int (*read)(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
     int (*write)(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
     int (*touch)(fs_device* dev, const char* filename);
@@ -101,3 +89,12 @@ int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd);
  * @return int 
  */
 int fs_close(fs_fd* fd);
+
+/**
+ * @brief 
+ * 
+ * @param fd 
+ * @param stat 
+ * @return int 
+ */
+int fs_fstat(fs_fd* fd, fs_file_stat* stat);

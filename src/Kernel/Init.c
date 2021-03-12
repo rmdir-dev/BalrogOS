@@ -93,6 +93,7 @@ void initialize_kernel(void* SMAP, void* size)
 
     /* SYSTEM CALL */
     init_syscalls();
+    KERNEL_LOG_OK("System calls initialization : done");
 
     /*      MEMORY      */
     // TODO later don't pass these as argument but fetch them using #define SMAP_PHYS_ADDR
@@ -112,14 +113,6 @@ void initialize_kernel(void* SMAP, void* size)
     init_vmheap();  // Kernel Virtual
     KERNEL_LOG_OK("Kernel heap initialization : done");
 
-    //uint8_t* kstack_test = kstack_alloc();
-    //kprint("kstack addr = 0%p \n", kstack_test);
-    //kstack_test -= 16;
-    //*kstack_test = 225;
-    //kprint("test = %d", *kstack_test);
-    //kstack_free(kstack_test);
-    //while(1){}
-
     /* GDT and TSS */
     init_gdt();
     KERNEL_LOG_OK("GDT and TSS : done");
@@ -134,6 +127,7 @@ void initialize_kernel(void* SMAP, void* size)
 
     /* FILE SYSTEM */
     init_file_system();
+    KERNEL_LOG_OK("File system initialization : done");
 
     /* TEST PROCESS */
     test_init();

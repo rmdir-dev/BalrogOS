@@ -1,13 +1,14 @@
-#include "BalrogOS/FileSystem/ext2/ext2.h"
 #include "BalrogOS/FileSystem/ext2/ext2_cache/ext2_cache.h"
+#include "BalrogOS/FileSystem/ext2/ext2.h"
 #include "BalrogOS/FileSystem/fs_cache.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Drivers/disk/ata.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/pmm.h"
+#include "lib/IO/kprint.h"
 #include "ext2_config.h"
 
-#include "lib/IO/kprint.h"
 #include <unistd.h>
 #include <string.h>
 
@@ -789,19 +790,18 @@ int ext2_probe(fs_device* dev)
     /*
         READ SUPER BLOCK
     */
-    kprint("read super block %p\n", sb);
+    KERNEL_LOG_INFO("read super block %p", sb);
     dev->read(dev, sb, 2, 2);
 
     if(sb->ext2_signature != EXT2_SIGNATURE)
     {
-        kprint("not ext 2 0%p 0%x \n", sb, &sb->ext2_signature);
+        KERNEL_LOG_FAIL("not ext 2 0%p 0%x", sb, &sb->ext2_signature);
         while(1){}
         return -1;
     }
-    kprint("fs is ext2\n");
+    KERNEL_LOG_OK("fs is ext2");
 
     ext2_fs_data* fs_data = vmalloc(sizeof(ext2_fs_data));
-    kprint("block size : %d \n", (1024 << sb->block_size_hint));
     fs_data->block_size = (1024 << sb->block_size_hint);
     fs_data->sec_per_block = fs_data->block_size / 512;
 

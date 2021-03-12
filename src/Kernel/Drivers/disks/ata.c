@@ -180,18 +180,18 @@ void ata_write(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 void ata_get_boot_device(fs_device* device)
 {
     uint16_t* buffer = vmalloc(512);
-    KERNEL_LOG_INFO("vmalloc : 0%p", buffer);
     for(size_t i = 0; i < 4; i++)
     {
         KERNEL_LOG_INFO("searching boot device. %d", i);
         if(!_ata_read_sector(&drives[i], buffer, 0))
         {
-            KERNEL_LOG_INFO("read success 0%p | magic number : 0%x", buffer, buffer[255]);
             if(buffer[255] == 0xaa55)
             {
+                KERNEL_LOG_INFO("boot device found!");
                 device->unique_id = i;
                 device->read = ata_read;
                 device->write = ata_write;
+                vmfree(buffer);
                 return;
             }
         }

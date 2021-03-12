@@ -1,4 +1,5 @@
 #include "BalrogOS/Tasking/tasking.h"
+#include "BalrogOS/Memory/kstack.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/pmm.h"
 #include "BalrogOS/Memory/vmm.h"
@@ -82,6 +83,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x2000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x3000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x4000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    phys = kstack_alloc();
 
     /*
         SETUP THE STACK
@@ -90,11 +92,11 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 
     if(mode != 0)
     {
-        proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(pmm_calloc()) + 4095;
+        proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
         virt = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
     } else 
     {
-        proc->kernel_stack_top = proc->stack_top;
+        proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
         virt = PHYSICAL_TO_VIRTUAL(((uint8_t*)phys) + 4095 - sizeof(task_register));
     }
 
@@ -144,5 +146,6 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 int clean_process(process* proc)
 {
     vmm_clean_page_table(proc->PML4T);
+    vmfree(proc);
     return 0;
 }

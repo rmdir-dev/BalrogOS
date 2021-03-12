@@ -15,6 +15,7 @@
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/Syscall/syscall.h"
 #include "BalrogOS/FileSystem/filesystem.h"
+#include "BalrogOS/Memory/kstack.h"
 
 /* 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -60,7 +61,8 @@ void test_file()
     kprint("test file close \n");
     close(fd);
 
-    while(1){}
+    exit(0);
+    kprint("error exit don't work.\n");
 }
 
 void test_user_mode()
@@ -110,6 +112,14 @@ void initialize_kernel(void* SMAP, void* size)
     init_vmheap();  // Kernel Virtual
     KERNEL_LOG_OK("Kernel heap initialization : done");
 
+    //uint8_t* kstack_test = kstack_alloc();
+    //kprint("kstack addr = 0%p \n", kstack_test);
+    //kstack_test -= 16;
+    //*kstack_test = 225;
+    //kprint("test = %d", *kstack_test);
+    //kstack_free(kstack_test);
+    //while(1){}
+
     /* GDT and TSS */
     init_gdt();
     KERNEL_LOG_OK("GDT and TSS : done");
@@ -131,6 +141,7 @@ void initialize_kernel(void* SMAP, void* size)
     //push_process("test", test, 0);test_file
     push_process("test", test_file, 0);
     push_process("test", test_user_mode, 3);
+    KERNEL_LOG_OK("start process");
 
     enable_interrupt();
 }

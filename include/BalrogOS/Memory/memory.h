@@ -10,9 +10,12 @@ Balrog Memory Map :
     Start			    End			        Size		Use
     -----------------------------------------------------------------------
     0000000000000000	ffffff7fffffffff	 255.5TB	user
-    ffffff8000000000	ffffff9fffffffff	 128GB		kernel logical
+    ffffff8000000000	ffffff800009fbff	 638KB		kernel stack, code & logical
+    ffffff800009fc00	ffffff80000fffff	 385KB		RESERVED
+    ffffff8000100000	ffffff9fffffffff	 128GB		MEMORY (128GiB - 1MiB)
     ffffffa000000000    ffffffbfffffffff     128GB      Kernel open files cache
-    ffffffc000000000	ffffffffffffffff	 256GB		Kernel virtual
+    ffffffc000000000	ffffffdfffffffff	 128GB		Kernel virtual
+    ffffffe000000000	ffffffffffffffff	 128GB		Process kernel stack space
 
 Balrog Process memory map :
     Start			    End			        Size		Use
@@ -65,6 +68,14 @@ addr = 0x101000
 #define PDPT_OFFSET(addr)   ((((uintptr_t)(addr)) >> 30) & 0x1ff)
 #define PDT_OFFSET(addr)    ((((uintptr_t)(addr)) >> 21) & 0x1ff)
 #define PT_OFFSET(addr)     ((((uintptr_t)(addr)) >> 12) & 0x1ff)
+
+#define PML4T_TO_VIRT(addr) (((uintptr_t)(addr)) << 39)
+#define PDPT_TO_VIRT(addr)  (((uintptr_t)(addr)) << 30)
+#define PDT_TO_VIRT(addr)   (((uintptr_t)(addr)) << 21)
+#define PT_TO_VIRT(addr)    (((uintptr_t)(addr)) << 12)
+
+#define STRIP_FLAGS(addr)       (((uintptr_t)addr) & ~PAGE_FLAG_MASK)
+#define ADD_FLAGS(addr, flags)   (((uintptr_t)addr) | (flags & PAGE_FLAG_MASK))
 
 #define PAGE_FLAG_MASK      0xfff
 

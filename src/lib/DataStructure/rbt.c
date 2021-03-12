@@ -24,7 +24,6 @@ rbt_node* rbt_create_node(rbt_node* parent, uint64_t key)
 rbt_node* rbt_search(rbt_tree* root, const uint64_t key)
 {
     rbt_node* current_node = root->rb_root;
-
     while(current_node)
     {
         if(current_node->key == key)
@@ -218,7 +217,6 @@ static inline void __delete_fixup(rbt_tree* root, rbt_node* unbalanced_entry, ui
 
 void rbt_delete(rbt_tree* root, rbt_node* to_delete)
 {
-
     if(to_delete != NULL)
     {
         rbt_node* unbalanced_parent = NULL;
@@ -328,7 +326,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
 
 void rbt_delete_key(rbt_tree* root, uint64_t key)
 {
-    rbt_delete(root, rbt_search(root->rb_root, key));
+    rbt_delete(root, rbt_search(root, key));
 }
 
 

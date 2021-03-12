@@ -15,6 +15,13 @@ void abort();
 /**
  * @brief 
  * 
+ * @param code 
+ */
+void exit(int code);
+
+/**
+ * @brief 
+ * 
  * @param pointer 
  */
 void free(void* pointer);

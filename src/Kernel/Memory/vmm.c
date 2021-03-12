@@ -5,9 +5,6 @@
 #include "BalrogOS/Memory/pmm.h"
 #include <string.h>
 
-#define STRIP_FLAGS(addr)       (((uintptr_t)addr) & ~PAGE_FLAG_MASK)
-#define ADD_FLAGS(addr, flags)   (((uintptr_t)addr) | (flags & PAGE_FLAG_MASK))
-
 /*
 Contain the physical address of the kernel PML4T
 */
@@ -135,22 +132,23 @@ void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
 
 static int _vmm_clean(page_table* table, uint8_t level)
 {
+    page_table* tab = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(table));
     for(int i = 0; i < 512; i++)
     {
-        // if table[i] has an address 
-        // and table[i] is not the kernel address
+        // if tab[i] has an address 
+        // and tab[i] is not the kernel address
         // the kernel is at address 511 of the PML4T
-        if(table[i] && (i < 511 || level < 4))
+        if(tab[i] && (i < 511 || level < 4))
         {
             // if the page table is a PML4T, PDPT, PDT
             // then clean the level below before cleaning it.
             if(level > 1)
             {
-                _vmm_clean(table[i], level - 1);
+                _vmm_clean(tab[i], level - 1);
             }
             // free the page.
-            pmm_free(STRIP_FLAGS(table[i]));
-            table[i] = 0;
+            pmm_free(STRIP_FLAGS(tab[i]));
+            tab[i] = 0;
         }
     }
     return 0;

@@ -5,12 +5,12 @@
 #include "BalrogOS/Debug/debug_output.h"
 
 /*
-Kernel heap start at KERNEL_OFFSET + 0x2000000000 (128GiB)
-Total kernel heap = 512 GiB - 128GiB = 384GiB
+Kernel heap start at KERNEL_OFFSET + 0x4000000000 (256GiB)
+Total kernel heap = 128GiB
 */
 
 #define KERNEL_VIRTUAL_START    0xffffffc000000000
-#define KERNEL_VIRTUAL_TOP      0xffffffffffffffff
+#define KERNEL_VIRTUAL_TOP      0xffffffdfffffffff
 
 uintptr_t vmheap_start;
 uintptr_t vmheap_current_top;

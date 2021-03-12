@@ -84,8 +84,8 @@ void proc_kill_process(uint64_t pid)
     if(_proc_transfert_to_wait(proc) == 0)
     {
         proc->state = PROCESS_STATE_DEAD;
-
         _proc_remove_process(proc);
+        
         clean_process(proc);
 
         if(proc == current_running)

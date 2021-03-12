@@ -49,3 +49,5 @@ typedef struct process_t
  * @return process* 
  */
 process* create_process(char* name, uintptr_t func, uint8_t mode);
+
+int clean_process(process* proc);

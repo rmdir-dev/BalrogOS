@@ -43,3 +43,11 @@ void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, 
  * @param virt_addr 
  */
 void vmm_free_page(page_table* PML4T, uintptr_t virt_addr);
+
+/**
+ * @brief 
+ * 
+ * @param PML4T 
+ * @return int 
+ */
+int vmm_clean_page_table(page_table* PML4T);

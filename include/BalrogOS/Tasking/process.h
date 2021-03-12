@@ -24,6 +24,14 @@ void proc_insert_to_ready_queue(process* proc);
 int proc_remove_process(uint64_t pid);
 
 /**
+ * @brief 
+ * 
+ * @param pid 
+ * @return int 
+ */
+void proc_kill_process(uint64_t pid);
+
+/**
  * @brief transfert a process from the ready queue to the waiting
  * 
  * @param proc the process to transfert.

@@ -31,26 +31,10 @@ void proc_insert_to_ready_queue(process* proc)
     proc->state = PROCESS_STATE_READY;
 }
 
-int proc_remove_process(uint64_t pid)
-{
-    process* proc = proc_get_process(pid);
-
-    if(proc->state == PROCESS_STATE_DEAD || proc->state == PROCESS_STATE_ZOMBIE)
-    {
-        rbt_delete_key(&process_tree, proc->pid);
-
-        return 0;
-    }
-
-    return -1;
-}
-
 extern void schedule();
 
-void proc_transfert_to_waiting(uint64_t pid)
+static int _proc_transfert_to_wait(process* proc)
 {
-    process* proc = proc_get_process(pid);
-
     if(proc->state == PROCESS_STATE_READY || proc->state == PROCESS_STATE_RUNNING)
     {
         if(rdy_proc_list.size == 1)
@@ -75,6 +59,55 @@ void proc_transfert_to_waiting(uint64_t pid)
         }
         rdy_proc_list.size--;
 
+        return 0;
+    }
+
+    return -1;
+}
+
+int _proc_remove_process(process* proc)
+{
+    if(proc->state == PROCESS_STATE_DEAD || proc->state == PROCESS_STATE_ZOMBIE)
+    {
+        rbt_delete_key(&process_tree, proc->pid);
+
+        return 0;
+    }
+
+    return -1;
+}
+
+void proc_kill_process(uint64_t pid)
+{
+    process* proc = proc_get_process(pid);
+    
+    if(_proc_transfert_to_wait(proc) == 0)
+    {
+        proc->state = PROCESS_STATE_DEAD;
+
+        _proc_remove_process(proc);
+        clean_process(proc);
+
+        if(proc == current_running)
+        {
+            schedule();
+        }
+    }
+}
+
+int proc_remove_process(uint64_t pid)
+{
+    process* proc = proc_get_process(pid);
+
+    return _proc_remove_process(proc);
+}
+
+void proc_transfert_to_waiting(uint64_t pid)
+{
+    process* proc = proc_get_process(pid);
+
+    if(_proc_transfert_to_wait(proc) == 0)
+    {
         proc->state = PROCESS_STATE_WAITING;
 
         if(proc == current_running)

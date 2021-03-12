@@ -53,7 +53,7 @@ CC= ccache gcc
 ########################################################
 #	COMPILER OPTIONS
 ########################################################
-OPTIMIZATION = 
+OPTIMIZATION =
 
 ########################################################
 #	COMPILER FLAGS
@@ -74,6 +74,7 @@ LD_OPTIMIZATION = -flto
 #	GENERATE OBJECT FILES
 ########################################################
 K_OBJECTS = $(C_SRCS:.c=.o) $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
+LIBC_OBJECTS = $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o)
 
 bootloader:
 	mkdir -p $(BUILD_DIR)

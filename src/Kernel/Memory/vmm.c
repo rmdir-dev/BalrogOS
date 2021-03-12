@@ -132,3 +132,36 @@ void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
         PT[PT_OFFSET(virt_addr)] = 0;
     }
 }
+
+static int _vmm_clean(page_table* table, uint8_t level)
+{
+    for(int i = 0; i < 512; i++)
+    {
+        // if table[i] has an address 
+        // and table[i] is not the kernel address
+        // the kernel is at address 511 of the PML4T
+        if(table[i] && (i < 511 || level < 4))
+        {
+            // if the page table is a PML4T, PDPT, PDT
+            // then clean the level below before cleaning it.
+            if(level > 1)
+            {
+                _vmm_clean(table[i], level - 1);
+            }
+            // free the page.
+            pmm_free(STRIP_FLAGS(table[i]));
+            table[i] = 0;
+        }
+    }
+    return 0;
+}
+
+int vmm_clean_page_table(page_table* PML4T)
+{
+    if(!PML4T)
+    {
+        return -1;
+    }
+    
+    return _vmm_clean(PML4T, 4);
+}

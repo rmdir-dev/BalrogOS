@@ -140,3 +140,9 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 
     return proc;
 }
+
+int clean_process(process* proc)
+{
+    vmm_clean_page_table(proc->PML4T);
+    return 0;
+}

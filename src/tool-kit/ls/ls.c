@@ -25,7 +25,6 @@ void main(int argc, char** argv)
 {
     printf("elf file :D \n");
     int fd = open("/boot", 0);
-    while(1){}
     fs_file_stat stat = {};
     fstat(fd, &stat);
     read(fd, buf, stat.size);

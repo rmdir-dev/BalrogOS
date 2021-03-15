@@ -27,18 +27,17 @@ void queue_enqueue(queue_t* queue, uint64_t value)
 
 int queue_dequeue(queue_t* queue, uint64_t* value)
 {
-    kprint("dequeue 1\n");
     if(!queue->head)
     {
         return -1;
     }
-    kprint("dequeue 2\n");
+
     queue_node_t* tmp = queue->head;
     *value = tmp->value;
     queue->head = tmp->next;
-    kprint("dequeue 3\n");
+
     kfree(tmp);
-    kprint("dequeue 4\n");
+
     return 0;
 }
 

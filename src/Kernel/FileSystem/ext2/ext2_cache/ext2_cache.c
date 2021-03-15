@@ -19,29 +19,26 @@ extern ext2_inode ext2_get_inode(fs_device* dev, uint32_t inode_idx);
 
 ext2_idata* ext2_cache_search_inode(fs_device* dev, uint32_t inode_nbr)
 {
-    kprint("search inode 1\n");
     rbt_node* node = rbt_search(&ext2_cache.inode_tree, inode_nbr);
  
     if(!node)
     {
-        kprint("search inode 2\n");
         ext2_idata* file_data = vmalloc(sizeof(ext2_idata));
         
         if(!file_data)
         {
             return 0;
         }
-        kprint("search inode 3\n");
+
         file_data->inode_nbr = inode_nbr;
         file_data->open = 0;
         file_data->file_id = 0;
         file_data->inode = ext2_get_inode(dev, inode_nbr);
-        kprint("search inode 4\n");
+
         node = rbt_insert(&ext2_cache.inode_tree, inode_nbr);
-        kprint("search inode 5\n");
         node->value = file_data;
     }
-    kprint("search inode end\n");
+    
     return node->value;
 }
 

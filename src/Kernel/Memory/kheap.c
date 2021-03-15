@@ -181,7 +181,7 @@ void kfree(void* ptr)
     {
         block_info* first = kfirst_free;
         
-        while(first->next_free != block->next_free)
+        while(first->next_free < block)
         {
             first = first->next_free;
         }

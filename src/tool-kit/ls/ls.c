@@ -16,13 +16,13 @@ void _test_print_dir(uint8_t* entires)
     {
         memcpy(name, &entry->name, entry->name_len);
         name[entry->name_len] = 0;
-        kprint("%s \n", name);
+        printf("%s \n", name);
         entires += entry->entry_size;
         entry = entires;
     }
 }
 
-int main(int argc, char** argv)
+void main(int argc, char** argv)
 {
     int fd = open("/boot", 0);
     fs_file_stat stat = {};
@@ -31,4 +31,5 @@ int main(int argc, char** argv)
     buf[stat.size] = 0;
     _test_print_dir(buf);
     close(fd);
+    exit(0);
 }

@@ -15,6 +15,7 @@ KERNEL_SRC = src/Kernel
 KLIB_SRC = src/lib
 C_LIB_SRC = src/Libc/
 C_POSIX_SRC = src/POSIX
+LS_SRC = src/tool-kit/ls/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
 	-I./include/POSIX
@@ -34,6 +35,9 @@ LIBC_SRCS += $(shell find $(C_LIB_SRC) -name *.c)
 # pthread
 PTHREADC_SRCS += $(shell find $(C_POSIX_SRC) -name *.c)
 
+#tools
+LS_SRCS = $(shell find $(LS_SRC) -name *.c)
+
 ########################################################
 #	OBJECT FILES
 ########################################################
@@ -44,6 +48,7 @@ PSXC_OBJECTS64 	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PTHREADC_SRCS))
 ASMOBJECT64		:= $(patsubst %.asm, $(TEMP_DIR)/obj64/%.asm.o, $(ASM_SRCS))
 GNU_ASMOBJECT64	:= $(patsubst %.S, $(TEMP_DIR)/obj64/%.S.o, $(GNU_ASM_SRCS))
 ALL_KOBJECTS64	:= $(sort $(COBJECTS64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
+ALL_LS_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(LS_SRCS))
 
 ########################################################
 #	COMPILER
@@ -75,6 +80,7 @@ LD_OPTIMIZATION = -flto
 ########################################################
 K_OBJECTS = $(C_SRCS:.c=.o) $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
 LIBC_OBJECTS = $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o)
+TOOLS_OBJECT = $(LS_SRCS:.c=.o)
 
 bootloader:
 	mkdir -p $(BUILD_DIR)
@@ -94,6 +100,9 @@ os:
 	cp files/filesys.dd build/os/os-image
 	#rm VBox/os-image.vdi || true
 	#VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
+
+tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o build/bin/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64)	
 
 run:
 	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown

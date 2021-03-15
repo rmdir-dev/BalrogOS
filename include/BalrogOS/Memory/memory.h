@@ -10,11 +10,12 @@ Balrog Memory Map :
     Start			    End			        Size		Use
     -----------------------------------------------------------------------
     0000000000000000	ffffff7fffffffff	 255.5TB	user
-    ffffff8000000000	ffffff800009fbff	 638KB		kernel stack, code & logical
+    ffffff8000000000	ffffff8000017fff	 95KB		kernel stack, code
+    ffffff8000018000	ffffff800009fbff	 542KB		kernel logical heap
     ffffff800009fc00	ffffff80000fffff	 385KB		RESERVED
-    ffffff8000100000	ffffff9fffffffff	 128GB		MEMORY (128GiB - 1MiB)
+    ffffff8000100000	ffffff9fffffffff	 128GB		MEMORY (real size : 128GiB - 1MiB)
     ffffffa000000000    ffffffbfffffffff     128GB      Kernel open files cache
-    ffffffc000000000	ffffffdfffffffff	 128GB		Kernel virtual
+    ffffffc000000000	ffffffdfffffffff	 128GB		Kernel virtual heap
     ffffffe000000000	ffffffffffffffff	 128GB		Process kernel stack space
 
 Balrog Process memory map :

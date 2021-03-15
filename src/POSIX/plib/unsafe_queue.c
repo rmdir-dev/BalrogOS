@@ -10,7 +10,7 @@ void unsafe_queue_init(unsafe_queue_t* queue)
 void unsafe_queue_enqueue(unsafe_queue_t* queue, uint64_t value)
 {
     //TODO Change to malloc
-    queue_node_t* node = vmalloc(sizeof(queue_node_t));
+    unsafe_queue_node_t* node = vmalloc(sizeof(unsafe_queue_node_t));
     
     node->value = value;
     node->next = NULL;
@@ -33,7 +33,7 @@ int unsafe_queue_dequeue(unsafe_queue_t* queue, uint64_t* value)
         return -1;
     }
 
-    queue_node_t* tmp = queue->head;
+    unsafe_queue_node_t* tmp = queue->head;
     *value = tmp->value;
     queue->head = tmp->next;
 

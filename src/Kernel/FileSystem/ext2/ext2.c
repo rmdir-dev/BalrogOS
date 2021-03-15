@@ -708,7 +708,7 @@ static int ext2_read(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
     }
 
     _ext2_read(file->data, buffer, fd->offset, len);
-
+    
     return 0;
 }
 

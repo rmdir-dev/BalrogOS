@@ -87,7 +87,7 @@ uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr)
     {
         return 0;
     }
-    return PT[PT_OFFSET(virt_addr)];
+    return STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]);
 }
 
 void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags)

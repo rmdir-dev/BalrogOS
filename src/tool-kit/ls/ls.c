@@ -27,7 +27,7 @@ void main(int argc, char** argv)
     int fd = open("/boot", 0);
     fs_file_stat stat = {};
     fstat(fd, &stat);
-    read(fd, buf, stat.size);
+    read(fd, &buf[0], stat.size);
     buf[stat.size] = 0;
     _test_print_dir(buf);
     close(fd);

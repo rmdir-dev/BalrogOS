@@ -52,8 +52,10 @@ uintptr_t* pmm_alloc()
     uintptr_t* p = 0x00;
     if(last_free_q.head)
     {
+        kprint("last free 1 0%p \n", last_free_q.head);
         uintptr_t addr;
         queue_dequeue(&last_free_q, &addr);
+        kprint("last free 2 \n");
         p = VIRTUAL_TO_PHYSICAL(addr);
 
     } else 

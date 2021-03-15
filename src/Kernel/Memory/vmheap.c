@@ -52,6 +52,7 @@ void* vmalloc(size_t size)
             /*  check if the block is large enough 
                 if yes allocate the new block of memory here.
             */
+            //kprint("current size 0%x addr: 0%p | size : %d\n", current_block->_size, current_block, size);
             if(current_block->_size >= size)
             {
                 // if the previous block is free of not
@@ -73,6 +74,7 @@ void* vmalloc(size_t size)
                         else we would lose memory
                     */
                     size = current_block->_size;
+
                     // the previous block is not free.
                     present = 0;    
                 } else
@@ -80,8 +82,11 @@ void* vmalloc(size_t size)
                     /*  if the block can contain the new block then
                         change the current block size.
                     */
-                    size_t new_block_size = size + sizeof(block_info);
+                    uint32_t new_block_size = size + sizeof(block_info);
+                    //kprint("current block size : 0%x | 0%p\n", current_block->_size, current_block);
                     current_block->_size -= new_block_size;
+                    //kprint("current block size : 0%x\n", new_block_size);
+
                     //move the block pointer to the new block we want to allocate
                     block += current_block->_size + sizeof(block_info);
                 }

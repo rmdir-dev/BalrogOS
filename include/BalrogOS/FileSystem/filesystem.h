@@ -69,6 +69,15 @@ void init_file_system();
  * @brief 
  * 
  * @param name 
+ * @param file 
+ * @return int 
+ */
+int fs_get_file(const char* name, fs_file* file);
+
+/**
+ * @brief 
+ * 
+ * @param name 
  * @param fd 
  * @return int 
  */

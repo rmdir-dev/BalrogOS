@@ -1,16 +1,16 @@
 #include "plib/unsafe_queue.h"
 #include "BalrogOS/Memory/kheap.h" // TEMPORARY!! switch to malloc once it is implemented!
 
-void unsafe_queue_init(unsafe_queue_t* queue)
+void uqueue_init(uqueue_t* queue)
 {
     queue->head = NULL;
     queue->tail = NULL;
 }
 
-void unsafe_queue_enqueue(unsafe_queue_t* queue, uint64_t value)
+void uqueue_enqueue(uqueue_t* queue, uint64_t value)
 {
     //TODO Change to malloc
-    unsafe_queue_node_t* node = vmalloc(sizeof(unsafe_queue_node_t));
+    uqueue_node_t* node = vmalloc(sizeof(uqueue_node_t));
     
     node->value = value;
     node->next = NULL;
@@ -26,14 +26,14 @@ void unsafe_queue_enqueue(unsafe_queue_t* queue, uint64_t value)
     queue->tail = node;
 }
 
-int unsafe_queue_dequeue(unsafe_queue_t* queue, uint64_t* value)
+int uqueue_dequeue(uqueue_t* queue, uint64_t* value)
 {
     if(!queue->head)
     {
         return -1;
     }
 
-    unsafe_queue_node_t* tmp = queue->head;
+    uqueue_node_t* tmp = queue->head;
     *value = tmp->value;
     queue->head = tmp->next;
 
@@ -43,14 +43,14 @@ int unsafe_queue_dequeue(unsafe_queue_t* queue, uint64_t* value)
     return 0;
 }
 
-uint64_t unsafe_queue_remove(unsafe_queue_t* queue)
+uint64_t uqueue_remove(uqueue_t* queue)
 {
     uint64_t ret = 0;
-    unsafe_queue_dequeue(queue, &ret);
+    uqueue_dequeue(queue, &ret);
     return ret;
 }
 
-int unsafe_queue_empty(unsafe_queue_t* queue)
+int uqueue_empty(uqueue_t* queue)
 {
     if(queue->head)
     {

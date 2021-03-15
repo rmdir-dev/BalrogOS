@@ -102,7 +102,8 @@ os:
 	#VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS)
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o build/bin/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64)	
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o build/bin/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) 
+	#$(PSXC_OBJECTS64)	
 
 run:
 	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown

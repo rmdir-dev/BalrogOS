@@ -219,14 +219,18 @@ static int _ext2_update_inode_table(fs_device* dev, uint32_t inode_idx, ext2_ino
 
 ext2_inode ext2_get_inode(fs_device* dev, uint32_t inode_idx)
 {
+    kprint("get inode 1\n");
     uint32_t tbl_str_blc_addr = inode_idx / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
     ext2_inode* inode_table = PHYSICAL_TO_VIRTUAL(pmm_calloc());
+    kprint("get inode 2\n");
     dev->read(dev, inode_table, (fs_data->blk_grp_desc.block_addr_of_inode_table + tbl_str_blc_addr) * fs_data->sec_per_block, 8);
+    kprint("get inode 3\n");
 
     ext2_inode ret = inode_table[(inode_idx - 1) % 32];
     //kprint("inode %d info mode : %d | 0%p \n", ((inode_idx - 1) % 32), ret.mode, inode_table);
     pmm_free(VIRTUAL_TO_PHYSICAL(inode_table));
+    kprint("get inode 4\n");
     return ret;
 }
 
@@ -544,14 +548,18 @@ static uint32_t _ext2_create_new_dir_entry(fs_device* dev, ext2_dir_entry* dir, 
 
 static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index, uint8_t new)
 {
+    kprint("find file 1 \n");
     if(*index == 0)
     {
         return 2;
     }
     ext2_idata* root_itable = ext2_cache_search_inode(dev, 2);
-    char* buffer = PHYSICAL_TO_VIRTUAL(pmm_calloc());
+    kprint("find file 2 \n");
+    char* buffer = kmalloc(root_itable->inode.size);
+    kprint("find file 3 \n");
 
     _ext2_read_file(dev, buffer, &root_itable->inode);
+    kprint("find file 4 \n");
 
     entry_read_dir_entries entries;
     uint32_t inode_id = 0;
@@ -562,15 +570,21 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     {
         if(!_ext2_read_dir_entry(buffer, &entries, *path))
         {
+            kprint("find file 5 0%p\n", entries.entry->inode);
             root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
+            kprint("find file 6 \n");
             inode_id = entries.entry->inode;
+            kfree(buffer);
+            buffer = kmalloc(root_itable->inode.size);
+            kprint("find file 7 \n");
             _ext2_read_file(dev, buffer, &root_itable->inode);
+            kprint("find file 8 \n");
             size++;
         }
         path++;
     }
-
-    pmm_free(VIRTUAL_TO_PHYSICAL(buffer));
+    
+    kfree(buffer);
     
     if(new)
     {
@@ -628,16 +642,22 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
 {
     size_t index;
     uint8_t from_root;
+    //kprint("open 1 \n");
     char** path = _ext2_get_path(filename, '/', &index, &from_root);
+    //kprint("open 2 \n");
     uint32_t file_inode_nbr = _ext2_find_directory(dev, path, &index, 0);
-
+    //kprint("open 3 \n");
     ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
+    //kprint("open 4 \n");
     
     if(file_inode->open == 0)
     {
         uint8_t* buffer = fs_cache_get_new_buffer(file_inode->inode.size);
+        //kprint("open 5 \n");
         _ext2_read_file(dev, buffer, &file_inode->inode);
+        //kprint("open 6 \n");
         ext2_add_file_to_cache(filename, file_inode, buffer);
+        //kprint("open 7 \n");
         file_inode->open = 1;
     }
     fs_cache_increase_ref(file_inode->file_id);

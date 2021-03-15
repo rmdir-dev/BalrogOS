@@ -7,17 +7,18 @@
 
 static inline void _elf_load_prog(elf_program* prog, uint8_t* data, page_table* PML4T, uint32_t flags)
 {
-    uint64_t copied = 0;
+    uint64_t fsize = prog->p_filesz;
     uint8_t* phys = 0;
     uint8_t* vaddr = prog->p_vaddr;
     uint64_t offset = prog->p_offset;
     uint64_t shift = 0;
     uint16_t size = 0;
     
-    while(copied < prog->p_filesz)
+    while(fsize > 0)
     {
+        kprint("here 0%p | fsize : %d\n", &data[offset], fsize);
         shift = ((uintptr_t)vaddr) % 0x1000;
-        size = PAGE_SIZE - shift;
+        size = fsize > 0x1000 ? (PAGE_SIZE - shift) : fsize;
 
         phys = vmm_get_page(PML4T, vaddr);
         
@@ -30,13 +31,14 @@ static inline void _elf_load_prog(elf_program* prog, uint8_t* data, page_table* 
         memcpy(PHYSICAL_TO_VIRTUAL(phys) + shift, &data[offset], size);
         
         vaddr += size;
-        copied += size;
+        fsize -= size;
         offset += size;
     }
 }
 
 int elf_load_binary(elf_header* header, uint8_t* data, page_table* PML4T, uint32_t flags)
 {
+    kprint("entry : 0%p", header->e_entry);
     
     uint64_t ph_offset = header->e_phoff;
     elf_program* prog = &data[ph_offset];

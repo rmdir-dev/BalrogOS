@@ -12,7 +12,7 @@ typedef struct __pthread_mutex_t
     /* counting waiting threads    */
     unsigned int count;
     /* a queue of currently waiting process */
-    unsafe_queue_t wait_queue;
+    uqueue_t wait_queue;
 } pthread_mutex_t;
 
 /**

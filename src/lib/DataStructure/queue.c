@@ -9,8 +9,7 @@ void queue_init(queue_t* queue)
 
 void queue_enqueue(queue_t* queue, uint64_t value)
 {
-    //TODO Change to malloc
-    queue_node_t* node = vmalloc(sizeof(queue_node_t));
+    queue_node_t* node = kmalloc(sizeof(queue_node_t));
     
     node->value = value;
     node->next = NULL;
@@ -28,18 +27,18 @@ void queue_enqueue(queue_t* queue, uint64_t value)
 
 int queue_dequeue(queue_t* queue, uint64_t* value)
 {
+    kprint("dequeue 1\n");
     if(!queue->head)
     {
         return -1;
     }
-
+    kprint("dequeue 2\n");
     queue_node_t* tmp = queue->head;
     *value = tmp->value;
     queue->head = tmp->next;
-
-    // TODO change to free()
-    vmfree(tmp);
-
+    kprint("dequeue 3\n");
+    kfree(tmp);
+    kprint("dequeue 4\n");
     return 0;
 }
 

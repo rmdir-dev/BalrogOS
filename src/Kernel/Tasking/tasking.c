@@ -72,7 +72,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     if(header->ei_mag == ELF_MAGIC)
     {
         proc->rip = header->e_entry;
-        elf_load_binary(header, addr, proc->PML4T, PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+        elf_load_binary(header, addr, proc->PML4T, PAGE_PRESENT | PAGE_WRITE);
     } else 
     {
         uintptr_t text = pmm_calloc();

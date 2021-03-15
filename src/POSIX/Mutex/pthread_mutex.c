@@ -8,7 +8,7 @@ int pthread_mutex_init(pthread_mutex_t* lock, pthread_mutex_attr_t* attr)
     lock->lock = 0;
     lock->flag = 0;
     lock->count = 0;
-    unsafe_queue_init(&lock->wait_queue);
+    uqueue_init(&lock->wait_queue);
     return 0;
 }
 
@@ -42,7 +42,7 @@ int pthread_mutex_lock(pthread_mutex_t* lock)
         /*
         add process to parked list.
         */
-        unsafe_queue_enqueue(&lock->wait_queue, getpid());
+        uqueue_enqueue(&lock->wait_queue, getpid());
         setpark();
         xchg(&lock->lock, 0);
         park();
@@ -66,7 +66,7 @@ int pthread_mutex_unlock(pthread_mutex_t* lock)
     /*
     if the queue is empty then flag == 0 no one is parked
     */
-    if(unsafe_queue_empty(&lock->wait_queue))
+    if(uqueue_empty(&lock->wait_queue))
     {
         lock->flag = 0;
     } else 
@@ -75,7 +75,7 @@ int pthread_mutex_unlock(pthread_mutex_t* lock)
         unpark front the queue process
         wake up the process
         */
-        unpark(unsafe_queue_remove(&lock->wait_queue));
+        unpark(uqueue_remove(&lock->wait_queue));
     }
 
     /* set the lock back to 0 atomically */

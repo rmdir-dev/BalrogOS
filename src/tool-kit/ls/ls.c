@@ -5,12 +5,11 @@
 #include <balrog/fs/fs_struct.h>
 
 char buf[4096 * 10];
+char name[255];
 
 void _test_print_dir(uint8_t* entires)
 {
     fs_dir_entry* entry = entires;
-    
-    char* name = vmalloc(255);
 
     while(entry->inbr)
     {
@@ -24,7 +23,9 @@ void _test_print_dir(uint8_t* entires)
 
 void main(int argc, char** argv)
 {
+    printf("elf file :D \n");
     int fd = open("/boot", 0);
+    while(1){}
     fs_file_stat stat = {};
     fstat(fd, &stat);
     read(fd, buf, stat.size);

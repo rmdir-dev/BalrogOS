@@ -15,6 +15,7 @@
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/Syscall/syscall.h"
 #include "BalrogOS/FileSystem/filesystem.h"
+#include "BalrogOS/FileSystem/fs_cache.h"
 #include "BalrogOS/Memory/kstack.h"
 
 /* 
@@ -67,6 +68,7 @@ void test_file()
 
 void test_user_mode()
 {
+    kprint("test program 2\n");
     while(1){}
 }
 
@@ -135,7 +137,12 @@ void initialize_kernel(void* SMAP, void* size)
     /*    TEST PROCESS */
     test_init();
     push_process("test", test_file, 0);
-    push_process("test", test_user_mode, 3);
+    push_process("test", test_user_mode, 0);
+    fs_fd fd;
+    fs_file file;
+    fs_get_file("/bin/ls", &file);
+    push_process("test", file.data, 0);
+
     KERNEL_LOG_OK("start process");
 
     enable_interrupt();

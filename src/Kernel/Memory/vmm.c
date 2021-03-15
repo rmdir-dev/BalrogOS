@@ -96,7 +96,7 @@ void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, 
     {
         PML4T = KernelPML4T;
     }
-
+    
     page_table* PT = vmm_find_page(PML4T, virt_addr, 1);
 
     if(!PT)

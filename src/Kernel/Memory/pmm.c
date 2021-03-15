@@ -2,6 +2,7 @@
 #include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/vmm.h"
 
+#include "lib/DataStructure/queue.h"
 #include "lib/IO/kprint.h"
 #include <string.h>
 
@@ -26,6 +27,9 @@ Pointer to last address freed -> contain the last address freed before
 */
 uintptr_t last_free_addr = 0x0;
 
+// freed address queue.
+queue_t last_free_q;
+
 void pmm_free(uintptr_t* addr)
 {
     // if addr is greater than next_addr
@@ -37,10 +41,8 @@ void pmm_free(uintptr_t* addr)
     }
 
     addr = PHYSICAL_TO_VIRTUAL(addr);
-    // addr now point to last_free_addr
-    *addr = last_free_addr;
-    // free addr and set last_free_addr to addr.
-    last_free_addr = addr;
+    queue_enqueue(&last_free_q, addr);
+
     // decrease total memory used by one page
     total_memory_used -= PAGE_SIZE;
 }
@@ -48,11 +50,11 @@ void pmm_free(uintptr_t* addr)
 uintptr_t* pmm_alloc()
 {
     uintptr_t* p = 0x00;
-    if(last_free_addr)
+    if(last_free_q.head)
     {
-        p = last_free_addr;
-        last_free_addr = *p;
-        p = VIRTUAL_TO_PHYSICAL(p);
+        uintptr_t addr;
+        queue_dequeue(&last_free_q, &addr);
+        p = VIRTUAL_TO_PHYSICAL(addr);
 
     } else 
     {
@@ -62,7 +64,7 @@ uintptr_t* pmm_alloc()
             kprint("next : %p | top : %p ", next_addr, pmm_top_addr);
             return 0x0;
         }
-
+        
         // if next address exceed 32bit addressing then switch to the 64bit address.
         if(next_addr >= top_32_addr - 0x1000 && next_addr < 0x100000000)
         {
@@ -131,6 +133,7 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
         }
     }
     
+    queue_init(&last_free_q);
     KERNEL_LOG_INFO("Total system memory : %dMiB", BYTE_TO_MiB(total_memory));
     KERNEL_LOG_INFO("Total usable system memory : %dMiB", BYTE_TO_MiB(total_usable_memory));
 }

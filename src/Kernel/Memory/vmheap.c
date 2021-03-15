@@ -17,19 +17,6 @@ uintptr_t vmheap_current_top;
 uintptr_t first_free;
 uintptr_t vmheap_end;
 
-typedef struct block_info_t
-{
-    struct block_info_t* previous_chunk;
-    struct
-    {
-        uint16_t _size : 13;
-        uint16_t _non_arena : 1;
-        uint16_t _is_mmapped : 1;
-        uint16_t _present : 1;
-    } __attribute__((packed));
-    struct block_info_t* next_free;
-}__attribute__((packed)) block_info;
-
 void init_vmheap()
 {
     vmheap_start = KERNEL_VIRTUAL_START;

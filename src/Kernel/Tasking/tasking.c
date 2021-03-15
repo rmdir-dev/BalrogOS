@@ -6,6 +6,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
+#include "BalrogOS/Tasking/elf/elf.h"
 #include <string.h>
 
 #define PROCESS_STACK_TOP   0x00007ffd0e212000
@@ -62,12 +63,23 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
 
     /*
-    TEXT
+    TEXT & DATA
     */
-    uintptr_t text = pmm_calloc();
-    uintptr_t phys = VIRTUAL_TO_PHYSICAL(addr);
-    vmm_set_page(proc->PML4T, PROCESS_TEXT, text, PAGE_USER | PAGE_PRESENT);
-    memcpy(PHYSICAL_TO_VIRTUAL(text), addr, 4096);
+    uintptr_t phys;
+
+    elf_header* header = addr;
+
+    if(header->ei_mag == ELF_MAGIC)
+    {
+        proc->rip = header->e_entry;
+        elf_load_binary(header, addr, proc->PML4T, PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    } else 
+    {
+        uintptr_t text = pmm_calloc();
+        phys = VIRTUAL_TO_PHYSICAL(addr);
+        vmm_set_page(proc->PML4T, PROCESS_TEXT, text, PAGE_USER | PAGE_PRESENT);
+        memcpy(PHYSICAL_TO_VIRTUAL(text), addr, 4096);
+    }
 
     /*
     HEAP

@@ -53,7 +53,7 @@ void _test_print_dir(uint8_t* entires)
 void test_file()
 {
     kprint("test file open \n");
-    int fd = open("/", 001);
+    int fd = open("/bin/", 001);
     buf[4096] = 0;
     kprint("test file read \n");
     read(fd, buf, 4096);
@@ -79,60 +79,59 @@ void test_user_mode()
 void initialize_kernel(void* SMAP, void* size)
 {
     disable_interrupt();
-    /*      SCREEN      */
+    /*      SCREEN        */
     vga_init();
     KERNEL_LOG_OK("Kernel loading :");
     KERNEL_LOG_OK("VGA Driver : done");
 
-    /*   INTERRRUPTS    */
+    /*   INTERRRUPTS      */
     KERNEL_LOG_INFO("Interrrupts : waiting...");
     init_interrupt();
     KERNEL_LOG_OK("Interrupt initialization : done");
 
+    /*    EXCEPTIONS      */
     init_exception();
 
-    /* SYSTEM CALL */
+    /*    SYSTEM CALL     */
     init_syscalls();
     KERNEL_LOG_OK("System calls initialization : done");
 
-    /*      MEMORY      */
+    /*    MEMORY          */
     // TODO later don't pass these as argument but fetch them using #define SMAP_PHYS_ADDR
     SMAP_entry* SMAPinfo = PHYSICAL_TO_VIRTUAL(SMAP);
 	uint16_t* SMAPsize = PHYSICAL_TO_VIRTUAL(size);
     
-    /* Virtual Memory */
+    /*    Virtual Memory  */
     init_vmm();
     KERNEL_LOG_OK("Virtual memory initialization : done");
 
-    /* Physical Memory */
+    /*    Physical Memory */
     init_pmm(SMAPinfo, SMAPsize);
     KERNEL_LOG_OK("Physical memory initialization : done");
 
-    /* Kernel Heap */
+    /*    Kernel Heap    */
     init_kheap(); // Kernel Logical
     init_vmheap();  // Kernel Virtual
     KERNEL_LOG_OK("Kernel heap initialization : done");
 
-    /* GDT and TSS */
+    /*    GDT and TSS   */
     init_gdt();
     KERNEL_LOG_OK("GDT and TSS : done");
 
-    /* SCHEDULER */
+    /*    SCHEDULER     */
     init_scheduler();
     KERNEL_LOG_OK("CPU scheduler initialization : done");
 
-    /*     KEYBOARD     */
+    /*    KEYBOARD      */
     init_keyboard();
     KERNEL_LOG_OK("Keyboard initialization : done");
 
-    /* FILE SYSTEM */
+    /*    FILE SYSTEM   */
     init_file_system();
     KERNEL_LOG_OK("File system initialization : done");
 
-    /* TEST PROCESS */
+    /*    TEST PROCESS */
     test_init();
-    //push_process("test", test2, 0);
-    //push_process("test", test, 0);test_file
     push_process("test", test_file, 0);
     push_process("test", test_user_mode, 3);
     KERNEL_LOG_OK("start process");

@@ -111,7 +111,7 @@ void kfree(void* ptr)
 
     if(!block->_is_mmapped)
     {
-        kprint("double free()");
+        kprint("double free() 0%p", ptr);
         while (1)
         {
             /* code */

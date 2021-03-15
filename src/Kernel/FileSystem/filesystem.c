@@ -25,7 +25,6 @@ int fs_open(const char* name, fs_fd* fd)
 {
     pthread_mutex_lock(&dev.lock);
     int ret = dev.fs->open(&dev, name, fd);
-    kprint("opened \n");
     pthread_mutex_unlock(&dev.lock);
     return ret;
 }
@@ -33,9 +32,7 @@ int fs_open(const char* name, fs_fd* fd)
 int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
     pthread_mutex_lock(&dev.lock);
-    kprint("read start\n");
     int ret = dev.fs->read(&dev, buffer, len, fd);
-    kprint("read done \n");
     pthread_mutex_unlock(&dev.lock);
     return ret;
 }
@@ -44,7 +41,6 @@ int fs_close(fs_fd* fd)
 {
     pthread_mutex_lock(&dev.lock);
     int ret = dev.fs->close(&dev, fd);
-    kprint("closed\n");
     pthread_mutex_unlock(&dev.lock);
     return ret;
 }
@@ -53,7 +49,6 @@ int fs_fstat(fs_fd* fd, fs_file_stat* stat)
 {
     pthread_mutex_lock(&dev.lock);
     int ret = dev.fs->stat(&dev, fd, stat);
-    kprint("stat done \n");
     pthread_mutex_unlock(&dev.lock);
     return ret;
 }

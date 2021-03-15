@@ -50,7 +50,7 @@ uint8_t* fs_cache_get_new_buffer(uint64_t size)
     uint64_t start_buffer_index = 0;
     uint64_t buffer_size = 0;
     uint8_t contiguous = 0;
-
+    
     for(size_t i = 0; i < 4096; i++)
     {
         if(free_buffer_map[i] == 0 && buffer_size == 0)

@@ -58,7 +58,7 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
     if(ret)
     {
         size_t idx = 0;
-        char* token = strtok(src, "/");
+        char* token = strtok(src, '/');
 
         while(token)
         {
@@ -66,7 +66,7 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
             {
                 //kprint("has token %s | 0%p \n", token, src);
                 *(ret + idx++) = token;
-                token = strtok(NULL, "/");
+                token = strtok(NULL, '/');
             }
         }
 
@@ -432,9 +432,9 @@ static int _ext2_read_dir_entry(uint8_t* dir_ptr, entry_read_dir_entries* read_e
         read_entries->next_entry = dir_ptr + read_entries->entry->entry_size;
         strcpy(&name_buffer, &read_entries->entry->name);
         name_buffer[read_entries->entry->name_length] = 0;
-
-        if(read_entries->entry->type != 0 && !strcmp(&name_buffer, filename))
+        if(read_entries->entry->type != 0 && strcmp(&name_buffer, filename) == 0)
         {
+            int scmp = strcmp(&name_buffer, filename);
             return 0;
         }
 
@@ -571,7 +571,7 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     }
 
     pmm_free(VIRTUAL_TO_PHYSICAL(buffer));
-
+    
     if(new)
     {
         if(size == 0)
@@ -587,7 +587,6 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
             return 0;
         }
     }
-
     *index = size;
     return inode_id;
 }
@@ -641,7 +640,6 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
         ext2_add_file_to_cache(filename, file_inode, buffer);
         file_inode->open = 1;
     }
-
     fs_cache_increase_ref(file_inode->file_id);
     fd->ftable_idx = file_inode->file_id;
     fd->offset = 0;

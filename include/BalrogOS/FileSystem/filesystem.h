@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "balrog/fs/fs_struct.h"
+#include "POSIX/pthread.h"
 
 struct _file_system;
 
@@ -39,6 +40,7 @@ typedef struct _fs_fd
 typedef struct _fs_device
 {
     char* name;
+    pthread_mutex_t lock;
     uint32_t unique_id;
     uint8_t type;
     uint8_t (*read)(struct _fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len);

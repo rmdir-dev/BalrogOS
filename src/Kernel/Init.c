@@ -98,7 +98,7 @@ void initialize_kernel(void* SMAP, void* size)
     fs_fd fd;
     fs_file file;
     fs_get_file("/bin/ls", &file);
-    push_process("test", file.data, 0);
+    push_process("test", file.data, 3);
     fs_close(&fd);
     push_process("morgoth", idle_loop, 0);
 

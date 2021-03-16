@@ -55,7 +55,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     memset(proc, 0, sizeof(process));
     proc->name = name;
     proc->pid = ++next_pid;
-    proc->rip = addr;
+    proc->rip = mode == 3 ? PROCESS_TEXT : addr; 
     proc->state = PROCESS_STATE_READY;
     proc->PML4T = pmm_calloc();
     proc->exec = 0;
@@ -103,15 +103,9 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     */
     proc->stack_top = PROCESS_STACK_TOP - 1;
 
-    if(mode != 0)
-    {
-        proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
-        virt = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
-    } else 
-    {
-        proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
-        virt = PHYSICAL_TO_VIRTUAL(((uint8_t*)phys) + 4095 - sizeof(task_register));
-    }
+    proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
+    virt = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
+
 
     proc->rsp = virt;// PROCESS_STACK_TOP - sizeof(task_register) - 1;
     
@@ -125,7 +119,6 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 
     if(mode == 3)
     {
-        proc->rip = PROCESS_TEXT;
         stack->ss = SEG_UDATA | 3;
         stack->rsp = proc->stack_top;
         stack->cs = SEG_UCODE | 3;

@@ -61,6 +61,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     proc->exec = 0;
     uintptr_t* virt = PHYSICAL_TO_VIRTUAL(proc->PML4T); // Kernel space
     virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
+    uint32_t user = mode == 3 ? PAGE_USER : 0; 
 
     /*
     TEXT & DATA
@@ -72,12 +73,12 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     if(header->ei_mag == ELF_MAGIC)
     {
         proc->rip = header->e_entry;
-        elf_load_binary(header, addr, proc->PML4T, PAGE_PRESENT | PAGE_WRITE);
+        elf_load_binary(header, addr, proc->PML4T, user | PAGE_PRESENT | PAGE_WRITE);
     } else 
     {
         uintptr_t text = pmm_calloc();
         phys = VIRTUAL_TO_PHYSICAL(addr);
-        vmm_set_page(proc->PML4T, PROCESS_TEXT, text, PAGE_USER | PAGE_PRESENT);
+        vmm_set_page(proc->PML4T, PROCESS_TEXT, text, user | PAGE_PRESENT);
         memcpy(PHYSICAL_TO_VIRTUAL(text), addr, 4096);
     }
 
@@ -85,16 +86,16 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     HEAP
     */
     phys = pmm_calloc();
-    vmm_set_page(proc->PML4T, PROCESS_HEAP_BOTTOM, phys, PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_HEAP_BOTTOM, phys, user | PAGE_PRESENT | PAGE_WRITE);
 
     /*
     STACK
     */
     phys = pmm_calloc();
-    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x1000, phys, PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
-    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x2000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
-    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x3000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
-    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x4000, pmm_calloc(), PAGE_USER | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x1000, phys, user | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x2000, pmm_calloc(), user | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x3000, pmm_calloc(), user | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x4000, pmm_calloc(), user | PAGE_PRESENT | PAGE_WRITE);
     phys = kstack_alloc();
 
     /*

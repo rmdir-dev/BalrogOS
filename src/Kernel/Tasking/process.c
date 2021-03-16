@@ -39,7 +39,7 @@ static int _proc_transfert_to_wait(process* proc)
     {
         if(rdy_proc_list.size == 1)
         {
-            current_running = NULL;
+            //current_running = NULL;
             rdy_proc_list.head = NULL;
             rdy_proc_list.tail = NULL;
         } else if(proc == rdy_proc_list.head)
@@ -80,16 +80,19 @@ int _proc_remove_process(process* proc)
 void proc_kill_process(uint64_t pid)
 {
     process* proc = proc_get_process(pid);
-    
+
     if(_proc_transfert_to_wait(proc) == 0)
     {
         proc->state = PROCESS_STATE_DEAD;
         _proc_remove_process(proc);
-        
         clean_process(proc);
 
         if(proc == current_running)
         {
+            if(proc == current_running->next)
+            {
+                current_running = NULL;
+            }
             schedule();
         }
     }
@@ -112,6 +115,10 @@ void proc_transfert_to_waiting(uint64_t pid)
 
         if(proc == current_running)
         {
+            if(proc == current_running->next)
+            {
+                current_running = NULL;
+            }
             schedule();
         }
     }

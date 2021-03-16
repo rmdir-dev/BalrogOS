@@ -53,7 +53,6 @@ void* kstack_alloc()
 
 void kstack_free(uintptr_t* addr)
 {
-    kprint("here\n");
     page_table* PML4T = PHYSICAL_TO_VIRTUAL(KernelPML4T);
     page_table* PDPT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PML4T[PML4T_OFFSET(addr)]));
     page_table* PDT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDPT[PDPT_OFFSET(addr)]));

@@ -550,7 +550,8 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     }
     ext2_idata* root_itable = ext2_cache_search_inode(dev, 2);
 
-    char* buffer = kmalloc(root_itable->inode.size);
+    uint32_t allocsize = root_itable->inode.size + (512 - (root_itable->inode.size % 512));
+    char* buffer = kmalloc(allocsize);
 
     _ext2_read_file(dev, buffer, &root_itable->inode);
 
@@ -566,13 +567,14 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
             root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
             inode_id = entries.entry->inode;
             kfree(buffer);
-            buffer = kmalloc(root_itable->inode.size);
+            allocsize = root_itable->inode.size + (512 - (root_itable->inode.size % 512));
+            buffer = kmalloc(allocsize);
             _ext2_read_file(dev, buffer, &root_itable->inode);
             size++;
         }
         path++;
     }
-    
+
     kfree(buffer);
     
     if(new)
@@ -642,12 +644,14 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
         ext2_add_file_to_cache(filename, file_inode, buffer);
         file_inode->open = 1;
     }
+
     fs_cache_increase_ref(file_inode->file_id);
     fd->ftable_idx = file_inode->file_id;
     fd->offset = 0;
     fd->inode_nbr = file_inode->inode_nbr;
-    
+
     vmfree(path);
+
     return 0;
 }
 

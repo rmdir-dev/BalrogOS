@@ -92,6 +92,7 @@ void* kmalloc(size_t size)
                 }
 
                 // return the address of the newly allocated block
+                //kprint("kalloc : 0%p\n", block + sizeof(block_info));
                 return block + sizeof(block_info);
             }
             // current block = next block
@@ -108,7 +109,8 @@ void kfree(void* ptr)
 {
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
-
+    
+    //kprint("k heap freeing : 0%p \n", ptr);
     if(!block->_is_mmapped)
     {
         kprint("double free() 0%p", ptr);

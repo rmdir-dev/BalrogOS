@@ -24,51 +24,11 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 */
 
-#include <pthread.h>
-#include <stdlib.h>
-
-unsigned test_var = 0;
-pthread_mutex_t mutex_test;
-
-void test_init()
+/*  we will have a loop that kill dead or zombie process
+    this one is a place holder until that program is done.
+*/
+void idle_loop()
 {
-    pthread_mutex_init(&mutex_test, NULL);
-}
-
-char buf[4096 * 2];
-
-void _test_print_dir(uint8_t* entires)
-{
-    fs_dir_entry* entry = entires;
-    char* name = vmalloc(255);
-    while(entry->inbr)
-    {
-        memcpy(name, &entry->name, entry->name_len);
-        name[entry->name_len] = 0;
-        kprint("%s \n", name);
-        entires += entry->entry_size;
-        entry = entires;
-    }
-}
-
-void test_file()
-{
-    kprint("test file open \n");
-    int fd = open("/bin/", 001);
-    buf[4096] = 0;
-    kprint("test file read \n");
-    read(fd, buf, 4096);
-    _test_print_dir(buf);
-    kprint("test file close \n");
-    close(fd);
-
-    exit(0);
-    kprint("error exit don't work.\n");
-}
-
-void test_user_mode()
-{
-    kprint("test program 2\n");
     while(1){}
 }
 
@@ -135,13 +95,12 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_OK("File system initialization : done");
 
     /*    TEST PROCESS */
-    test_init();
-    push_process("test", test_file, 0);
-    push_process("test", test_user_mode, 0);
+    push_process("morgoth", idle_loop, 0);
     fs_fd fd;
     fs_file file;
     fs_get_file("/bin/ls", &file);
     push_process("test", file.data, 0);
+    fs_close(&fd);
 
     KERNEL_LOG_OK("start process");
 

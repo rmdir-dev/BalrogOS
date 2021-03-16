@@ -158,10 +158,11 @@ void vmfree(void* ptr)
 {
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
-
+    
+    //kprint("freeing : 0%p \n", ptr);
     if(!block->_is_mmapped)
     {
-        kprint("double free() 0%p", ptr);
+        kprint("double vmfree() 0%p", ptr);
         while (1)
         {
             /* code */

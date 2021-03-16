@@ -56,5 +56,6 @@ files/defrag-e2c-0.73.1-1.1/terminfo/x
 files/defrag-e2c-0.73.1-1.1/terminfo/xterm
 files/defrag-e2c-0.73.1-1.1/terminfo/c/console
 files/defrag-e2c-0.73.1-1.1/terminfo/v/vt100
+files/root/*
 VBox/*
 files/filesys_old.dd

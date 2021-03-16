@@ -17,7 +17,7 @@ typedef struct process_t
 {
     struct process_t* prev;
     char* name;
-    uint64_t pid;
+    int pid;
     uintptr_t rsp;
     uintptr_t rip;
     uintptr_t stack_top;

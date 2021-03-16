@@ -1,12 +1,13 @@
 #include "BalrogOS/FileSystem/filesystem.h"
-#include "BalrogOS/FileSystem/fs_cache.h"
-#include "BalrogOS/Drivers/disk/ata.h"
 #include "BalrogOS/FileSystem/ext2/ext2.h"
+#include "BalrogOS/FileSystem/fs_cache.h"
+#include "BalrogOS/Debug/debug_output.h"
+#include "BalrogOS/Drivers/disk/ata.h"
+#include "BalrogOS/Tasking/elf/elf.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/vmm.h"
 #include "BalrogOS/Memory/pmm.h"
-#include "BalrogOS/Tasking/elf/elf.h"
 #include <string.h>
 #include "lib/IO/kprint.h"
 
@@ -23,42 +24,46 @@ int fs_get_file(const char* name, fs_file* file)
 
 int fs_open(const char* name, fs_fd* fd)
 {
-    pthread_mutex_lock(&dev.lock);
+    kmutex_lock(&dev.lock);
     int ret = dev.fs->open(&dev, name, fd);
-    pthread_mutex_unlock(&dev.lock);
+    kmutex_unlock(&dev.lock);
     return ret;
 }
 
 int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
-    pthread_mutex_lock(&dev.lock);
+    kmutex_lock(&dev.lock);
     int ret = dev.fs->read(&dev, buffer, len, fd);
-    pthread_mutex_unlock(&dev.lock);
+    kmutex_unlock(&dev.lock);
     return ret;
 }
 
 int fs_close(fs_fd* fd)
 {
-    pthread_mutex_lock(&dev.lock);
+    kmutex_lock(&dev.lock);
     int ret = dev.fs->close(&dev, fd);
-    pthread_mutex_unlock(&dev.lock);
+    kmutex_unlock(&dev.lock);
     return ret;
 }
 
 int fs_fstat(fs_fd* fd, fs_file_stat* stat)
 {
-    pthread_mutex_lock(&dev.lock);
+    kmutex_lock(&dev.lock);
     int ret = dev.fs->stat(&dev, fd, stat);
-    pthread_mutex_unlock(&dev.lock);
+    kmutex_unlock(&dev.lock);
     return ret;
 }
 
 void init_file_system()
 {
     init_ata();
-    pthread_mutex_init(&dev.lock, NULL);
-    pthread_mutex_lock(&dev.lock);
-    ata_get_boot_device(&dev);
+    kmutex_init(&dev.lock);
+    kmutex_lock(&dev.lock);
+    if(ata_get_boot_device(&dev) != 0)
+    {
+        KERNEL_LOG_FAIL("file system : No suitable drive found!");
+        while(1){}
+    }
     ext2_probe(&dev);
-    pthread_mutex_unlock(&dev.lock);
+    kmutex_unlock(&dev.lock);
 }

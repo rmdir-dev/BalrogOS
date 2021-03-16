@@ -35,7 +35,7 @@ LIBC_SRCS += $(shell find $(C_LIB_SRC) -name *.c)
 # pthread
 PTHREADC_SRCS += $(shell find $(C_POSIX_SRC) -name *.c)
 
-#tools
+# tools
 LS_SRCS = $(shell find $(LS_SRC) -name *.c)
 
 ########################################################
@@ -78,7 +78,7 @@ LD_OPTIMIZATION = -flto
 ########################################################
 #	GENERATE OBJECT FILES
 ########################################################
-K_OBJECTS = $(C_SRCS:.c=.o) $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
+K_OBJECTS = $(C_SRCS:.c=.o) $(LIBC_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
 LIBC_OBJECTS = $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o)
 

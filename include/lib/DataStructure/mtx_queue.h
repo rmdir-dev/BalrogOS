@@ -1,25 +1,24 @@
 #pragma once
 #include <stdint.h>
-#include "lib/Threading/kmutex.h"
 #include "queue_node.h"
 
 /**
- * @brief the unsafe queue is a non thread safe queue.
+ * @brief the mutex queue is a non thread safe queue.
+ * SHOULD ONLY be use by the kmutex and or FUTEX once implemented!
  * 
  */
-typedef struct __queue_t
+typedef struct __mtx_queue_t
 {
     queue_node_t* head;
     queue_node_t* tail;
-    kmutex_t head_lock, tail_lock;
-} queue_t;
+} mtx_queue_t;
 
 /**
  * @brief 
  * 
  * @param queue 
  */
-void queue_init(queue_t* queue);
+void mtx_queue_init(mtx_queue_t* queue);
 
 /**
  * @brief 
@@ -27,7 +26,7 @@ void queue_init(queue_t* queue);
  * @param queue 
  * @param value 
  */
-void queue_enqueue(queue_t* queue, uint64_t value);
+void mtx_queue_enqueue(mtx_queue_t* queue, uint64_t value);
 
 /**
  * @brief 
@@ -36,7 +35,7 @@ void queue_enqueue(queue_t* queue, uint64_t value);
  * @param value 
  * @return int 0 no error, -1 the queue is empty.
  */
-int queue_dequeue(queue_t* queue, uint64_t* value);
+int mtx_queue_dequeue(mtx_queue_t* queue, uint64_t* value);
 
 /**
  * @brief remove the head of the queue, you MUST first check if the queue is not empty
@@ -44,7 +43,7 @@ int queue_dequeue(queue_t* queue, uint64_t* value);
  * @param queue 
  * @return int the value at the head of the queue.
  */
-uint64_t queue_remove(queue_t* queue);
+uint64_t mtx_queue_remove(mtx_queue_t* queue);
 
 /**
  * @brief check if the queue is empty
@@ -52,4 +51,4 @@ uint64_t queue_remove(queue_t* queue);
  * @param queue 
  * @return int return 1 if empty
  */
-int queue_empty(queue_t* queue);
+int mtx_queue_empty(mtx_queue_t* queue);

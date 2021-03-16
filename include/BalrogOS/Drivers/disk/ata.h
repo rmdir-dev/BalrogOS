@@ -29,7 +29,7 @@ void ata_write(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len);
  * 
  * @param device 
  */
-void ata_get_boot_device(fs_device* device);
+int ata_get_boot_device(fs_device* device);
 
 /**
  * @brief initialize ATA drives

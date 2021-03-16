@@ -1,7 +1,7 @@
 #include "Mutex/pthread_mutex.h"
 #include "Mutex/pthread_mutex_attr.h"
-#include "plib/park.h"
-#include "BalrogOS/arch/x86_64/x86.h"
+#include "balrog/thread/park.h"
+#include "balrog/arch/x86_64/x86.h"
 
 int pthread_mutex_init(pthread_mutex_t* lock, pthread_mutex_attr_t* attr)
 {

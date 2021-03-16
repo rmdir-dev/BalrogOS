@@ -1,20 +1,34 @@
-#include "plib/park.h"
+#pragma once
+#include <stdint.h>
 
-void setpark()
+/**
+ * @brief 
+ * 
+ */
+static inline void setpark()
 {
     asm volatile("mov $0, %rdi");
     asm volatile("mov $203, %rax");
     asm volatile("int $0x80");
 }
 
-void park()
+/**
+ * @brief add the current process into the waiting queue
+ * 
+ */
+static inline void park()
 {
     asm volatile("mov $0, %rdi");
     asm volatile("mov $202, %rax");
     asm volatile("int $0x80");
 }
 
-void unpark(uint64_t pid)
+/**
+ * @brief wake a waiting process.
+ * 
+ * @param pid process ID of the process we want to wake up
+ */
+static inline void unpark(uint64_t pid)
 {
     asm volatile("mov %%rax, %%rdi": :"a"(pid));
     asm volatile("mov $202, %rax");

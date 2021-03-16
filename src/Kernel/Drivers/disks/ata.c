@@ -177,7 +177,7 @@ void ata_write(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 }
 
 
-void ata_get_boot_device(fs_device* device)
+int ata_get_boot_device(fs_device* device)
 {
     uint16_t* buffer = vmalloc(512);
     for(size_t i = 0; i < 4; i++)
@@ -192,10 +192,11 @@ void ata_get_boot_device(fs_device* device)
                 device->read = ata_read;
                 device->write = ata_write;
                 vmfree(buffer);
-                return;
+                return 0;
             }
         }
     }
+    return -1;
 }
 
 void init_ata()

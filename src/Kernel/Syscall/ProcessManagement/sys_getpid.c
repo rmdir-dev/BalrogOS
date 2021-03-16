@@ -4,7 +4,7 @@
 
 extern process* current_running;
 
-uint64_t sys_getpid(interrupt_regs* stack_frame)
+int sys_getpid(interrupt_regs* stack_frame)
 {
     return current_running->pid;
 }

@@ -6,7 +6,7 @@
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/pmm.h"
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include "ext2_config.h"
 
 #include <unistd.h>

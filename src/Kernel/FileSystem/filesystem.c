@@ -9,7 +9,7 @@
 #include "BalrogOS/Memory/vmm.h"
 #include "BalrogOS/Memory/pmm.h"
 #include <string.h>
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 
 fs_device dev;
 

@@ -1,4 +1,4 @@
-#include "lib/DataStructure/mtx_queue.h"
+#include "klib/DataStructure/mtx_queue.h"
 #include "BalrogOS/Memory/kheap.h" // TEMPORARY!! switch to malloc once it is implemented!
 
 void mtx_queue_init(mtx_queue_t* queue)

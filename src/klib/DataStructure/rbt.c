@@ -1,8 +1,8 @@
-#include "lib/DataStructure/rbt.h"
+#include "klib/DataStructure/rbt.h"
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include "BalrogOS/Memory/kheap.h"
 
 #define RBT_GET_DIR(var)    (var == var->parent->children[RBT_RIGHT])

@@ -3,7 +3,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 
 /**
  * @brief enable the keyboard found in keyboard.asm

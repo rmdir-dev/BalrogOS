@@ -1,7 +1,7 @@
 #include "BalrogOS/Tasking/elf/elf.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/pmm.h"
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include <stddef.h>
 #include <string.h>
 

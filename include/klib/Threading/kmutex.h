@@ -1,6 +1,6 @@
 #pragma once
-#include "lib/Threading/kmutex.h"
-#include "lib/DataStructure/mtx_queue.h"
+#include "klib/Threading/kmutex.h"
+#include "klib/DataStructure/mtx_queue.h"
 #include <stdint.h>
 
 typedef struct __kmutex_t

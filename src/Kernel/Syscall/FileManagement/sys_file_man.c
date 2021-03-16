@@ -2,7 +2,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "BalrogOS/Tasking/process.h"
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include <stdint.h>
 #include <string.h>
 

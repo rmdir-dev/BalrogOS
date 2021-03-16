@@ -2,7 +2,7 @@
 #include "BalrogOS/Memory/kstack.h"
 #include "BalrogOS/Memory/pmm.h"
 #include "BalrogOS/Memory/vmm.h"
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include <stddef.h>
 
 extern page_table* KernelPML4T;

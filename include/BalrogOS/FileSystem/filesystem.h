@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "balrog/fs/fs_struct.h"
-#include "lib/Threading/kmutex.h"
+#include "klib/Threading/kmutex.h"
 
 struct _file_system;
 

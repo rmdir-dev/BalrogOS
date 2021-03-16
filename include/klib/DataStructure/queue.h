@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include "lib/Threading/kmutex.h"
+#include "klib/Threading/kmutex.h"
 #include "queue_node.h"
 
 /**

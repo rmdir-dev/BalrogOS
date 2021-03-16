@@ -1,4 +1,4 @@
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include "BalrogOS/Drivers/Screen/vga_driver.h"
 
 int kputchar(int c)

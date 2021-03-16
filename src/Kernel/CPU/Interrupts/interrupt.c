@@ -1,7 +1,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 #include <string.h>
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include "BalrogOS/Debug/debug_output.h"
 
 extern void _set_idt();

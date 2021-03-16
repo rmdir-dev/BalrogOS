@@ -12,7 +12,7 @@ DEFINES 		=
 BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
-KLIB_SRC = src/lib
+KLIB_SRC = src/klib
 C_LIB_SRC = src/Libc/
 C_POSIX_SRC = src/POSIX
 LS_SRC = src/tool-kit/ls/
@@ -47,7 +47,7 @@ LIBC_OBJECTS64 	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(LIBC_SRCS))
 PSXC_OBJECTS64 	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PTHREADC_SRCS))
 ASMOBJECT64		:= $(patsubst %.asm, $(TEMP_DIR)/obj64/%.asm.o, $(ASM_SRCS))
 GNU_ASMOBJECT64	:= $(patsubst %.S, $(TEMP_DIR)/obj64/%.S.o, $(GNU_ASM_SRCS))
-ALL_KOBJECTS64	:= $(sort $(COBJECTS64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
+ALL_KOBJECTS64	:= $(sort $(COBJECTS64) $(LIBC_OBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
 ALL_LS_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(LS_SRCS))
 
 ########################################################

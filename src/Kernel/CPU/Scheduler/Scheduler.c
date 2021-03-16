@@ -6,7 +6,7 @@
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
 #include "BalrogOS/Tasking/process.h"
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 #include <stddef.h>
 
 extern process_list rdy_proc_list;

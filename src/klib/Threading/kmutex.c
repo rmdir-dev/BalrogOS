@@ -1,4 +1,4 @@
-#include "lib/Threading/kmutex.h"
+#include "klib/Threading/kmutex.h"
 #include "balrog/arch/x86_64/x86.h"
 #include "BalrogOS/Tasking/process.h"
 #include "balrog/thread/park.h"
@@ -10,7 +10,7 @@ int kmutex_init(kmutex_t* lock)
     lock->lock = 0;
     lock->flag = 0;
     lock->count = 0;
-    uqueue_init(&lock->wait_queue);
+    mtx_queue_init(&lock->wait_queue);
     return 0;
 }
 
@@ -77,7 +77,7 @@ int kmutex_unlock(kmutex_t* lock)
         unpark front the queue process
         wake up the process
         */
-        unpark(uqueue_remove(&lock->wait_queue));
+        unpark(mtx_queue_remove(&lock->wait_queue));
     }
 
     /* set the lock back to 0 atomically */

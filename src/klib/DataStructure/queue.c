@@ -1,4 +1,4 @@
-#include "lib/DataStructure/queue.h"
+#include "klib/DataStructure/queue.h"
 #include "BalrogOS/Memory/kheap.h"
 
 void queue_init(queue_t* queue)

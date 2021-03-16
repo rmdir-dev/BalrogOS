@@ -2,7 +2,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/Tasking/process.h"
 
-#include "lib/IO/kprint.h"
+#include "klib/IO/kprint.h"
 uint64_t park_loop = 0;
 
 extern process* current_running;

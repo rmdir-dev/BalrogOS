@@ -2,8 +2,8 @@
 #include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/vmm.h"
 
-#include "lib/DataStructure/queue.h"
-#include "lib/IO/kprint.h"
+#include "klib/DataStructure/queue.h"
+#include "klib/IO/kprint.h"
 #include <string.h>
 
 uint64_t total_memory = 0;

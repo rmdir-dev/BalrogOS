@@ -1,5 +1,5 @@
 #include "BalrogOS/Tasking/process.h"
-#include "lib/DataStructure/rbt.h"
+#include "klib/DataStructure/rbt.h"
 #include <stdlib.h>
 
 rbt_tree process_tree = { NULL, NULL };

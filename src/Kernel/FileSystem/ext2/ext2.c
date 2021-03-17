@@ -8,6 +8,7 @@
 #include "BalrogOS/Memory/pmm.h"
 #include "klib/IO/kprint.h"
 #include "ext2_config.h"
+#include "klib/ktime.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -238,9 +239,9 @@ static uint32_t _ext2_create_new_inode(fs_device* dev, uint16_t file_size, uint1
     new_inode.mode = mode;
     new_inode.user_id = 0;
     new_inode.size = file_size;
-    new_inode.access_time = time(NULL);
-    new_inode.create_time = time(NULL);
-    new_inode.modify_time = time(NULL);
+    new_inode.access_time = ktime(NULL);
+    new_inode.create_time = ktime(NULL);
+    new_inode.modify_time = ktime(NULL);
     new_inode.delete_time = 0;
     new_inode.group_id = 0;
     new_inode.hard_link_count = 1;

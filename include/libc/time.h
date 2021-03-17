@@ -1,10 +1,10 @@
 #pragma once
 
+#include "balrog/time/time.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef unsigned long time_t;
 
 /**
  * @brief Return the time in second since 1st january 1970

@@ -155,3 +155,40 @@ int clean_process(process* proc)
     vmfree(proc);
     return 0;
 }
+
+int fork_process(process* proc)
+{
+    /*
+    1 Create a new PML4T                : X
+    2 Copy the page table in read only  : X
+    3 Add process to process tree       : V
+    4 Add process to ready queue.       : V
+
+    COPY the page table only when a page is accessed
+    and that a page fault occure when attempting to write
+    */
+    return 0;
+}
+
+int exec_process(const char* name, char** argv)
+{
+    /*
+    1 Load the binary file          : V
+    2 Create a new process          : V
+    3 Add process to process tree   : V
+    4 Add process to ready queue    : V
+    5 Kill the current process      : V
+    */
+    return 0;
+}
+
+int wait_process(process* proc_to_wait)
+{
+    /*
+    1 add process to waiting proc list  : X
+        waiting proc list should use the proc_to_wait pid as key
+        and have an array of X pid containing the pids of waiting process.
+    2 Swtich process to waiting state.  : V
+    */
+    return 0;
+}

@@ -232,7 +232,7 @@ void vmfree(void* ptr)
     {
         block_info* first = first_free;
         
-        while(first->next_free != block->next_free)
+        while(first->next_free < block)
         {
             first = first->next_free;
         }

@@ -168,7 +168,26 @@ int clean_process(process* proc)
 
 void copy_pages(page_table* src, page_table* dest, uint8_t level)
 {
-    
+    src = PHYSICAL_TO_VIRTUAL(src);
+    dest = PHYSICAL_TO_VIRTUAL(dest);
+
+    for(size_t i = 0; i < 512; i++)
+    {
+        if(src[i] != 0 && (i < 511 || level < 4))
+        {
+            if(level > 1)
+            {
+                dest[i] = pmm_calloc();
+                copy_pages(STRIP_FLAGS(src[i]), dest[i], level - 1);
+                dest[i] |= PAGE_USER | PAGE_WRITE | PAGE_PRESENT;
+            } else 
+            {
+                dest[i] = pmm_calloc();
+                dest[i] = PHYSICAL_TO_VIRTUAL(dest[i]);
+                dest[i] = STRIP_FLAGS(src[i]) | PAGE_PRESENT | PAGE_USER | PAGE_WRITE;
+            }
+        }
+    }
 }
 
 extern process* current_running;
@@ -176,15 +195,23 @@ extern process* current_running;
 int fork_process(process* proc)
 {
     /*
-    1 Create a new PML4T                : X
+    1 Create a new PML4T                : V
     2 Copy the page table in read only  : X
     3 Add process to process tree       : V
     4 Add process to ready queue.       : V
 
+    TODO LATER
     COPY the page table only when a page is accessed
     and that a page fault occure when attempting to write
     */
     process* new = new_process(proc->name);
+    copy_pages(proc->PML4T, new->PML4T, 4);
+
+    uintptr_t phys = kstack_alloc();
+    new->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
+    // COPY KERNEL STACK
+    // Recover the kernel stack PT
+    // copy it over the new process kernel stack.
 
     return 0;
 }

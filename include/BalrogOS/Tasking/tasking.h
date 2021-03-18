@@ -34,6 +34,8 @@ typedef struct process_t
         */
         uintptr_t cr3;
     };
+    uint8_t wait_size;
+    int waiting[5];
     uint8_t fd_size;
     fs_fd fd_table[10];
     uint8_t state;

@@ -28,7 +28,7 @@ static inline void park()
  * 
  * @param pid process ID of the process we want to wake up
  */
-static inline void unpark(uint64_t pid)
+static inline void unpark(int pid)
 {
     asm volatile("mov %%rax, %%rdi": :"a"(pid));
     asm volatile("mov $202, %rax");

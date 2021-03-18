@@ -77,13 +77,28 @@ int _proc_remove_process(process* proc)
     return -1;
 }
 
-void proc_kill_process(uint64_t pid)
+void proc_wake_process(int* wating, uint8_t size)
+{
+    for(uint8_t i = 0; i < size; i++)
+    {
+        if(wating[i] != 0)
+        {
+            proc_transfert_to_ready(wating[i]);
+        }
+    }
+}
+
+void proc_kill_process(int pid)
 {
     process* proc = proc_get_process(pid);
 
     if(_proc_transfert_to_wait(proc) == 0)
     {
         proc->state = PROCESS_STATE_DEAD;
+        if(proc->wait_size != 0)
+        {
+            proc_wake_process(&proc->waiting[0], proc->wait_size);
+        }
         _proc_remove_process(proc);
         clean_process(proc);
 
@@ -98,14 +113,14 @@ void proc_kill_process(uint64_t pid)
     }
 }
 
-int proc_remove_process(uint64_t pid)
+int proc_remove_process(int pid)
 {
     process* proc = proc_get_process(pid);
 
     return _proc_remove_process(proc);
 }
 
-void proc_transfert_to_waiting(uint64_t pid)
+void proc_transfert_to_waiting(int pid)
 {
     process* proc = proc_get_process(pid);
 
@@ -124,7 +139,20 @@ void proc_transfert_to_waiting(uint64_t pid)
     }
 }
 
-void proc_transfert_to_ready(uint64_t pid)
+int proc_add_to_waiting(int pid, int to_wait_pid)
+{
+    process* proc = proc_get_process(to_wait_pid);
+
+    if(proc->wait_size < 5)
+    {
+        proc->waiting[proc->wait_size] = pid;
+        proc->wait_size++;
+        return 0;
+    }
+    return -1;
+}
+
+void proc_transfert_to_ready(int pid)
 {
     process* proc = proc_get_process(pid);
     
@@ -139,7 +167,7 @@ void proc_transfert_to_ready(uint64_t pid)
     }
 }
 
-process* proc_get_process(uint64_t pid)
+process* proc_get_process(int pid)
 {
     rbt_node* proc_node = rbt_search(&process_tree, pid);
     return (process*) proc_node->value;

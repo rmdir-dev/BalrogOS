@@ -12,7 +12,8 @@
 #include <string.h>
 
 #define PROCESS_STACK_TOP   0x00007ffd0e212000
-#define PROCESS_META_DATA   0x00007ffd0e212000
+#define PROCESS_STACK_BOT   0x00007ffd0e212000 - 0x800000 // stack top - 8MiB
+#define PROCESS_START_DATA  0x00007ffd0e212000
 #define PROCESS_HEAP_BOTTOM 0x000055c0603d3000
 #define PROCESS_TEXT        0x0000000000400000
 
@@ -52,16 +53,22 @@ typedef struct task_register_t
     //////////////////////////////////////////////////////////
 } __attribute__((packed)) task_register;
 
-process* create_process(char* name, uintptr_t addr, uint8_t mode)
+process* new_process(char* name)
 {
     process* proc = vmalloc(sizeof(process));
     memset(proc, 0, sizeof(process));
     proc->name = name;
     proc->pid = ++next_pid;
-    proc->rip = mode == 3 ? PROCESS_TEXT : addr; 
     proc->state = PROCESS_STATE_READY;
     proc->PML4T = pmm_calloc();
     proc->exec = 0;
+    return proc;
+}
+
+process* create_process(char* name, uintptr_t addr, uint8_t mode)
+{
+    process* proc = new_process(name);
+    proc->rip = mode == 3 ? PROCESS_TEXT : addr; 
     uintptr_t* virt = PHYSICAL_TO_VIRTUAL(proc->PML4T); // Kernel space
     virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
     uint32_t user = mode == 3 ? PAGE_USER : 0; 
@@ -159,6 +166,13 @@ int clean_process(process* proc)
     return 0;
 }
 
+void copy_pages(page_table* src, page_table* dest, uint8_t level)
+{
+    
+}
+
+extern process* current_running;
+
 int fork_process(process* proc)
 {
     /*
@@ -170,6 +184,8 @@ int fork_process(process* proc)
     COPY the page table only when a page is accessed
     and that a page fault occure when attempting to write
     */
+    process* new = new_process(proc->name);
+
     return 0;
 }
 
@@ -177,7 +193,7 @@ static int _copy_add_args_to_stack(process* proc, char** argv)
 {
     uint8_t* phys = pmm_calloc();
 
-    vmm_set_page(proc->PML4T, PROCESS_META_DATA, phys, PAGE_PRESENT | PAGE_USER);
+    vmm_set_page(proc->PML4T, PROCESS_START_DATA, phys, PAGE_PRESENT | PAGE_USER);
     uint64_t* array = PHYSICAL_TO_VIRTUAL(phys);
     char* data = PHYSICAL_TO_VIRTUAL(phys) + 0x100;
     
@@ -190,18 +206,18 @@ static int _copy_add_args_to_stack(process* proc, char** argv)
             strcpy(data, *argv);
             size_t len = strlen(*argv);
             data[len] = 0;
-            array[argc] = PROCESS_META_DATA | ((uint64_t)data) % 0x1000;
+            array[argc] = PROCESS_START_DATA | ((uint64_t)data) % 0x1000;
             data += len + 1;
-            kprint("argv : 0%p | len : %d | %s\n", array[argc], len, *argv);
+            //kprint("argv : 0%p | len : %d | %s\n", array[argc], len, *argv);
             argc++;
             argv++;
         }
     }
 
     task_register* reg = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
-    kprint("count : %d \n", argc);
+    //kprint("count : %d \n", argc);
     reg->rdi = argc;
-    reg->rsi = PROCESS_META_DATA;
+    reg->rsi = PROCESS_START_DATA;
 
     if(phys == 0) 
     {
@@ -244,20 +260,21 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     if(kill == 1)
     {
-        extern process* current_running;
         proc_kill_process(current_running->pid);
     }
 
     return 0;
 }
 
-int wait_process(process* proc_to_wait)
+int wait_process(int pid_to_wait)
 {
     /*
-    1 add process to waiting proc list  : X
+    1 add process to waiting proc list  : V
         waiting proc list should use the proc_to_wait pid as key
         and have an array of X pid containing the pids of waiting process.
     2 Swtich process to waiting state.  : V
     */
+    proc_add_to_waiting(current_running->pid, pid_to_wait);
+    proc_transfert_to_waiting(current_running->pid);
     return 0;
 }

@@ -190,8 +190,8 @@ static int _copy_add_args_to_stack(process* proc, char** argv)
             strcpy(data, *argv);
             size_t len = strlen(*argv);
             data[len] = 0;
-            data += len + 1;
             array[argc] = PROCESS_META_DATA | ((uint64_t)data) % 0x1000;
+            data += len + 1;
             kprint("argv : 0%p | len : %d | %s\n", array[argc], len, *argv);
             argc++;
             argv++;

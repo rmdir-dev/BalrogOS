@@ -23,7 +23,7 @@ void _test_print_dir(uint8_t* entires)
 
 void main(int argc, char** argv)
 {
-    printf("elf file :D %d %s\n", argc, argv[0]);
+    printf("elf file :D %d %s | 0%p\n", argc, argv[0], argv[0]);
     int fd = open("/boot", 0);
     fs_file_stat stat = {};
     fstat(fd, &stat);

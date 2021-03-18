@@ -51,3 +51,13 @@ typedef struct process_t
 process* create_process(char* name, uintptr_t func, uint8_t mode);
 
 int clean_process(process* proc);
+
+/**
+ * @brief 
+ * 
+ * @param name 
+ * @param argv 
+ * @param kill 
+ * @return int 
+ */
+int exec_process(const char* name, char** argv, uint8_t kill);

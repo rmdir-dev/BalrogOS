@@ -95,11 +95,15 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_OK("File system initialization : done");
 
     /*    TEST PROCESS */
-    fs_fd fd;
-    fs_file file;
-    fs_get_file("/bin/ls", &file);
-    push_process("test", file.data, 3);
-    fs_close(&fd);
+    //fs_fd fd;
+    //fs_file file;
+    //fs_get_file("/bin/ls", &file, &fd);
+    //push_process("test", file.data, 3);
+    //fs_close(&fd);
+    char test_arg1[8] = "/bin/ls";
+    char test_arg2[9] = "test_arg";
+    uintptr_t argv[5] = { &test_arg1, &test_arg2, 0, 0, 0 };
+    exec_process("/bin/ls", &argv, 0);
     push_process("morgoth", idle_loop, 0);
 
     KERNEL_LOG_OK("start process");

@@ -1,4 +1,5 @@
 #include "BalrogOS/Tasking/tasking.h"
+#include "BalrogOS/Tasking/process.h"
 #include "BalrogOS/Memory/kstack.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/pmm.h"
@@ -7,9 +8,11 @@
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
 #include "BalrogOS/Tasking/elf/elf.h"
+#include "BalrogOS/FileSystem/filesystem.h"
 #include <string.h>
 
 #define PROCESS_STACK_TOP   0x00007ffd0e212000
+#define PROCESS_META_DATA   0x00007ffd0e212000
 #define PROCESS_HEAP_BOTTOM 0x000055c0603d3000
 #define PROCESS_TEXT        0x0000000000400000
 
@@ -170,15 +173,81 @@ int fork_process(process* proc)
     return 0;
 }
 
-int exec_process(const char* name, char** argv)
+static int _copy_add_args_to_stack(process* proc, char** argv)
+{
+    uint8_t* phys = pmm_calloc();
+
+    vmm_set_page(proc->PML4T, PROCESS_META_DATA, phys, PAGE_PRESENT | PAGE_USER);
+    uint64_t* array = PHYSICAL_TO_VIRTUAL(phys);
+    char* data = PHYSICAL_TO_VIRTUAL(phys) + 0x100;
+    
+    int argc = 0;
+
+    if(argv != 0)
+    {
+        while(*argv)
+        {
+            strcpy(data, *argv);
+            size_t len = strlen(*argv);
+            data[len] = 0;
+            data += len + 1;
+            array[argc] = PROCESS_META_DATA | ((uint64_t)data) % 0x1000;
+            kprint("argv : 0%p | len : %d | %s\n", array[argc], len, *argv);
+            argc++;
+            argv++;
+        }
+    }
+
+    task_register* reg = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
+    kprint("count : %d \n", argc);
+    reg->rdi = argc;
+    reg->rsi = PROCESS_META_DATA;
+
+    if(phys == 0) 
+    {
+        return -1;
+    }
+    return 0;
+}
+
+int exec_process(const char* name, char** argv, uint8_t kill)
 {
     /*
     1 Load the binary file          : V
     2 Create a new process          : V
     3 Add process to process tree   : V
     4 Add process to ready queue    : V
-    5 Kill the current process      : V
+    5 Set the process stack         : V
+        argc = RDI
+        argv = RSI
+    6 Kill the current process      : V
+
+    PROCESS STACK :
+        meta data top :
+            0x00007ffd0e213000
+            contain argv array and the args themselves.
+
+        active stack top : 
+            0x00007ffd0e212000
     */
+    fs_fd fd;
+    fs_file file;
+    fs_get_file(name, &file, &fd);
+    process* proc = create_process(name, file.data, 3);
+    proc_insert_to_ready_queue(proc);
+    fs_close(&fd);
+    
+    if(_copy_add_args_to_stack(proc, argv) != 0)
+    {
+        return -1;
+    }
+
+    if(kill == 1)
+    {
+        extern process* current_running;
+        proc_kill_process(current_running->pid);
+    }
+
     return 0;
 }
 

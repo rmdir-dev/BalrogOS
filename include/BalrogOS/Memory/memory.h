@@ -25,6 +25,7 @@ Balrog Process memory map :
     000055c0603d3000	00007ffd0d812000	 42TB		heap
     2MB buffer
     00007ffd0da12000	00007ffd0e212000	 8MB		stack
+    00007ffd0da13000	00007ffd0e213fff	 4KB		proc meta data (argvs)
 
 Max Memory size :
     128GiB

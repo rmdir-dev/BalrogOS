@@ -13,11 +13,10 @@
 
 fs_device dev;
 
-int fs_get_file(const char* name, fs_file* file)
+int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
 {
-    fs_fd fd;
-    dev.fs->open(&dev, name, &fd);
-    fs_file* tmp = fs_cache_get_file(fd.ftable_idx);
+    dev.fs->open(&dev, name, fd);
+    fs_file* tmp = fs_cache_get_file(fd->ftable_idx);
     *file = *tmp;
     return 0;
 }

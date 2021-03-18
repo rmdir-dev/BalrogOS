@@ -72,7 +72,7 @@ void init_file_system();
  * @param file 
  * @return int 
  */
-int fs_get_file(const char* name, fs_file* file);
+int fs_get_file(const char* name, fs_file* file, fs_fd* fd);
 
 /**
  * @brief 

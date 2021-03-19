@@ -2,7 +2,6 @@
 #include "BalrogOS/CPU/Interrupts/irq.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/Ports/ports.h"
-#include "balrog/input.h"
 
 /**
  * @brief enable the keyboard found in keyboard.asm
@@ -23,7 +22,6 @@ static interrupt_regs* keyboard_int_handler(interrupt_regs* stack_frame)
     if(in_byte(0x64) & 1)
     {
         unsigned char key = in_byte(0x60);
-        kprint("key pressed: %d\n", key);
         key_event.type = EV_KEY;
         key_event.code = key % 128;
         key_event.value = key < 128 ? 1 : 0;

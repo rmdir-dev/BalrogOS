@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
-#include "klib/IO/kprint.h"
+#include "balrog/input.h"
 
 /**
  * @brief Initialize the keyboard

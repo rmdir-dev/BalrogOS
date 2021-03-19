@@ -14,8 +14,9 @@ int sys_open(interrupt_regs* stack_frame)
     if(current_running)
     {
         fs_fd* fd = &current_running->fd_table[3];
-        char name[255] = {};
+        char name[256] = {};
         uint8_t len = strlen(stack_frame->rdi);
+        // TODO manage error if len > 255
         memcpy(name, stack_frame->rdi, len);
         name[len] = 0;
         fs_open(name, fd);
@@ -53,9 +54,11 @@ void sys_read(interrupt_regs* stack_frame)
             break;
         
         default:
-            fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
-            fs_read(stack_frame->rsi, stack_frame->rdx, fd);
-            break;
+            {
+                fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
+                fs_read(stack_frame->rsi, stack_frame->rdx, fd);
+                break;
+            }
         }
     }
 }

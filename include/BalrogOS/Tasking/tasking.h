@@ -57,9 +57,25 @@ int clean_process(process* proc);
 /**
  * @brief 
  * 
+ * @param proc 
+ * @return int 
+ */
+int fork_process(process* proc);
+
+/**
+ * @brief 
+ * 
  * @param name 
  * @param argv 
  * @param kill 
  * @return int 
  */
 int exec_process(const char* name, char** argv, uint8_t kill);
+
+/**
+ * @brief 
+ * 
+ * @param pid_to_wait 
+ * @return int 
+ */
+int wait_process(int pid_to_wait);

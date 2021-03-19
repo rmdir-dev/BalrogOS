@@ -98,7 +98,7 @@ void initialize_kernel(void* SMAP, void* size)
     char test_arg1[8] = "/bin/ls";
     char test_arg2[9] = "/boot/";
     uintptr_t argv[5] = { &test_arg1, &test_arg2, 0, 0, 0 };
-    exec_process("/bin/ls", &argv, 0);
+    exec_process(argv[0], &argv, 0);
     push_process("morgoth", idle_loop, 0);
 
     KERNEL_LOG_OK("start process");

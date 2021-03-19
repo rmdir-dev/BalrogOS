@@ -15,7 +15,11 @@ fs_device dev;
 
 int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
 {
-    dev.fs->open(&dev, name, fd);
+    size_t len = strlen(name);
+    char* fname = vmalloc(len + 1);
+    memcpy(fname, name, len);
+    fname[len] = 0;
+    dev.fs->open(&dev, fname, fd);
     fs_file* tmp = fs_cache_get_file(fd->ftable_idx);
     *file = *tmp;
     return 0;

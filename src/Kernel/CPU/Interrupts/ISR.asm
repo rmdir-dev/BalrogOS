@@ -197,8 +197,15 @@ isr31:
     
 isr32:
     cli
-    call schedule
-    iretq
+    push 0
+    push 32
+    jmp isr_common
+    ; Better to use isr common that save
+    ; the registers directly so they're properly restored
+    ; using schedule and iretq can mess rax, rbx, rcx, rdi, rsi
+    ; so it is better to avoid them
+    ; call schedule
+    ; iretq
     
 isr33:
     cli

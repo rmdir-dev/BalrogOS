@@ -90,7 +90,7 @@ static void _round_robin()
     asm volatile("pop %rax");
 }
 
-void schedule()
+interrupt_regs* schedule(interrupt_regs* stack_frame)
 {
     if(rdy_proc_list.head != NULL)
     {
@@ -107,11 +107,13 @@ void schedule()
         //kprint("Schedule work!\n");
         irq_end(INT_IRQ_0);
     }
+    return stack_frame;
 }
 
 void init_scheduler()
 {
     irq_pic_toggle_mask_bit(INT_IRQ_0);
+    register_interrupt_handler(INT_IRQ_0, schedule);
     init_pit(100);
 }
 

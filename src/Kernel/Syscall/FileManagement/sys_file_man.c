@@ -1,3 +1,4 @@
+#include "BalrogOS/Drivers/Keyboard/keyboard.h"
 #include "BalrogOS/Drivers/Screen/vga_driver.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/FileSystem/filesystem.h"
@@ -12,13 +13,13 @@ int sys_open(interrupt_regs* stack_frame)
 {
     if(current_running)
     {
-        fs_fd* fd = &current_running->fd_table[0];
+        fs_fd* fd = &current_running->fd_table[3];
         char name[255] = {};
         uint8_t len = strlen(stack_frame->rdi);
         memcpy(name, stack_frame->rdi, len);
         name[len] = 0;
         fs_open(name, fd);
-        return 0;
+        return 3;
     }
     return -1;
 }
@@ -45,8 +46,17 @@ void sys_read(interrupt_regs* stack_frame)
 {
     if(current_running)
     {
-        fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
-        fs_read(stack_frame->rsi, stack_frame->rdx, fd);
+        switch (stack_frame->rdi)
+        {
+        case 0:
+            keyboard_read(stack_frame->rsi);
+            break;
+        
+        default:
+            fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
+            fs_read(stack_frame->rsi, stack_frame->rdx, fd);
+            break;
+        }
     }
 }
 

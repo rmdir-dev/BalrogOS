@@ -5,6 +5,7 @@
 #include "BalrogOS/CPU/TSS/tss.h"
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
+#include "BalrogOS/CPU/PIT/pit.h"
 #include "BalrogOS/Tasking/process.h"
 #include "klib/IO/kprint.h"
 #include <stddef.h>
@@ -110,9 +111,8 @@ void schedule()
 
 void init_scheduler()
 {
-    //set_interrupt_routine(INT_IRQ_0, schedule);
-    //register_interrupt_handler(INT_IRQ_0, schedule);
     irq_pic_toggle_mask_bit(INT_IRQ_0);
+    init_pit(100);
 }
 
 

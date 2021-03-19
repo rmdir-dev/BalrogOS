@@ -23,13 +23,16 @@ void _test_print_dir(uint8_t* entires)
 
 void main(int argc, char** argv)
 {
-    printf("elf file :D %d %s | 0%p\n", argc, argv[0], argv[0]);
-    int fd = open("/boot", 0);
-    fs_file_stat stat = {};
-    fstat(fd, &stat);
-    read(fd, &buf[0], stat.size);
-    buf[stat.size] = 0;
-    _test_print_dir(buf);
-    close(fd);
+    if(argc > 1)
+    {
+        // TODO check the agrs properly
+        int fd = open(argv[1], 0);
+        fs_file_stat stat = {};
+        fstat(fd, &stat);
+        read(fd, &buf[0], stat.size);
+        buf[stat.size] = 0;
+        _test_print_dir(buf);
+        close(fd);
+    }
     exit(0);
 }

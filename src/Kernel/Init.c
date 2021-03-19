@@ -60,8 +60,8 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    MEMORY          */
     // TODO later don't pass these as argument but fetch them using #define SMAP_PHYS_ADDR
-    SMAP_entry* SMAPinfo = PHYSICAL_TO_VIRTUAL(SMAP);
-	uint16_t* SMAPsize = PHYSICAL_TO_VIRTUAL(size);
+    SMAP_entry* SMAPinfo = P2V(SMAP);
+	uint16_t* SMAPsize = P2V(size);
     
     /*    Kernel Heap    */
     init_kheap(); // Kernel Logical

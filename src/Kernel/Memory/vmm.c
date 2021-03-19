@@ -31,7 +31,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
     page_table* PDT;
     page_table* PT;
     
-    PML4T = PHYSICAL_TO_VIRTUAL(PML4T);
+    PML4T = P2V(PML4T);
 
     PDPT = PML4T[PML4T_OFFSET(virt_addr)];
     if(!PDPT)
@@ -44,7 +44,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
         PML4T[PML4T_OFFSET(virt_addr)] = PDPT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
 
-    PDPT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDPT));
+    PDPT = P2V(STRIP_FLAGS(PDPT));
     PDT = PDPT[PDPT_OFFSET(virt_addr)];
         
     if(!PDT)
@@ -58,7 +58,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
         PDPT[PDPT_OFFSET(virt_addr)] = PDT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
     
-    PDT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDT));
+    PDT = P2V(STRIP_FLAGS(PDT));
     PT = PDT[PDT_OFFSET(virt_addr)];
     
     if(!PT)
@@ -71,7 +71,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
         PDT[PDT_OFFSET(virt_addr)] = PT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
     
-    return PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PT));
+    return P2V(STRIP_FLAGS(PT));
 }
 
 uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr)
@@ -132,7 +132,7 @@ void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
 
 static int _vmm_clean(page_table* table, uint8_t level)
 {
-    page_table* tab = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(table));
+    page_table* tab = P2V(STRIP_FLAGS(table));
     for(int i = 0; i < 512; i++)
     {
         // if tab[i] has an address 

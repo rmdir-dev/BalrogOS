@@ -216,7 +216,7 @@ void vga_init()
     vga_row = 0;
 	vga_column = 0;
 	vga_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-	vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(0xb8000);
+	vga_buffer = (uint16_t*) P2V(0xb8000);
 	vga_clear();
 }
 

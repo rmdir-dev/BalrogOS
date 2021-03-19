@@ -209,11 +209,11 @@ static int _ext2_update_inode_table(fs_device* dev, uint32_t inode_idx, ext2_ino
 {
     uint32_t tbl_str_blc_addr = inode_idx / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
-    ext2_inode* inode_table = PHYSICAL_TO_VIRTUAL(pmm_calloc());
+    ext2_inode* inode_table = P2V(pmm_calloc());
     dev->read(dev, inode_table, (fs_data->blk_grp_desc.block_addr_of_inode_table + tbl_str_blc_addr) * fs_data->sec_per_block, 8);
     inode_table[(inode_idx - 1) % 32] = *inode;
     dev->write(dev, inode_table, (fs_data->blk_grp_desc.block_addr_of_inode_table + tbl_str_blc_addr) * fs_data->sec_per_block, 8);
-    pmm_free(VIRTUAL_TO_PHYSICAL(inode_table));
+    pmm_free(V2P(inode_table));
     return 0;
 }
 
@@ -221,12 +221,12 @@ ext2_inode ext2_get_inode(fs_device* dev, uint32_t inode_idx)
 {
     uint32_t tbl_str_blc_addr = inode_idx / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
-    ext2_inode* inode_table = PHYSICAL_TO_VIRTUAL(pmm_calloc());
+    ext2_inode* inode_table = P2V(pmm_calloc());
     dev->read(dev, inode_table, (fs_data->blk_grp_desc.block_addr_of_inode_table + tbl_str_blc_addr) * fs_data->sec_per_block, 8);
 
     ext2_inode ret = inode_table[(inode_idx - 1) % 32];
     //kprint("inode %d info mode : %d | 0%p \n", ((inode_idx - 1) % 32), ret.mode, inode_table);
-    pmm_free(VIRTUAL_TO_PHYSICAL(inode_table));
+    pmm_free(V2P(inode_table));
 
     return ret;
 }

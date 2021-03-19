@@ -69,7 +69,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 {
     process* proc = new_process(name);
     proc->rip = mode == 3 ? PROCESS_TEXT : addr; 
-    uintptr_t* virt = PHYSICAL_TO_VIRTUAL(proc->PML4T); // Kernel space
+    uintptr_t* virt = P2V(proc->PML4T); // Kernel space
     virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
     uint32_t user = mode == 3 ? PAGE_USER : 0; 
 
@@ -87,9 +87,9 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     } else 
     {
         uintptr_t text = pmm_calloc();
-        phys = VIRTUAL_TO_PHYSICAL(addr);
+        phys = V2P(addr);
         vmm_set_page(proc->PML4T, PROCESS_TEXT, text, user | PAGE_PRESENT);
-        memcpy(PHYSICAL_TO_VIRTUAL(text), addr, 4096);
+        memcpy(P2V(text), addr, 4096);
     }
 
     /*
@@ -113,7 +113,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     */
     proc->stack_top = PROCESS_STACK_TOP - 1;
 
-    proc->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
+    proc->kernel_stack_top = P2V(phys) + 4095;
     virt = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
 
 
@@ -166,25 +166,61 @@ int clean_process(process* proc)
     return 0;
 }
 
-void copy_pages(page_table* src, page_table* dest, uint8_t level)
+static void get_vaddr(size_t index, uint8_t level, uintptr_t* vaddr)
 {
-    src = PHYSICAL_TO_VIRTUAL(src);
-    dest = PHYSICAL_TO_VIRTUAL(dest);
+    switch (level)
+    {
+    case 1:
+        *vaddr |= PT_TO_VIRT(index);
+        break;
+
+    case 2:
+        *vaddr |= PDT_TO_VIRT(index);
+        break;
+
+    case 3:
+        *vaddr |= PDPT_TO_VIRT(index);
+        break;
+
+    case 4:
+        *vaddr |= PML4T_TO_VIRT(index);
+        break;
+    
+    default:
+        break;
+    }
+}
+
+static void copy_pages(page_table* src, page_table* dest, uint8_t level, uintptr_t vaddr)
+{
+    src = P2V(src);
+    dest = P2V(dest);
 
     for(size_t i = 0; i < 512; i++)
     {
         if(src[i] != 0 && (i < 511 || level < 4))
         {
+            uintptr_t caddr = vaddr;
+            get_vaddr(i, level, &caddr);
+            
             if(level > 1)
             {
                 dest[i] = pmm_calloc();
-                copy_pages(STRIP_FLAGS(src[i]), dest[i], level - 1);
+                copy_pages(STRIP_FLAGS(src[i]), dest, level - 1, caddr);
                 dest[i] |= PAGE_USER | PAGE_WRITE | PAGE_PRESENT;
-            } else 
+            }else 
             {
-                dest[i] = pmm_calloc();
-                dest[i] = PHYSICAL_TO_VIRTUAL(dest[i]);
-                dest[i] = STRIP_FLAGS(src[i]) | PAGE_PRESENT | PAGE_USER | PAGE_WRITE;
+                if(caddr < PROCESS_STACK_BOT)
+                {
+                    dest[i] = P2V(dest[i]);
+                    dest[i] = STRIP_FLAGS(src[i]) | PAGE_PRESENT | PAGE_USER;
+                } else 
+                {
+                    dest[i] = pmm_calloc();
+                    uint8_t* source = P2V(STRIP_FLAGS(src[i]));
+                    memcpy(P2V(dest[i]), source, 4096);
+                    dest[i] |= PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+                }
             }
         }
     }
@@ -196,7 +232,7 @@ int fork_process(process* proc)
 {
     /*
     1 Create a new PML4T                : V
-    2 Copy the page table in read only  : X
+    2 Copy the page table in read only  : V
     3 Add process to process tree       : V
     4 Add process to ready queue.       : V
 
@@ -205,13 +241,39 @@ int fork_process(process* proc)
     and that a page fault occure when attempting to write
     */
     process* new = new_process(proc->name);
-    copy_pages(proc->PML4T, new->PML4T, 4);
+    copy_pages(proc->PML4T, new->PML4T, 4, 0);
 
     uintptr_t phys = kstack_alloc();
-    new->kernel_stack_top = PHYSICAL_TO_VIRTUAL(phys) + 4095;
+    new->kernel_stack_top = P2V(phys) + 4095;
+
     // COPY KERNEL STACK
-    // Recover the kernel stack PT
-    // copy it over the new process kernel stack.
+
+    // Get PDPT
+    page_table* newkstack = P2V(STRIP_FLAGS(new->PML4T[PML4T_OFFSET(new->kernel_stack_top)]));
+    // Get PDT
+    newkstack = P2V(STRIP_FLAGS(newkstack[PDPT_OFFSET(new->kernel_stack_top)]));
+    // Get PT
+    newkstack = P2V(STRIP_FLAGS(newkstack[PDT_OFFSET(new->kernel_stack_top)]));
+
+    // Get PDPT
+    page_table* prockstack = P2V(STRIP_FLAGS(proc->PML4T[PML4T_OFFSET(proc->kernel_stack_top)]));
+    // Get PDT
+    prockstack = P2V(STRIP_FLAGS(prockstack[PDPT_OFFSET(proc->kernel_stack_top)]));
+    // Get PT
+    prockstack = P2V(STRIP_FLAGS(prockstack[PDT_OFFSET(proc->kernel_stack_top)]));
+
+    for(size_t i = 0; i < 512; i++)
+    {
+        if(prockstack[i] != 0)
+        {
+            if(newkstack[i] == 0)
+            {
+                newkstack[i] = pmm_calloc();
+                newkstack[i] |= PAGE_PRESENT | PAGE_WRITE;
+            }
+            memcpy(P2V(STRIP_FLAGS(newkstack[i])), P2V(STRIP_FLAGS(prockstack[i])), 4096);
+        }
+    }
 
     return 0;
 }
@@ -221,8 +283,8 @@ static int _copy_add_args_to_stack(process* proc, char** argv)
     uint8_t* phys = pmm_calloc();
 
     vmm_set_page(proc->PML4T, PROCESS_START_DATA, phys, PAGE_PRESENT | PAGE_USER);
-    uint64_t* array = PHYSICAL_TO_VIRTUAL(phys);
-    char* data = PHYSICAL_TO_VIRTUAL(phys) + 0x100;
+    uint64_t* array = P2V(phys);
+    char* data = P2V(phys) + 0x100;
     
     int argc = 0;
 

@@ -12,7 +12,7 @@ void init_kheap()
     /* Declared in linker script */
     extern uintptr_t* kernel_end;
     kheap_start = &kernel_end;
-    kheap_end = PHYSICAL_TO_VIRTUAL(0x9fc00);
+    kheap_end = P2V(0x9fc00);
 
     block_info* first_block = kheap_start;
     first_block->_size = (kheap_end - kheap_start) - sizeof(block_info);

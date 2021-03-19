@@ -40,7 +40,7 @@ void pmm_free(uintptr_t* addr)
         return;
     }
 
-    addr = PHYSICAL_TO_VIRTUAL(addr);
+    addr = P2V(addr);
     queue_enqueue(&last_free_q, addr);
 
     // decrease total memory used by one page
@@ -54,7 +54,7 @@ uintptr_t* pmm_alloc()
     {
         uintptr_t addr;
         queue_dequeue(&last_free_q, &addr);
-        p = VIRTUAL_TO_PHYSICAL(addr);
+        p = V2P(addr);
 
     } else 
     {
@@ -86,7 +86,7 @@ uintptr_t* pmm_calloc()
     uintptr_t* p = pmm_alloc();
 
     // set the bits inside the page to 0.
-    memset(PHYSICAL_TO_VIRTUAL(p), 0, PAGE_SIZE);
+    memset(P2V(p), 0, PAGE_SIZE);
     
     return p;
 }
@@ -124,7 +124,7 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
 
         for(uintptr_t p = start; (p + PAGE_SIZE) < end; p += PAGE_SIZE)
         {
-            vmm_set_page(0, PHYSICAL_TO_VIRTUAL(p), p, PAGE_PRESENT | PAGE_WRITE);
+            vmm_set_page(0, P2V(p), p, PAGE_PRESENT | PAGE_WRITE);
             
             if(SMAPinfo[i].Type == USABLE_MEMORY && p > 0x100000)
             {

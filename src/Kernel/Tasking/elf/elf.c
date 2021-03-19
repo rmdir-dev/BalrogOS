@@ -49,7 +49,7 @@ static inline void _elf_load_prog(elf_program* prog, uint8_t* data, page_table* 
             vmm_set_page(PML4T, vaddr, phys, flags);
         }
 
-        memcpy(PHYSICAL_TO_VIRTUAL(phys) + shift, &data[offset], size);
+        memcpy(P2V(phys) + shift, &data[offset], size);
         
         vaddr += size;
         fsize -= size;

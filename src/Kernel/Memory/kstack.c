@@ -9,9 +9,9 @@ extern page_table* KernelPML4T;
 
 void* _kstack_find_free_pt(uintptr_t* virt_addr)
 {
-    page_table* PML4T = PHYSICAL_TO_VIRTUAL(KernelPML4T);
+    page_table* PML4T = P2V(KernelPML4T);
 
-    page_table* PDPT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PML4T[511]));
+    page_table* PDPT = P2V(STRIP_FLAGS(PML4T[511]));
     for(size_t i = 384; i < 512; i++)
     {
         if(PDPT[i] == 0)
@@ -19,7 +19,7 @@ void* _kstack_find_free_pt(uintptr_t* virt_addr)
             PDPT[i] = pmm_calloc();
             PDPT[i] |= PAGE_PRESENT | PAGE_WRITE;
         }
-        page_table* PDT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDPT[i]));
+        page_table* PDT = P2V(STRIP_FLAGS(PDPT[i]));
         for(size_t j = 0; j < 512; j++)
         {
             if(PDT[j] == 0)
@@ -29,7 +29,7 @@ void* _kstack_find_free_pt(uintptr_t* virt_addr)
                 *virt_addr |= PML4T_TO_VIRT(511);
                 *virt_addr |= PDPT_TO_VIRT(i);
                 *virt_addr |= PDT_TO_VIRT(j);
-                return PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDT[j]));
+                return P2V(STRIP_FLAGS(PDT[j]));
             }
         }
     }
@@ -53,10 +53,10 @@ void* kstack_alloc()
 
 void kstack_free(uintptr_t* addr)
 {
-    page_table* PML4T = PHYSICAL_TO_VIRTUAL(KernelPML4T);
-    page_table* PDPT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PML4T[PML4T_OFFSET(addr)]));
-    page_table* PDT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDPT[PDPT_OFFSET(addr)]));
-    page_table* PT = PHYSICAL_TO_VIRTUAL(STRIP_FLAGS(PDT[PDT_OFFSET(addr)]));
+    page_table* PML4T = P2V(KernelPML4T);
+    page_table* PDPT = P2V(STRIP_FLAGS(PML4T[PML4T_OFFSET(addr)]));
+    page_table* PDT = P2V(STRIP_FLAGS(PDPT[PDPT_OFFSET(addr)]));
+    page_table* PT = P2V(STRIP_FLAGS(PDT[PDT_OFFSET(addr)]));
 
     for(size_t i = 0; i < 512; i++)
     {

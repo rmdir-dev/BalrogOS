@@ -39,14 +39,14 @@ addr = 0x101000
 0x101000 & 7FFFFFFFFF
 = 0x101000
 */
-#define VIRTUAL_TO_PHYSICAL(addr) ((uintptr_t)addr & ~KERNEL_OFFSET)
+#define V2P(addr) ((uintptr_t)addr & ~KERNEL_OFFSET)
 
 /*
 addr = 0x101000
 0x101000 | 0xFFFFFF8000000000
 = 0xFFFFFF8000101000
 */
-#define PHYSICAL_TO_VIRTUAL(addr) ((uintptr_t)addr | KERNEL_OFFSET)
+#define P2V(addr) ((uintptr_t)addr | KERNEL_OFFSET)
 
 /*
 ----------------------------------------------------------------------------------

@@ -56,6 +56,7 @@ char sh_process_input(struct input_event input)
     {
         if(input.value && keys[input.code] != input.value)
         {
+            uint8_t bckspace = 0;
             if(input.code == KEY_ENTER)
             {
                 buffer[buf_idx] = 0;
@@ -67,8 +68,15 @@ char sh_process_input(struct input_event input)
             } else
             if(input.code == KEY_BACKSPACE)
             {
-                buffer[buf_idx - 1] = 0;
-                buffer[buf_idx] = '\r';
+                bckspace = 1;
+                if(buf_idx > 0)
+                {
+                    buffer[buf_idx - 1] = 0;
+                    buffer[buf_idx] = '\r';
+                } else 
+                {
+                    buffer[buf_idx] = 0;
+                }
             } else
             if(input.code >= KEY_1 && input.code <= KEY_0)
             {
@@ -91,13 +99,16 @@ char sh_process_input(struct input_event input)
                 buffer[buf_idx] = '/';
             }
 
-            putchar(buffer[buf_idx]);
-            if(buffer[buf_idx] != '\r')
+            if(buffer[buf_idx] != 0)
             {
-                buf_idx++;
-            } else 
-            {
-                buf_idx -= 2;
+                putchar(buffer[buf_idx]);
+                if(bckspace == 0)
+                {
+                    buf_idx++;
+                } else 
+                {
+                    buf_idx--;
+                }
             }
         }
         keys[input.code] = input.value;

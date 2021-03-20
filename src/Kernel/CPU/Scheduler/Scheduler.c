@@ -113,7 +113,8 @@ void init_scheduler()
 {
     irq_pic_toggle_mask_bit(INT_IRQ_0);
     register_interrupt_handler(INT_IRQ_0, schedule);
-    init_pit(100);
+    // TODO set the pit speed faster to 10 000 or more
+    init_pit(1000);
 }
 
 

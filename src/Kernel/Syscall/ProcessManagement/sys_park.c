@@ -17,7 +17,7 @@ void sys_park(interrupt_regs* stack_frame)
         proc_transfert_to_ready(stack_frame->rdi);
     } else if(about_to_park == current_running->pid)
     {
-        proc_transfert_to_waiting(current_running->pid);
+        proc_to_sleep(current_running->pid);
     }
 }
 

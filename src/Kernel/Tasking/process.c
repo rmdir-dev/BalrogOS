@@ -31,7 +31,7 @@ void proc_insert_to_ready_queue(process* proc)
     proc->state = PROCESS_STATE_READY;
 }
 
-extern void schedule();
+extern interrupt_regs* schedule(interrupt_regs* stack_frame);
 
 static int _proc_transfert_to_wait(process* proc)
 {
@@ -88,33 +88,40 @@ void proc_wake_process(int* wating, uint8_t size)
     }
 }
 
+void proc_kill(process* proc)
+{
+    proc->state = PROCESS_STATE_DEAD;
+    
+    if(proc->wait_size != 0)
+    {
+        proc_wake_process(&proc->waiting[0], proc->wait_size);
+    }
+
+    _proc_remove_process(proc);
+
+    // if proc is not a child then clean it.
+    if(proc->child == 0)
+    {
+        clean_process(proc);
+    }
+
+    if(proc == current_running)
+    {
+        if(proc == current_running->next)
+        {
+            current_running = NULL;
+        }
+        schedule(NULL);
+    }
+}
+
 void proc_kill_process(int pid)
 {
     process* proc = proc_get_process(pid);
 
     if(_proc_transfert_to_wait(proc) == 0)
     {
-        proc->state = PROCESS_STATE_DEAD;
-        if(proc->wait_size != 0)
-        {
-            proc_wake_process(&proc->waiting[0], proc->wait_size);
-        }
-        _proc_remove_process(proc);
-
-        if(proc->child == 0)
-        {
-            kprint("killed pid : %d \n", proc->pid);
-            //clean_process(proc);
-        }
-
-        if(proc == current_running)
-        {
-            if(proc == current_running->next)
-            {
-                current_running = NULL;
-            }
-            schedule();
-        }
+        proc_kill(proc);
     }
 }
 
@@ -129,6 +136,16 @@ void proc_transfert_to_waiting(int pid)
 {
     process* proc = proc_get_process(pid);
 
+     if(_proc_transfert_to_wait(proc) == 0)
+    {
+        proc->state = PROCESS_STATE_WAITING;
+    }
+}
+
+void proc_to_sleep(int pid)
+{
+    process* proc = proc_get_process(pid);
+
     if(_proc_transfert_to_wait(proc) == 0)
     {
         proc->state = PROCESS_STATE_WAITING;
@@ -139,7 +156,7 @@ void proc_transfert_to_waiting(int pid)
             {
                 current_running = NULL;
             }
-            schedule();
+            schedule(NULL);
         }
     }
 }
@@ -147,7 +164,7 @@ void proc_transfert_to_waiting(int pid)
 int proc_add_to_waiting(int pid, int to_wait_pid)
 {
     process* proc = proc_get_process(to_wait_pid);
-
+    
     if(proc->wait_size < 5)
     {
         proc->waiting[proc->wait_size] = pid;

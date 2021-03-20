@@ -359,11 +359,22 @@ int exec_process(const char* name, char** argv, uint8_t kill)
             proc->wait_size = current_running->wait_size;
             current_running->wait_size = 0;
         }
+
+        // switch pids
+        proc_transfert_to_waiting(current_running->pid);
+        int pid = proc->pid;
+        proc->pid = current_running->pid;
+        current_running->pid = pid;
+        current_running->state = PROCESS_STATE_WAITING;
+        proc_insert_to_ready_queue(proc);
+        //proc_insert_to_ready_queue(current_running);
+    } else 
+    {
+        proc_insert_to_ready_queue(proc);
     }
 
-    proc_insert_to_ready_queue(proc);
     fs_close(&fd);
-    
+
     if(_copy_add_args_to_stack(proc, argv) != 0)
     {
         return -1;
@@ -371,7 +382,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     if(kill == 1)
     {
-        proc_kill_process(current_running->pid);
+        proc_kill(current_running);
     }
 
     return 0;
@@ -386,6 +397,6 @@ int wait_process(int pid_to_wait)
     2 Swtich process to waiting state.  : V
     */
     proc_add_to_waiting(current_running->pid, pid_to_wait);
-    proc_transfert_to_waiting(current_running->pid);
+    proc_to_sleep(current_running->pid);
     return 0;
 }

@@ -8,5 +8,5 @@ int sys_execve(interrupt_regs* stack_frame)
 {
     exec_process(stack_frame->rdi, stack_frame->rsi, 1);
     kprint("error execve! SHOULD NOT PRINT!\n");
-    return 0;
+    return -1;
 }

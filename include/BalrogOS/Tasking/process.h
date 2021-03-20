@@ -26,17 +26,31 @@ int proc_remove_process(int pid);
 /**
  * @brief 
  * 
+ * @param proc 
+ */
+void proc_kill(process* proc);
+
+/**
+ * @brief 
+ * 
  * @param pid 
  * @return int 
  */
 void proc_kill_process(int pid);
 
 /**
+ * @brief 
+ * 
+ * @param pid 
+ */
+void proc_transfert_to_waiting(int pid);
+
+/**
  * @brief transfert a process from the ready queue to the waiting
  * 
  * @param proc the process to transfert.
  */
-void proc_transfert_to_waiting(int pid);
+void proc_to_sleep(int pid);
 
 /**
  * @brief 

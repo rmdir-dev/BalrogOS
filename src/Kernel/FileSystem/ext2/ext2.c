@@ -550,8 +550,8 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
         return 2;
     }
     ext2_idata* root_itable = ext2_cache_search_inode(dev, 2);
-
-    uint32_t allocsize = root_itable->inode.size + (512 - (root_itable->inode.size % 512));
+    // 4096 not 512! blocks are 4096 bytes so 8 * 512 sectors.
+    uint32_t allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
     char* buffer = kmalloc(allocsize);
 
     _ext2_read_file(dev, buffer, &root_itable->inode);
@@ -560,22 +560,26 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     uint32_t inode_id = 0;
    
     size_t size = 0;
-
+    
     while(*path)
     {
         if(!_ext2_read_dir_entry(buffer, &entries, *path))
         {
             root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
             inode_id = entries.entry->inode;
+            if(!EXT2_IS_DIRECTORY(root_itable->inode.mode))
+            {
+                break;
+            }
             kfree(buffer);
-            allocsize = root_itable->inode.size + (512 - (root_itable->inode.size % 512));
+            allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
             buffer = kmalloc(allocsize);
             _ext2_read_file(dev, buffer, &root_itable->inode);
             size++;
         }
         path++;
     }
-
+    
     kfree(buffer);
     
     if(new)

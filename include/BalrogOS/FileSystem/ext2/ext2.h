@@ -35,6 +35,7 @@
 #define EXT2_DIR_ENTRY_SIZE(name_len) (name_len % 4) ? (((name_len / 4) + 1) * 4) + (sizeof(ext2_dir_entry) - 1) :\
                                                         (((name_len / 4)) * 4) + (sizeof(ext2_dir_entry) - 1)
 
+
 #define EXT2_MODE_SOCKET        0xc000
 #define EXT2_MODE_SYMB_LINK     0xa000
 #define EXT2_MODE_REG_FILE      0x8000
@@ -42,6 +43,8 @@
 #define EXT2_MODE_DIR           0x4000
 #define EXT2_MODE_CHAR_DEV      0x2000
 #define EXT2_MODE_FIFO          0x1000
+
+#define EXT2_IS_DIRECTORY(imode)    ((imode & 0xf000) & EXT2_MODE_DIR)
 
 /*
     BUGS 

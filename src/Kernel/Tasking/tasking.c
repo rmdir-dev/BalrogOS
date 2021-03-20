@@ -364,6 +364,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
         proc_transfert_to_waiting(current_running->pid);
         int pid = proc->pid;
         proc->pid = current_running->pid;
+        kprint("exec pid : %d\n", proc->pid);
         current_running->pid = pid;
         current_running->state = PROCESS_STATE_WAITING;
         proc_insert_to_ready_queue(proc);

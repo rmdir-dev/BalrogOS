@@ -237,7 +237,9 @@ void vga_write(const char* data, size_t size)
 			break;
 
 		case '\r':
-			//TODO
+			vga_column--;
+			const size_t index = vga_row * VGA_WIDTH + vga_column;
+			vga_buffer[index] = vga_entry(0, vga_color);
 			break;
 
 		case '\t':

@@ -164,7 +164,7 @@ void proc_to_sleep(int pid)
 int proc_add_to_waiting(int pid, int to_wait_pid)
 {
     process* proc = proc_get_process(to_wait_pid);
-    
+
     if(proc->wait_size < 5)
     {
         proc->waiting[proc->wait_size] = pid;

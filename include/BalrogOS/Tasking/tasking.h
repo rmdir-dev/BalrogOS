@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "BalrogOS/Memory/vmm.h"
 #include "BalrogOS/FileSystem/filesystem.h"
+#include "BalrogOS/CPU/Interrupts/interrupt.h"
 
 #define PROCESS_STATE_READY     0
 #define PROCESS_STATE_RUNNING   1
@@ -60,7 +61,7 @@ int clean_process(process* proc);
  * @param proc 
  * @return int 
  */
-int fork_process(process* proc);
+int fork_process(process* proc, interrupt_regs* regs);
 
 /**
  * @brief 

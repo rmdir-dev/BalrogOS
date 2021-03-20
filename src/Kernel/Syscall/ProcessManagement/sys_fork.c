@@ -6,5 +6,5 @@ extern process* current_running;
 
 int sys_fork(interrupt_regs* stack_frame)
 {
-    return fork_process(current_running);
+    return fork_process(current_running, stack_frame);
 }

@@ -116,7 +116,6 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     proc->kernel_stack_top = P2V(phys) + 4095;
     virt = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
 
-
     proc->rsp = virt;// PROCESS_STACK_TOP - sizeof(task_register) - 1;
     
     task_register* stack = virt;
@@ -206,7 +205,7 @@ static void copy_pages(page_table* src, page_table* dest, uint8_t level, uintptr
             if(level > 1)
             {
                 dest[i] = pmm_calloc();
-                copy_pages(STRIP_FLAGS(src[i]), dest, level - 1, caddr);
+                copy_pages(STRIP_FLAGS(src[i]), dest[i], level - 1, caddr);
                 dest[i] |= PAGE_USER | PAGE_WRITE | PAGE_PRESENT;
             }else 
             {
@@ -228,7 +227,7 @@ static void copy_pages(page_table* src, page_table* dest, uint8_t level, uintptr
 
 extern process* current_running;
 
-int fork_process(process* proc)
+int fork_process(process* proc, interrupt_regs* regs)
 {
     /*
     1 Create a new PML4T                : V
@@ -243,39 +242,46 @@ int fork_process(process* proc)
     process* new = new_process(proc->name);
     copy_pages(proc->PML4T, new->PML4T, 4, 0);
 
+    // KERNEL STACK
+    page_table* newkstack = P2V(new->PML4T);
+    //Set kernel to new stack
+    newkstack[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE;
+
     uintptr_t phys = kstack_alloc();
     new->kernel_stack_top = P2V(phys) + 4095;
 
-    // COPY KERNEL STACK
+    proc_insert_to_ready_queue(new);
 
-    // Get PDPT
-    page_table* newkstack = P2V(STRIP_FLAGS(new->PML4T[PML4T_OFFSET(new->kernel_stack_top)]));
-    // Get PDT
-    newkstack = P2V(STRIP_FLAGS(newkstack[PDPT_OFFSET(new->kernel_stack_top)]));
-    // Get PT
-    newkstack = P2V(STRIP_FLAGS(newkstack[PDT_OFFSET(new->kernel_stack_top)]));
+    uint8_t* virt = ((uint8_t*) new->kernel_stack_top) - sizeof(task_register);
 
-    // Get PDPT
-    page_table* prockstack = P2V(STRIP_FLAGS(proc->PML4T[PML4T_OFFSET(proc->kernel_stack_top)]));
-    // Get PDT
-    prockstack = P2V(STRIP_FLAGS(prockstack[PDPT_OFFSET(proc->kernel_stack_top)]));
-    // Get PT
-    prockstack = P2V(STRIP_FLAGS(prockstack[PDT_OFFSET(proc->kernel_stack_top)]));
+    new->rsp = virt;
+    
+    task_register* stack = virt;
+    new->exec = 0;
 
-    for(size_t i = 0; i < 512; i++)
-    {
-        if(prockstack[i] != 0)
-        {
-            if(newkstack[i] == 0)
-            {
-                newkstack[i] = pmm_calloc();
-                newkstack[i] |= PAGE_PRESENT | PAGE_WRITE;
-            }
-            memcpy(P2V(STRIP_FLAGS(newkstack[i])), P2V(STRIP_FLAGS(prockstack[i])), 4096);
-        }
-    }
+    stack->rflags = RFLAG_IF;
+    stack->ss = SEG_UDATA | 3;
+    stack->rsp = regs->rsp;
+    stack->cs = SEG_UCODE | 3;
 
-    return 0;
+    stack->rip = regs->rip;
+    stack->r15 = regs->r15;
+    stack->r14 = regs->r14;
+    stack->r13 = regs->r13;
+    stack->r12 = regs->r12;
+    stack->r11 = regs->r11;
+    stack->r10 = regs->r10;
+    stack->r9 = regs->r9;
+    stack->r8 = regs->r8;
+    stack->rbp = regs->rbp;
+    stack->rdi = regs->rdi;
+    stack->rsi = regs->rsi;
+    stack->rdx = regs->rdx;
+    stack->rcx = regs->rcx;
+    stack->rbx = regs->rbx;
+    stack->rax = 0;
+    kprint("FORK 5 %p\n", stack->rip);
+    return new->pid;
 }
 
 static int _copy_add_args_to_stack(process* proc, char** argv)

@@ -100,7 +100,12 @@ void proc_kill_process(int pid)
             proc_wake_process(&proc->waiting[0], proc->wait_size);
         }
         _proc_remove_process(proc);
-        clean_process(proc);
+
+        if(proc->child == 0)
+        {
+            kprint("killed pid : %d \n", proc->pid);
+            //clean_process(proc);
+        }
 
         if(proc == current_running)
         {

@@ -62,6 +62,7 @@ process* new_process(char* name)
     proc->state = PROCESS_STATE_READY;
     proc->PML4T = pmm_calloc();
     proc->exec = 0;
+    proc->child = 0;
     return proc;
 }
 
@@ -241,6 +242,7 @@ int fork_process(process* proc, interrupt_regs* regs)
     */
     process* new = new_process(proc->name);
     copy_pages(proc->PML4T, new->PML4T, 4, 0);
+    new->child = 1;
 
     // KERNEL STACK
     page_table* newkstack = P2V(new->PML4T);
@@ -280,7 +282,7 @@ int fork_process(process* proc, interrupt_regs* regs)
     stack->rcx = regs->rcx;
     stack->rbx = regs->rbx;
     stack->rax = 0;
-    kprint("FORK 5 %p\n", stack->rip);
+
     return new->pid;
 }
 
@@ -345,6 +347,20 @@ int exec_process(const char* name, char** argv, uint8_t kill)
     fs_file file;
     fs_get_file(name, &file, &fd);
     process* proc = create_process(name, file.data, 3);
+
+    if(current_running)
+    {
+        if(current_running->wait_size != 0)
+        {
+            for(size_t i = 0; i < 5; i++)
+            {
+                proc->waiting[i] = current_running->waiting[i];
+            }
+            proc->wait_size = current_running->wait_size;
+            current_running->wait_size = 0;
+        }
+    }
+
     proc_insert_to_ready_queue(proc);
     fs_close(&fd);
     

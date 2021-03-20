@@ -37,6 +37,7 @@ typedef struct process_t
     };
     uint8_t wait_size;
     int waiting[5];
+    uint8_t child;
     uint8_t fd_size;
     fs_fd fd_table[10];
     uint8_t state;

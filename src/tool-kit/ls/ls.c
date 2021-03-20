@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <stat.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <balrog/fs/fs_struct.h>
 
 char buf[4096 * 10];

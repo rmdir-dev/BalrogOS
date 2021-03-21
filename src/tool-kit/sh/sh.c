@@ -147,9 +147,7 @@ void main(int argc, char** argv)
 
         // TODO some sleep(nanosec) 
         for(int i = 0; i < 1000000; i++)
-        {
-
-        }
+        {}
     }
     exit(0);
 }

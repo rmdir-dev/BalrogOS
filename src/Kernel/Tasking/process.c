@@ -102,6 +102,7 @@ void proc_kill(process* proc)
     // if proc is not a child then clean it.
     if(proc->child == 0)
     {
+        //kprint("clean process pid : %d\n", proc->pid);
         clean_process(proc);
     }
 
@@ -156,6 +157,7 @@ void proc_to_sleep(int pid)
             {
                 current_running = NULL;
             }
+            //kprint("next proc : 0%p", current_running->next);
             schedule(NULL);
         }
     }
@@ -165,7 +167,7 @@ int proc_add_to_waiting(int pid, int to_wait_pid)
 {
     process* proc = proc_get_process(to_wait_pid);
 
-    if(proc->wait_size < 5)
+    if(proc != 0 && proc->wait_size < 5)
     {
         proc->waiting[proc->wait_size] = pid;
         proc->wait_size++;
@@ -192,5 +194,9 @@ void proc_transfert_to_ready(int pid)
 process* proc_get_process(int pid)
 {
     rbt_node* proc_node = rbt_search(&process_tree, pid);
-    return (process*) proc_node->value;
+    if(proc_node != 0)
+    {
+        return (process*) proc_node->value;
+    }
+    return NULL;
 }

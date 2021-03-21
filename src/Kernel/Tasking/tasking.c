@@ -364,7 +364,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
         proc_transfert_to_waiting(current_running->pid);
         int pid = proc->pid;
         proc->pid = current_running->pid;
-        kprint("exec pid : %d\n", proc->pid);
+        //kprint("pid : %d | 0%p\n", proc->pid, proc);
         current_running->pid = pid;
         current_running->state = PROCESS_STATE_WAITING;
         proc_insert_to_ready_queue(proc);
@@ -397,7 +397,10 @@ int wait_process(int pid_to_wait)
         and have an array of X pid containing the pids of waiting process.
     2 Swtich process to waiting state.  : V
     */
-    proc_add_to_waiting(current_running->pid, pid_to_wait);
-    proc_to_sleep(current_running->pid);
-    return 0;
+    if(proc_add_to_waiting(current_running->pid, pid_to_wait) == 0)
+    {
+        proc_to_sleep(current_running->pid);
+        return 0;
+    }
+    return -1;
 }

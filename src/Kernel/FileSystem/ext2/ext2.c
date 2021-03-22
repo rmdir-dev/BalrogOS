@@ -565,7 +565,6 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     {
         if(!_ext2_read_dir_entry(buffer, &entries, *path))
         {
-            kprint("entry : %s\n", *path);
             root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
             inode_id = entries.entry->inode;
             if(!EXT2_IS_DIRECTORY(root_itable->inode.mode))

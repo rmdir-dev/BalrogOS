@@ -19,19 +19,19 @@ int sh_exec_cmd(char** args)
 {
     pid_t id = fork();
 
-    printf("pid : %d\n", id);
+    //printf("pid : %d\n", id);
 
     if(id != 0)
     {
-        printf("Parent\n");
+        //printf("Parent\n");
         waitpid(id, 0, 0);
     } else 
     {
-        printf("Child\n");
+        //printf("Child\n");
         execv(args[0], args);
     }
 
-    printf("Both\n");
+    //printf("Both\n");
     return 0;
 }
 
@@ -123,7 +123,7 @@ void sh_read_input()
     buf_idx = 0;
     memset(buffer, 0, 255);
 
-    printf("Balrog:/$ ");
+    printf("\e[0;94mBalrog:\e[0m/$ ");
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));

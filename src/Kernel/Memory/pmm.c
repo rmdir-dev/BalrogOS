@@ -61,7 +61,7 @@ uintptr_t* pmm_alloc()
         // if the next address is equal to the top address then return 0
         if(next_addr >= pmm_top_addr)
         {
-            kprint("next : %p | top : %p ", next_addr, pmm_top_addr);
+            // kprint("next : %p | top : %p ", next_addr, pmm_top_addr);
             return 0x0;
         }
         

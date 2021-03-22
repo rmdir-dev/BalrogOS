@@ -22,6 +22,7 @@ int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
     dev.fs->open(&dev, fname, fd);
     fs_file* tmp = fs_cache_get_file(fd->ftable_idx);
     *file = *tmp;
+    vmfree(fname);
     return 0;
 }
 

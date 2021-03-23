@@ -807,6 +807,7 @@ int ext2_probe(fs_device* dev)
     if(sb->ext2_signature != EXT2_SIGNATURE)
     {
         KERNEL_LOG_FAIL("not ext 2 0%p 0%x", sb, &sb->ext2_signature);
+        vmfree(sb);
         while(1){}
         return -1;
     }

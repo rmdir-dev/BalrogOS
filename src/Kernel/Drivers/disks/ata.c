@@ -196,6 +196,7 @@ int ata_get_boot_device(fs_device* device)
             }
         }
     }
+    vmfree(buffer);
     return -1;
 }
 

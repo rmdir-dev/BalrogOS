@@ -549,6 +549,7 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     {
         return 2;
     }
+
     ext2_idata* root_itable = ext2_cache_search_inode(dev, 2);
     // 4096 not 512! blocks are 4096 bytes so 8 * 512 sectors.
     uint32_t allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
@@ -816,6 +817,7 @@ int ext2_probe(fs_device* dev)
     fs_data->sec_per_block = fs_data->block_size / 512;
 
     memcpy(&fs_data->sb, sb, sizeof(ext2_superblock));
+    vmfree(sb);
     
     /*
         READ BLOCK GROUP DESCRIPTOR
@@ -830,6 +832,7 @@ int ext2_probe(fs_device* dev)
     dev->read(dev, block_desc, block_grp_loc * fs_data->sec_per_block, 1);
 
     memcpy(&fs_data->blk_grp_desc, block_desc, sizeof(ext2_block_group_descriptor));
+    vmfree(block_desc);
 
     dev->fs = vmalloc(sizeof(file_system));
     dev->fs->probe = ext2_probe;

@@ -8,7 +8,7 @@ uintptr_t kheap_end = 0;
 uintptr_t kfirst_free = 0;
 
 extern void* alloc(size_t size, block_info* current_block, block_info* prev_block, block_info* current_top, uintptr_t* first_free, uint8_t first_block);
-extern void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free);
+extern void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free, uint64_t block_max_size);
 
 void init_kheap()
 {
@@ -61,5 +61,5 @@ void kfree(void* ptr)
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
     
-    free(block, next_block, kheap_end, &kfirst_free);
+    free(block, next_block, kheap_end, &kfirst_free, kheap_end - kheap_start);
 }

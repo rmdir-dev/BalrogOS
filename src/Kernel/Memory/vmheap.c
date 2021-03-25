@@ -18,7 +18,7 @@ uintptr_t first_free;
 uintptr_t vmheap_end;
 
 extern void* alloc(size_t size, block_info* current_block, block_info* prev_block, block_info* current_top, uintptr_t* first_free, uint8_t first_block);
-extern void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free);
+extern void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free, uint64_t block_max_size);
 
 void init_vmheap()
 {
@@ -103,5 +103,5 @@ void vmfree(void* ptr)
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
     
-    free(block, next_block, vmheap_current_top, &first_free);
+    free(block, next_block, vmheap_current_top, &first_free, 0x1000);
 }

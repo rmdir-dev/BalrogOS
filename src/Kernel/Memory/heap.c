@@ -79,7 +79,7 @@ void* alloc(size_t size, block_info* current_block, block_info* prev_block, bloc
     return 0;
 }
 
-void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free)
+void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free, uint64_t block_max_size)
 {
     //kprint("vh freeing : 0%p \n", block);
     if(!block->_is_mmapped)
@@ -111,7 +111,7 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
             {
                 // if block is smaller than 4096 bytes && contiguous
                 // then coalesce the two blocks
-                if(block->_size + sizeof(block_info) < 0x1000 && contiguous)
+                if(block->_size + sizeof(block_info) < block_max_size && contiguous)
                 {
                     // set the new free block
                     block_info* new_free_block = block;

@@ -234,6 +234,10 @@ void vga_write(const char* data, size_t size)
 		case '\n':
 			increase_vga_row();
 			vga_column = 0;
+			if(vga_row ==0)
+			{
+				vga_clear();
+			}
 			break;
 
 		case '\r':

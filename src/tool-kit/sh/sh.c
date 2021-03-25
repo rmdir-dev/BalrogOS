@@ -66,6 +66,10 @@ char sh_process_input(struct input_event input)
             {
                 buffer[buf_idx] = ' ';
             } else
+            if(input.code == KEY_DOT)
+            {
+                buffer[buf_idx] = '.';
+            } else
             if(input.code == KEY_BACKSPACE)
             {
                 bckspace = 1;

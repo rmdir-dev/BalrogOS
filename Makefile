@@ -9,6 +9,7 @@ DEFINES 		=
 ########################################################
 #	DIRECTORIES
 ########################################################
+OS_BUILD_DIR = build/os
 BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
@@ -92,17 +93,17 @@ LIBC_OBJECTS = $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o)
 
 bootloader:
-	mkdir -p $(BUILD_DIR)
-	nasm -fbin src/Bootloader/start.asm -o build/bin/Bootloader
+	mkdir -p $(OS_BUILD_DIR)
+	nasm -fbin src/Bootloader/start.asm -o $(OS_BUILD_DIR)/Bootloader
 
 kernel: $(K_OBJECTS)
-	mkdir -p $(BUILD_DIR)
+	mkdir -p $(OS_BUILD_DIR)
 	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
-	ld -o $(BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
+	ld -o $(OS_BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
 
 os:
 	mkdir -p build/os
-	cat build/bin/Bootloader $(BUILD_DIR)/kernel.bin > build/os/os-image.bin
+	cat $(OS_BUILD_DIR)/Bootloader $(OS_BUILD_DIR)/kernel.bin > build/os/os-image.bin
 	truncate build/os/os-image.bin -s 1200k
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=512 count=1 conv=notrunc
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=1 skip=512 seek=4014080 conv=notrunc
@@ -111,10 +112,11 @@ os:
 	#VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS)
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o build/bin/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) 
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o build/bin/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o build/bin/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64)
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o build/bin/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64)
+	mkdir -p $(BUILD_DIR)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) 
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64)
 	#$(PSXC_OBJECTS64)	
 
 run:

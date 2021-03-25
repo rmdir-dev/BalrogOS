@@ -133,6 +133,7 @@ void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
 static int _vmm_clean(page_table* table, uint8_t level)
 {
     page_table* tab = P2V(STRIP_FLAGS(table));
+    
     for(int i = 0; i < 512; i++)
     {
         // if tab[i] has an address 

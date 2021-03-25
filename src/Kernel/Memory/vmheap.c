@@ -40,6 +40,7 @@ void init_vmheap()
 void* vmalloc(size_t size)
 {
     block_info* current_block = first_free;
+    block_info* prev_block = current_block;
     uint8_t first_block = 1;
     
     while(1)
@@ -69,6 +70,9 @@ void* vmalloc(size_t size)
                     if(first_block)
                     {
                         first_free = current_block->next_free;
+                    } else 
+                    {
+                        prev_block->next_free = current_block->next_free;
                     }
                     /*  the size is equal to the size of the current block.
                         else we would lose memory
@@ -113,9 +117,11 @@ void* vmalloc(size_t size)
                 }
 
                 // return the address of the newly allocated block
+                //kprint("vh alloc : 0%p | prev 0%p\n", block + sizeof(block_info), prev_block->next_free);
                 return block + sizeof(block_info);
             }
             // current block = next block
+            prev_block = current_block;
             current_block = current_block->next_free;
         } else 
         {
@@ -159,7 +165,7 @@ void vmfree(void* ptr)
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
     
-    //kprint("freeing : 0%p \n", ptr);
+    //kprint("vh freeing : 0%p \n", ptr);
     if(!block->_is_mmapped)
     {
         kprint("double vmfree() 0%p", ptr);

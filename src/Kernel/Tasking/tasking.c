@@ -312,7 +312,7 @@ static int _copy_add_args_to_stack(process* proc, char** argv)
     }
 
     task_register* reg = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
-    //kprint("count : %d \n", argc);
+    //kprint("count : %d | stack : 0%p \n", argc, reg);
     reg->rdi = argc;
     reg->rsi = PROCESS_START_DATA;
 
@@ -364,7 +364,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
         proc_transfert_to_waiting(current_running->pid);
         int pid = proc->pid;
         proc->pid = current_running->pid;
-        //kprint("pid : %d | 0%p\n", proc->pid, proc);
+        //kprint("pid : %d | 0%p \n", proc->pid, proc);
         current_running->pid = pid;
         current_running->state = PROCESS_STATE_WAITING;
         proc_insert_to_ready_queue(proc);

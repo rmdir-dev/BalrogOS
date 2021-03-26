@@ -14,6 +14,13 @@ void main(int argc, char** argv)
     {
         // TODO check the agrs properly
         int fd = open(argv[1], 0);
+        
+        if(fd == -1)
+        {
+            printf("file '%s' does not exist.\n", argv[1]);
+            exit(0);
+        }
+
         fs_file_stat stat = {};
         fstat(fd, &stat);
         if(stat.size >= (4096 * 100))

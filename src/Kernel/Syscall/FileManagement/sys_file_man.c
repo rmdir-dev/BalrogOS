@@ -19,7 +19,10 @@ int sys_open(interrupt_regs* stack_frame)
         // TODO manage error if len > 255
         memcpy(name, stack_frame->rdi, len);
         name[len] = 0;
-        fs_open(name, fd);
+        if(fs_open(name, fd) != 0)
+        {
+            return -1;
+        }
         return 3;
     }
     return -1;

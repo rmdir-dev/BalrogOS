@@ -643,6 +643,11 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
     uint32_t file_inode_nbr = _ext2_find_directory(dev, path, &index, 0);
     ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
     
+    if(file_inode->inode_nbr == 0)
+    {
+        return -1;
+    }
+
     if(file_inode->open == 0)
     {
         uint8_t* buffer = fs_cache_get_new_buffer(file_inode->inode.size);

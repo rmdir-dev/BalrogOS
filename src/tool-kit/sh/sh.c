@@ -10,28 +10,30 @@ static int buf_idx = 0;
 static uint8_t keys[255] = {};
 static char* arguments[32] = {};
 static int count_idx = 0;
-static char* _qwertyuiop = "qwertyuiop";
-static char* _asdfghjkl = "asdfghjkl";
-static char* _zxcvbnm = "zxcvbnm";
-static char* _num = "123456789";
+static char* _qwertyuiop = "qwertyuiop[]QWERTYUIOP{}";
+static char* _asdfghjkl = "asdfghjkl;'\\ASDFGHJKL:\"|";
+static char* _zxcvbnm = "zxcvbnm,./ZXCVBNM<>?";
+static char* _num = "1234567890-=!@#$%^&*()_+";
+static int shift = 0;
 
 int sh_exec_cmd(char** args)
 {
+    if(open(args[0], 0) == -1)
+    {
+        printf("command '%s' does not exist! \n", args[0]);
+        return -1;
+    }
+    
     pid_t id = fork();
-
-    //printf("pid : %d\n", id);
 
     if(id != 0)
     {
-        //printf("Parent\n");
         waitpid(id, 0, 0);
     } else 
     {
-        //printf("Child\n");
         execv(args[0], args);
     }
 
-    //printf("Both\n");
     return 0;
 }
 
@@ -56,6 +58,8 @@ char sh_process_input(struct input_event input)
     {
         if(input.value && keys[input.code] != input.value)
         {
+            shift = keys[KEY_RIGHTSHIFT] || keys[KEY_LEFTSHIFT];
+
             uint8_t bckspace = 0;
             if(input.code == KEY_ENTER)
             {
@@ -65,10 +69,6 @@ char sh_process_input(struct input_event input)
             if(input.code == KEY_SPACE)
             {
                 buffer[buf_idx] = ' ';
-            } else
-            if(input.code == KEY_DOT)
-            {
-                buffer[buf_idx] = '.';
             } else
             if(input.code == KEY_BACKSPACE)
             {
@@ -82,25 +82,21 @@ char sh_process_input(struct input_event input)
                     buffer[buf_idx] = 0;
                 }
             } else
-            if(input.code >= KEY_1 && input.code <= KEY_0)
+            if(input.code >= KEY_1 && input.code <= KEY_0 + 2)
             {
-                buffer[buf_idx] = _num[input.code - KEY_1];
+                buffer[buf_idx] = _num[(input.code - KEY_1) + (shift * 12)];
             } else 
-            if (input.code >= KEY_Q && input.code <= KEY_P)
+            if (input.code >= KEY_Q && input.code <= KEY_P + 2)
             {
-                buffer[buf_idx] = _qwertyuiop[input.code - KEY_Q];
+                buffer[buf_idx] = _qwertyuiop[(input.code - KEY_Q) + (shift * 12)];
             } else
-            if (input.code >= KEY_A && input.code <= KEY_L)
+            if (input.code >= KEY_A && input.code <= KEY_L + 3)
             {
-                buffer[buf_idx] = _asdfghjkl[input.code - KEY_A];
+                buffer[buf_idx] = _asdfghjkl[(input.code - KEY_A) + (shift * 12)];
             } else 
-            if (input.code >= KEY_Z && input.code <= KEY_M)
+            if (input.code >= KEY_Z && input.code <= KEY_M + 3)
             {
-                buffer[buf_idx] = _zxcvbnm[input.code - KEY_Z];
-            } else 
-            if (input.code == KEY_SLASH)
-            {
-                buffer[buf_idx] = '/';
+                buffer[buf_idx] = _zxcvbnm[(input.code - KEY_Z) + (shift * 10)];
             }
 
             if(buffer[buf_idx] != 0)
@@ -127,7 +123,7 @@ void sh_read_input()
     buf_idx = 0;
     memset(buffer, 0, 255);
 
-    printf("\e[0;94mBalrog:\e[0m/$ ");
+    printf("\e[0;96mBalrog\e[0m:/$ ");
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));

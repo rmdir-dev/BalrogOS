@@ -18,6 +18,11 @@ static int shift = 0;
 
 int sh_exec_cmd(char** args)
 {
+    if(buf_idx == 0)
+    {
+        return 0;
+    }
+    
     int fd = open(args[0], 0);
     if(fd == -1)
     {

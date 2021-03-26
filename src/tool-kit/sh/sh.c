@@ -18,12 +18,13 @@ static int shift = 0;
 
 int sh_exec_cmd(char** args)
 {
-    if(open(args[0], 0) == -1)
+    int fd = open(args[0], 0);
+    if(fd == -1)
     {
         printf("command '%s' does not exist! \n", args[0]);
         return -1;
     }
-    
+
     pid_t id = fork();
 
     if(id != 0)
@@ -34,6 +35,7 @@ int sh_exec_cmd(char** args)
         execv(args[0], args);
     }
 
+    close(fd);
     return 0;
 }
 

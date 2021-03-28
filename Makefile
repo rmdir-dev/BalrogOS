@@ -99,7 +99,8 @@ LD_OPTIMIZATION = -flto
 #	GENERATE OBJECT FILES
 ########################################################
 K_OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
-LIBC_OBJECTS = $(LIBC_SRCS:.c=.o) $(PTHREADC_SRCS:.c=.o)
+LIBC_OBJECTS = $(LIBC_SRCS:.c=.o)
+LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o)
 
 bootloader:
@@ -121,7 +122,7 @@ os:
 	#rm VBox/os-image.vdi || true
 	#VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
-tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS)
+tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	mkdir -p $(BUILD_DIR)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) 
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64)

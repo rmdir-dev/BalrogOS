@@ -2,6 +2,7 @@
 #include "BalrogOS/FileSystem/fs_config.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/vmm.h"
+#include "BalrogOS/Memory/pmm.h"
 #include <stddef.h>
 
 static fs_file file_table[FS_MAX_FILE] = {};
@@ -86,10 +87,10 @@ uint8_t* fs_cache_get_new_buffer(uint64_t size)
         
         for(size_t i = 0; i < size; i += PAGE_SIZE)
         {
-            vmm_set_page(0, addr + i, pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
+            vmm_set_page(0, addr + i, (uintptr_t)pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
         }
         
-        return addr;
+        return (void*) addr;
     }
 
     return 0;
@@ -108,7 +109,7 @@ static int _fs_cache_free_buffer(uint32_t index)
 
     for(size_t i = 0; i < file_table[index].size; i += PAGE_SIZE)
     {
-        vmm_free_page(0, file_table[index].data + i);
+        vmm_free_page(0, (uintptr_t)(file_table[index].data + i));
     }
 
     return 0;

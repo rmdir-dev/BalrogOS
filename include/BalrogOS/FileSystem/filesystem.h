@@ -14,7 +14,7 @@ typedef enum _fs_format
 typedef struct _fs_file
 {
     // full name of the file (real path)
-    char* name;
+    const char* name;
     // pointer to the datas.
     void* data;
     // file size

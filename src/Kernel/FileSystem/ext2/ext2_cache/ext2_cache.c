@@ -1,5 +1,6 @@
 #include "BalrogOS/FileSystem/ext2/ext2_cache/ext2_cache.h"
 #include "BalrogOS/FileSystem/fs_config.h"
+#include "BalrogOS/FileSystem/fs_cache.h"
 #include "klib/DataStructure/rbt.h"
 #include "BalrogOS/Memory/kheap.h"
 
@@ -45,10 +46,10 @@ ext2_idata* ext2_cache_search_inode(fs_device* dev, uint32_t inode_nbr)
 int ext2_cache_delete_inode(uint32_t inode_nbr)
 {
     rbt_node* node = rbt_search(&ext2_cache.inode_tree, inode_nbr);
-    if(!node)
+    if(node != 0)
     {
         vmfree(node->value);
-        rbt_delete(&ext2_cache.inode_tree, inode_nbr);
+        rbt_delete(&ext2_cache.inode_tree, node);
     }
     return 0;
 }

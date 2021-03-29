@@ -40,8 +40,8 @@ void pmm_free(uintptr_t* addr)
         return;
     }
 
-    addr = P2V(addr);
-    queue_enqueue(&last_free_q, addr);
+    addr = (void*)P2V(addr);
+    queue_enqueue(&last_free_q, (uintptr_t)addr);
 
     // decrease total memory used by one page
     total_memory_used -= PAGE_SIZE;
@@ -54,7 +54,7 @@ uintptr_t* pmm_alloc()
     {
         uintptr_t addr;
         queue_dequeue(&last_free_q, &addr);
-        p = V2P(addr);
+        p = (void*)V2P(addr);
 
     } else 
     {
@@ -71,7 +71,7 @@ uintptr_t* pmm_alloc()
             next_addr = 0x100000000;
         }
 
-        p = next_addr;
+        p = (void*)next_addr;
 
         // increase next_addr to point to the next page.
         next_addr += PAGE_SIZE;
@@ -86,7 +86,7 @@ uintptr_t* pmm_calloc()
     uintptr_t* p = pmm_alloc();
 
     // set the bits inside the page to 0.
-    memset(P2V(p), 0, PAGE_SIZE);
+    memset((void*)P2V(p), 0, PAGE_SIZE);
     
     return p;
 }
@@ -128,7 +128,7 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
             
             if(SMAPinfo[i].Type == USABLE_MEMORY && p > 0x100000)
             {
-                pmm_free(p);
+                pmm_free((void*)p);
             }
         }
     }

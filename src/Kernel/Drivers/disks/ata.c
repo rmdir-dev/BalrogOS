@@ -125,7 +125,7 @@ static void _ata_init_drive(ata_drive* drive)
     drive->exist = 1;
 }
 
-static inline int _ata_read_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
+static inline int _ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_t lba)
 {
     // number of tries.
     int retries = 5;
@@ -161,7 +161,7 @@ void ata_read(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
     ata_drive* drive = &drives[device->unique_id];
     for(size_t i = 0; i < len; i++)
     {
-        _ata_read_sector(drive, buffer, lba + i);
+        _ata_read_sector(drive, (uint16_t*)buffer, lba + i);
         buffer += 512;
     }
 }

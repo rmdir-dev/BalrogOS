@@ -14,12 +14,12 @@ void init_kheap()
 {
     /* Declared in linker script */
     extern uintptr_t* kernel_end;
-    kheap_start = &kernel_end;
+    kheap_start = (uintptr_t)&kernel_end;
     kheap_end = P2V(0x9fc00);
 
-    block_info* first_block = kheap_start;
+    block_info* first_block = (void*)kheap_start;
     first_block->_size = (kheap_end - kheap_start) - sizeof(block_info);
-    first_block->next_free = kheap_end;
+    first_block->next_free = (void*)kheap_end;
     first_block->previous_chunk = 0;
     first_block->_is_mmapped = 0;
     first_block->_present = 0;
@@ -32,15 +32,15 @@ void init_kheap()
 
 void* kmalloc(size_t size)
 {
-    block_info* current_block = kfirst_free;
+    block_info* current_block = (void*)kfirst_free;
     block_info* prev_block = current_block;
     uint8_t first_block = 1;
 
     while(1)
     {
-        if(current_block < kheap_end)
+        if(current_block < (block_info*)kheap_end)
         {
-            void* ret = alloc(size, current_block, prev_block, kheap_end, &kfirst_free, first_block);
+            void* ret = alloc(size, current_block, prev_block, (void*)kheap_end, &kfirst_free, first_block);
             if(ret != 0)
             {
                 return ret;
@@ -61,5 +61,5 @@ void kfree(void* ptr)
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
     
-    free(block, next_block, kheap_end, &kfirst_free, kheap_end - kheap_start);
+    free(block, next_block, (block_info*)kheap_end, &kfirst_free, kheap_end - kheap_start);
 }

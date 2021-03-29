@@ -12,7 +12,7 @@ page_table* KernelPML4T;
 
 void init_vmm()
 {
-    KernelPML4T = 0x1000;
+    KernelPML4T = (void*)0x1000;
 }
 
 /**
@@ -31,21 +31,22 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
     page_table* PDT;
     page_table* PT;
     
-    PML4T = P2V(PML4T);
+    PML4T = (void*)P2V(PML4T);
+    PDPT = (void*)PML4T[PML4T_OFFSET(virt_addr)];
 
-    PDPT = PML4T[PML4T_OFFSET(virt_addr)];
     if(!PDPT)
     {
         if(!create)
         {
             return 0;
         }
-        uintptr_t p = pmm_calloc();
-        PML4T[PML4T_OFFSET(virt_addr)] = PDPT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        uintptr_t p = (uintptr_t)pmm_calloc();
+        PDPT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        PML4T[PML4T_OFFSET(virt_addr)] = (page_table)PDPT;
     }
 
-    PDPT = P2V(STRIP_FLAGS(PDPT));
-    PDT = PDPT[PDPT_OFFSET(virt_addr)];
+    PDPT = (void*)P2V(STRIP_FLAGS(PDPT));
+    PDT = (void*)PDPT[PDPT_OFFSET(virt_addr)];
         
     if(!PDT)
     {
@@ -54,12 +55,13 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
             return 0;
         }
 
-        uintptr_t p = pmm_calloc();
-        PDPT[PDPT_OFFSET(virt_addr)] = PDT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        uintptr_t p = (uintptr_t)pmm_calloc();
+        PDT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        PDPT[PDPT_OFFSET(virt_addr)] = (page_table)PDT;
     }
     
-    PDT = P2V(STRIP_FLAGS(PDT));
-    PT = PDT[PDT_OFFSET(virt_addr)];
+    PDT = (void*)P2V(STRIP_FLAGS(PDT));
+    PT = (void*)PDT[PDT_OFFSET(virt_addr)];
     
     if(!PT)
     {
@@ -67,11 +69,12 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
         {
             return 0;
         }
-        uintptr_t p = pmm_calloc();
-        PDT[PDT_OFFSET(virt_addr)] = PT = ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        uintptr_t p = (uintptr_t)pmm_calloc();
+        PT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        PDT[PDT_OFFSET(virt_addr)] = (page_table)PT;
     }
     
-    return P2V(STRIP_FLAGS(PT));
+    return (void*)P2V(STRIP_FLAGS(PT));
 }
 
 uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr)
@@ -106,7 +109,7 @@ void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, 
 
     PT[PT_OFFSET(virt_addr)] = ADD_FLAGS(phys_addr, flags);
     
-    return PT[PT_OFFSET(virt_addr)];
+    return (void*)PT[PT_OFFSET(virt_addr)];
 }
 
 void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
@@ -125,14 +128,14 @@ void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
 
     if(PT[PT_OFFSET(virt_addr)])
     {
-        pmm_free(STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]));
+        pmm_free((uintptr_t*)STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]));
         PT[PT_OFFSET(virt_addr)] = 0;
     }
 }
 
 static int _vmm_clean(page_table* table, uint8_t level)
 {
-    page_table* tab = P2V(STRIP_FLAGS(table));
+    page_table* tab = (void*)P2V(STRIP_FLAGS(table));
     
     for(int i = 0; i < 512; i++)
     {
@@ -145,10 +148,10 @@ static int _vmm_clean(page_table* table, uint8_t level)
             // then clean the level below before cleaning it.
             if(level > 1)
             {
-                _vmm_clean(tab[i], level - 1);
+                _vmm_clean((void*)tab[i], level - 1);
             }
             // free the page.
-            pmm_free(STRIP_FLAGS(tab[i]));
+            pmm_free((void*)STRIP_FLAGS(tab[i]));
             tab[i] = 0;
         }
     }

@@ -50,7 +50,7 @@ void install_tss(gdt_entry* gdt)
     Add tss last part of the 64bit address
     */
     gdt++;
-    uintptr_t* last_index = gdt;
+    uintptr_t* last_index = (void*)gdt;
     *last_index = (base >> 32) & 0xffffffff;
 }
 

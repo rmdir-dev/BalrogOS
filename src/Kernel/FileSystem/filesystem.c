@@ -26,7 +26,7 @@ int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
     return 0;
 }
 
-int fs_open(const char* name, fs_fd* fd)
+int fs_open(char* name, fs_fd* fd)
 {
     kmutex_lock(&dev.lock);
     int ret = dev.fs->open(&dev, name, fd);

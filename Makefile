@@ -83,7 +83,7 @@ OPTIMIZATION =
 ########################################################
 #	COMPILER FLAGS
 ########################################################
-CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int
+CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int -Wno-address-of-packed-member
 
 ########################################################
 #	LINKER

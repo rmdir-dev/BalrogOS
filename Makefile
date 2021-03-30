@@ -10,7 +10,7 @@ DEFINES 		=
 #	DIRECTORIES
 ########################################################
 OS_BUILD_DIR = build/os
-BUILD_DIR = build/bin
+BIN_BUILD_DIR = build/bin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
 KLIB_SRC = src/klib
@@ -123,12 +123,12 @@ os:
 	#VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
-	mkdir -p $(BUILD_DIR)
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) 
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64)
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64)
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64)
+	mkdir -p $(BIN_BUILD_DIR)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) 
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64)
 	#$(PSXC_OBJECTS64)	
 
 run:

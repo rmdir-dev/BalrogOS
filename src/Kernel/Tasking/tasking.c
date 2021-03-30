@@ -14,7 +14,7 @@
 #define PROCESS_STACK_TOP   0x00007ffd0e212000
 #define PROCESS_STACK_BOT   0x00007ffd0e212000 - 0x800000 // stack top - 8MiB
 #define PROCESS_START_DATA  0x00007ffd0e212000
-#define PROCESS_HEAP_BOTTOM 0x000055c0603d3000
+#define PROCESS_HEAP_START  0x000055c0603d3000
 #define PROCESS_TEXT        0x0000000000400000
 
 uint64_t next_pid = 0;
@@ -97,7 +97,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     HEAP
     */
     phys = pmm_calloc();
-    vmm_set_page(proc->PML4T, PROCESS_HEAP_BOTTOM, phys, user | PAGE_PRESENT | PAGE_WRITE);
+    vmm_set_page(proc->PML4T, PROCESS_HEAP_START, phys, user | PAGE_PRESENT | PAGE_WRITE);
 
     /*
     STACK

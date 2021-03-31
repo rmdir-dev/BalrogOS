@@ -9,13 +9,8 @@
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
 #include "BalrogOS/Tasking/elf/elf.h"
 #include "BalrogOS/FileSystem/filesystem.h"
+#include "balrog/memory/proc_mem.h"
 #include <string.h>
-
-#define PROCESS_STACK_TOP   0x00007ffd0e212000
-#define PROCESS_STACK_BOT   0x00007ffd0e212000 - 0x800000 // stack top - 8MiB
-#define PROCESS_START_DATA  0x00007ffd0e212000
-#define PROCESS_HEAP_START  0x000055c0603d3000
-#define PROCESS_TEXT        0x0000000000400000
 
 uint64_t next_pid = 0;
 

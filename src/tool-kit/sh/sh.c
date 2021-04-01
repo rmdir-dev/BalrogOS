@@ -5,6 +5,8 @@
 #include <string.h>
 #include <balrog/input.h>
 
+static char** historic = 0;
+static int hist_index = 0;
 static char buffer[255] = {};
 static int buf_idx = 0;
 static uint8_t keys[255] = {};
@@ -51,7 +53,13 @@ void sh_parse_cmd()
     {
         arguments[i] = 0;
     }
-    arguments[count_idx] = strtok(buffer, ' ');
+    char* cmd = strtok(buffer, ' ');
+    size_t len = strlen(cmd);
+    char* buf = malloc(5 + len);
+    memcpy(buf, "/bin/", 5);
+    memcpy(&buf[5], cmd, len);
+    buf[5 + len] = 0;
+    arguments[count_idx] = &buf[0];
 
     while(arguments[count_idx++])
     {
@@ -129,6 +137,10 @@ void sh_read_input()
 
     buf_idx = 0;
     memset(buffer, 0, 255);
+    if(arguments[0] != 0)
+    {
+        free(arguments[0]);
+    }
 
     printf("\e[0;96mBalrog\e[0m:/$ ");
     while(1)
@@ -145,6 +157,13 @@ void sh_read_input()
 
 void main(int argc, char** argv)
 {
+    historic = malloc(sizeof(char*) * 10);
+    
+    for(int i = 0; i < 10; i++)
+    {
+        historic[i] = malloc(256);
+    }
+
     while(1)
     {
         sh_read_input();

@@ -6,21 +6,21 @@
  * 
  * @param addr the memory address.
  */
-void pmm_free(uintptr_t* addr);
+void pmm_free(void* addr);
 
 /**
  * @brief allocate a new page of physical memory
  * 
  * @return uintptr_t the physical address of the new allocated page
  */
-uintptr_t* pmm_alloc();
+void* pmm_alloc();
 
 /**
  * @brief allocate a new page of physical memory and set it to 0
  * 
  * @return uintptr_t the physical address of the new allocated page
  */
-uintptr_t* pmm_calloc();
+void* pmm_calloc();
 
 /**
  * @brief initialize the physical memory manager

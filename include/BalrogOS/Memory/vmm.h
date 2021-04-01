@@ -21,9 +21,9 @@ void init_vmm();
  * 
  * @param PML4T the PML4T currently in use, if none then the default (kernel) is use
  * @param virt_addr virtual address
- * @return uintptr_t the physical address of a given virtual address page
+ * @return void* the physical address of a given virtual address page
  */
-uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr);
+void* vmm_get_page(page_table* PML4T, void* virt_addr);
 
 /**
  * @brief Set a physical address into the page table at a given virtual address
@@ -34,7 +34,7 @@ uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr);
  * @param flags Page flags to use.
  * @return the newly setted page
  */
-void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags);
+void* vmm_set_page(page_table* PML4T, void* virt_addr, void* phys_addr, uint32_t flags);
 
 /**
  * @brief 
@@ -42,7 +42,7 @@ void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, 
  * @param PML4T 
  * @param virt_addr 
  */
-void vmm_free_page(page_table* PML4T, uintptr_t virt_addr);
+void vmm_free_page(page_table* PML4T, void* virt_addr);
 
 /**
  * @brief 

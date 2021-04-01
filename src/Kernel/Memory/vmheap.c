@@ -22,10 +22,10 @@ extern void free(block_info* block, block_info* next_block, block_info* current_
 
 void init_vmheap()
 {
-    vmheap_start = KERNEL_VIRTUAL_START;
+    vmheap_start = (void*)KERNEL_VIRTUAL_START;
     first_free = vmheap_start;
     vmheap_current_top = vmheap_start + 0x1000;
-    uintptr_t alloc = (uintptr_t)pmm_calloc();
+    void* alloc = pmm_calloc();
     vmm_set_page(0, vmheap_start, alloc, PAGE_PRESENT | PAGE_WRITE);
 
     block_info block;
@@ -53,7 +53,7 @@ void* vmalloc(size_t size)
         */
         if(current_block < (block_info*) vmheap_current_top)
         {
-            void* ret = alloc(size, current_block, prev_block, vmheap_current_top, &first_free, first_block);
+            void* ret = alloc(size, current_block, prev_block, vmheap_current_top, (uintptr_t*)&first_free, first_block);
             if(ret != 0)
             {
                 return ret;
@@ -66,14 +66,14 @@ void* vmalloc(size_t size)
             // if the current virtual heap top is equal to KERNEL_VIRTUAL_TOP
             // then we don't have any space left in memory.
             // We also don't allow to allocate a block larger than 4072 bytes atm.
-            if(vmheap_current_top == KERNEL_VIRTUAL_TOP || size > 0x1000 - sizeof(block_info))
+            if(vmheap_current_top == (void*)KERNEL_VIRTUAL_TOP || size > 0x1000 - sizeof(block_info))
             {
                 //Kernel heap full
                 return 0;
             }
 
             // get a new page
-            uintptr_t alloc = (uintptr_t)pmm_calloc();
+            void* alloc = pmm_calloc();
             // set the new page to the vmheap_current_top address
             vmm_set_page(0, vmheap_current_top, alloc, PAGE_PRESENT | PAGE_WRITE);            
 
@@ -103,5 +103,5 @@ void vmfree(void* ptr)
     block_info* block = ptr - sizeof(block_info);
     block_info* next_block =  ptr + block->_size;
     
-    free(block, next_block, vmheap_current_top, &first_free, 0x1000);
+    free(block, next_block, vmheap_current_top, (uintptr_t*)&first_free, 0x1000);
 }

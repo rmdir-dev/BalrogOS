@@ -72,7 +72,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     /*
     TEXT & DATA
     */
-    uintptr_t phys;
+    void* phys;
 
     elf_header* header = addr;
 
@@ -82,7 +82,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
         elf_load_binary(header, addr, proc->PML4T, user | PAGE_PRESENT | PAGE_WRITE);
     } else 
     {
-        uintptr_t text = pmm_calloc();
+        void* text = pmm_calloc();
         phys = V2P(addr);
         vmm_set_page(proc->PML4T, PROCESS_TEXT, text, user | PAGE_PRESENT);
         memcpy(P2V(text), addr, 4096);
@@ -283,7 +283,12 @@ int fork_process(process* proc, interrupt_regs* regs)
 
 static int _copy_add_args_to_stack(process* proc, char** argv)
 {
-    uint8_t* phys = pmm_calloc();
+    void* phys = pmm_calloc();
+
+    if(phys == 0) 
+    {
+        return -1;
+    }
 
     vmm_set_page(proc->PML4T, PROCESS_START_DATA, phys, PAGE_PRESENT | PAGE_USER);
     uint64_t* array = P2V(phys);
@@ -311,10 +316,6 @@ static int _copy_add_args_to_stack(process* proc, char** argv)
     reg->rdi = argc;
     reg->rsi = PROCESS_START_DATA;
 
-    if(phys == 0) 
-    {
-        return -1;
-    }
     return 0;
 }
 

@@ -16,6 +16,9 @@
     get file inode using file name
 5	    sys_fstat	        unsigned int fd	    struct stat *statbuf
     get file inode using file descriptor
+12	    sys_brk	            unsigned long brk
+    change the location of the program break (the program break is the first location after the end of the uninitialized
+       data segment)
 39      sys_getpid
     get the currently running process ID.
 57	    sys_fork
@@ -32,7 +35,8 @@
 202     sys_park            uint64 pid
     park the current process if pid == 0 else unpark the process with that pid
 203     sys_setpark         
-    prepare to park the current process, if the current process is unparked in between the setpark and park call, then it won't be parked at all.
+    prepare to park the current process, if the current process is unparked in between the setpark and park call, 
+    then it won't be parked at all.
 */
 
 #define SYS_READ        0
@@ -41,6 +45,7 @@
 #define SYS_CLOSE       3
 #define SYS_STAT        4
 #define SYS_FSTAT       5
+#define SYS_BRK         12
 #define SYS_GETPID      39
 #define SYS_FORK        57
 #define SYS_EXECVE      59

@@ -21,11 +21,11 @@ void init_vmm()
  * @param PML4T the Page Map Level 4 Table
  * @param virt_addr the virtual address we want to use
  * @param create if we want to create pages that do not exist.
- * @return uintptr_t return the Level 1 Page Table.
+ * @return void* return the Level 1 Page Table.
  */
-static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t create)
+static void* vmm_find_page(page_table* PML4T, void* virt_addr, uint8_t create)
 {
-    virt_addr = STRIP_FLAGS(virt_addr);
+    virt_addr = (void*)STRIP_FLAGS(virt_addr);
 
     page_table* PDPT;
     page_table* PDT;
@@ -40,7 +40,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
         {
             return 0;
         }
-        uintptr_t p = (uintptr_t)pmm_calloc();
+        void* p = pmm_calloc();
         PDPT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PML4T[PML4T_OFFSET(virt_addr)] = (page_table)PDPT;
     }
@@ -55,7 +55,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
             return 0;
         }
 
-        uintptr_t p = (uintptr_t)pmm_calloc();
+        void* p = pmm_calloc();
         PDT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PDPT[PDPT_OFFSET(virt_addr)] = (page_table)PDT;
     }
@@ -69,7 +69,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
         {
             return 0;
         }
-        uintptr_t p = (uintptr_t)pmm_calloc();
+        void* p = pmm_calloc();
         PT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PDT[PDT_OFFSET(virt_addr)] = (page_table)PT;
     }
@@ -77,7 +77,7 @@ static uintptr_t* vmm_find_page(page_table* PML4T, uintptr_t virt_addr, uint8_t 
     return (void*)P2V(STRIP_FLAGS(PT));
 }
 
-uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr)
+void* vmm_get_page(page_table* PML4T, void* virt_addr)
 {
     if(!PML4T)
     {
@@ -90,10 +90,10 @@ uintptr_t vmm_get_page(page_table* PML4T, uintptr_t virt_addr)
     {
         return 0;
     }
-    return STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]);
+    return (void*)STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]);
 }
 
-void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, uint32_t flags)
+void* vmm_set_page(page_table* PML4T, void* virt_addr, void* phys_addr, uint32_t flags)
 {
     if(!PML4T)
     {
@@ -112,7 +112,7 @@ void* vmm_set_page(page_table* PML4T, uintptr_t virt_addr, uintptr_t phys_addr, 
     return (void*)PT[PT_OFFSET(virt_addr)];
 }
 
-void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
+void vmm_free_page(page_table* PML4T, void* virt_addr)
 {
     if(!PML4T)
     {
@@ -128,7 +128,7 @@ void vmm_free_page(page_table* PML4T, uintptr_t virt_addr)
 
     if(PT[PT_OFFSET(virt_addr)])
     {
-        pmm_free((uintptr_t*)STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]));
+        pmm_free((void*)STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]));
         PT[PT_OFFSET(virt_addr)] = 0;
     }
 }

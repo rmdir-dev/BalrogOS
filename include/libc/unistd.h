@@ -79,6 +79,16 @@ size_t write(int fd, void* buf, size_t count);
  */
 int close(int fd);
 
+/**
+ * @brief brk() sets the end of the data segment to the value specified by
+    addr, when that value is reasonable, the system has enough
+    memory.
+ * 
+ * @param addr the new program break address.
+ * @return int 
+ */
+int brk(void* addr);
+
 #ifdef __cplusplus
 }
 #endif

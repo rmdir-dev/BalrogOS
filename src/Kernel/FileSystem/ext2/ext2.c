@@ -543,7 +543,7 @@ static uint32_t _ext2_create_new_dir_entry(fs_device* dev, ext2_dir_entry* dir, 
     return 0;
 }
 
-static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index, uint8_t new)
+static uint32_t _ext2_find_file(fs_device* dev, char** path, size_t* index, uint8_t new)
 {
     if(*index == 0)
     {
@@ -584,11 +584,6 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     }
     
     kfree(buffer);
-
-    if(found == 0)
-    {
-        return 0;
-    }
     
     if(new)
     {
@@ -604,7 +599,11 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
             *index = 0;
             return 0;
         }
+    } else if(found == 0)
+    {
+        return 0;
     }
+    
     *index = size;
     return inode_id;
 }
@@ -647,7 +646,7 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
     size_t index;
     uint8_t from_root;
     char** path = _ext2_get_path(filename, '/', &index, &from_root);
-    uint32_t file_inode_nbr = _ext2_find_directory(dev, path, &index, 0);
+    uint32_t file_inode_nbr = _ext2_find_file(dev, path, &index, 0);
     
     if(file_inode_nbr == 0)
     {
@@ -702,7 +701,7 @@ static int ext2_touch(fs_device* dev, char* filename)
     size_t index;
     uint8_t from_root;
     char** path = _ext2_get_path(filename, '/', &index, &from_root);
-    uint32_t file_inode_nbr = _ext2_find_directory(dev, path, &index, 1);
+    uint32_t file_inode_nbr = _ext2_find_file(dev, path, &index, 1);
 
     if(file_inode_nbr == 0)
     {
@@ -752,7 +751,7 @@ static int ext2_list(fs_device* dev, char* dirname, uint8_t* buffer)
     size_t index;
     uint8_t from_root;
     char** path = _ext2_get_path(dirname, '/', &index, &from_root);
-    uint32_t inode = _ext2_find_directory(dev, path, &index, 0);
+    uint32_t inode = _ext2_find_file(dev, path, &index, 0);
     ext2_idata* root_itable = ext2_cache_search_inode(dev, inode);
     _ext2_read_file(dev, buffer, &root_itable->inode);
     _ext2_list_dir(buffer);
@@ -771,7 +770,7 @@ static int ext2_mkdir(fs_device* dev, char* dirname)
     size_t index;
     uint8_t from_root;
     char** path = _ext2_get_path(dirname, '/', &index, &from_root);
-    uint32_t prev_inode = _ext2_find_directory(dev, path, &index, 1);
+    uint32_t prev_inode = _ext2_find_file(dev, path, &index, 1);
     
     if(prev_inode == 0)
     {

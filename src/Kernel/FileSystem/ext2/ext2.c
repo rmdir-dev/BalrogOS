@@ -561,11 +561,13 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     uint32_t inode_id = 0;
    
     size_t size = 0;
-    
+    uint8_t found = 0;
     while(*path)
     {
+        found = 0;
         if(!_ext2_read_dir_entry(buffer, &entries, *path))
         {
+            found = 1;
             root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
             inode_id = entries.entry->inode;
             if(!EXT2_IS_DIRECTORY(root_itable->inode.mode))
@@ -582,6 +584,11 @@ static uint32_t _ext2_find_directory(fs_device* dev, char** path, size_t* index,
     }
     
     kfree(buffer);
+
+    if(found == 0)
+    {
+        return 0;
+    }
     
     if(new)
     {
@@ -641,12 +648,14 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
     uint8_t from_root;
     char** path = _ext2_get_path(filename, '/', &index, &from_root);
     uint32_t file_inode_nbr = _ext2_find_directory(dev, path, &index, 0);
-    ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
     
-    if(file_inode->inode_nbr == 0)
+    if(file_inode_nbr == 0)
     {
         return -1;
     }
+
+    ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
+
 
     if(file_inode->open == 0)
     {

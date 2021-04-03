@@ -26,6 +26,7 @@ int sh_exec_cmd(char** args)
     }
     
     int fd = open(args[0], 0);
+
     if(fd == -1)
     {
         printf("command '%s' does not exist! \n", args[0]);

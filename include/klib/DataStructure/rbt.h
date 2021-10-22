@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "klib/Threading/kmutex.h"
 
 #define RBT_BLACK   0
 #define RBT_RED     1
@@ -20,9 +21,17 @@ typedef struct rbt_node_st
 
 typedef struct rbt_container_st
 {
-    rbt_node* rb_root;
-    rbt_node* rb_leftmost;
+    rbt_node* rbt_root;
+    rbt_node* rbt_leftmost;
+    kmutex_t rbt_lock;
 } rbt_tree;
+
+/**
+ * @brief Initialize the red balck tree
+ * 
+ * @param root the root element to initialize
+ */
+void rbt_init(rbt_tree* root);
 
 /**
  * @brief create a new node.

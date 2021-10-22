@@ -1,5 +1,5 @@
 #include "klib/DataStructure/mtx_queue.h"
-#include "BalrogOS/Memory/kheap.h" // TEMPORARY!! switch to malloc once it is implemented!
+#include "BalrogOS/Memory/kheap.h" 
 
 void mtx_queue_init(mtx_queue_t* queue)
 {
@@ -9,7 +9,6 @@ void mtx_queue_init(mtx_queue_t* queue)
 
 void mtx_queue_enqueue(mtx_queue_t* queue, uint64_t value)
 {
-    //TODO Change to malloc
     queue_node_t* node = vmalloc(sizeof(queue_node_t));
     
     node->value = value;
@@ -37,7 +36,6 @@ int mtx_queue_dequeue(mtx_queue_t* queue, uint64_t* value)
     *value = tmp->value;
     queue->head = tmp->next;
 
-    // TODO change to free()
     vmfree(tmp);
 
     return 0;

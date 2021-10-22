@@ -76,7 +76,7 @@ _DiskLoad:
     ; dl = 0x80
     ; cl = 1   V   SECTOR   29
     ; dh = 0   X   HEAD     12
-    ; ch = 20    X CYLINDER 7
+    ; ch = 20  X   CYLINDER 7
     
     int 0x13            ; bios mass storage (disk, floppy) access interrupt
                         ; INPUT

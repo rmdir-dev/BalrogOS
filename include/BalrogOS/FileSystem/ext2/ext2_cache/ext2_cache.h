@@ -6,6 +6,12 @@
 /**
  * @brief 
  * 
+ */
+void ext2_cache_init();
+
+/**
+ * @brief 
+ * 
  * @param dev 
  * @param type 
  * @return int 

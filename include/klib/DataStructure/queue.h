@@ -4,7 +4,7 @@
 #include "queue_node.h"
 
 /**
- * @brief the unsafe queue is a non thread safe queue.
+ * @brief A thread safe FIFO queue.
  * 
  */
 typedef struct __queue_t

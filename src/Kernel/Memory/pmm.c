@@ -39,7 +39,6 @@ void pmm_free(void* addr)
     {
         return;
     }
-
     addr = (void*)P2V(addr);
     queue_enqueue(&last_free_q, (uintptr_t)addr);
 
@@ -50,7 +49,7 @@ void pmm_free(void* addr)
 void* pmm_alloc()
 {
     void* p = 0x00;
-    if(last_free_q.head)
+    if(!queue_empty(&last_free_q))
     {
         uintptr_t addr;
         queue_dequeue(&last_free_q, &addr);
@@ -93,6 +92,8 @@ void* pmm_calloc()
 
 void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
 {
+    queue_init(&last_free_q);
+    
     for(uint16_t i = 0; i < *SMAPsize; i++)
     {
         total_memory += SMAPinfo[i].Length;
@@ -133,7 +134,6 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
         }
     }
     
-    queue_init(&last_free_q);
     KERNEL_LOG_INFO("Total system memory : %dMiB", BYTE_TO_MiB(total_memory));
     KERNEL_LOG_INFO("Total usable system memory : %dMiB", BYTE_TO_MiB(total_usable_memory));
 }

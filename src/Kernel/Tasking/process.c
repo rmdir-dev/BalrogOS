@@ -2,9 +2,14 @@
 #include "klib/DataStructure/rbt.h"
 #include <stdlib.h>
 
-rbt_tree process_tree = { NULL, NULL };
+rbt_tree process_tree;
 process_list rdy_proc_list = { NULL, 0, NULL};
 extern process* current_running;
+
+void init_process()
+{
+    rbt_init(&process_tree);
+}
 
 void proc_insert_to_ready_queue(process* proc)
 {

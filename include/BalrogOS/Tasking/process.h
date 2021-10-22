@@ -9,6 +9,12 @@ typedef struct _process_list
 } process_list;
 
 /**
+ * @brief 
+ * 
+ */
+void init_process();
+
+/**
  * @brief push a new process into the ready queue
  * 
  * @param proc the process to push

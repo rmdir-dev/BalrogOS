@@ -1,3 +1,4 @@
+#include "BalrogOS/FileSystem/ext2/ext2_cache/ext2_cache.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "BalrogOS/FileSystem/ext2/ext2.h"
 #include "BalrogOS/FileSystem/fs_cache.h"
@@ -68,6 +69,10 @@ void init_file_system()
         KERNEL_LOG_FAIL("file system : No suitable drive found!");
         while(1){}
     }
+    /*
+    Initialize ext2 cache datastructures.
+    */
+    ext2_cache_init();
     ext2_probe(&dev);
     kmutex_unlock(&dev.lock);
 }

@@ -8,6 +8,13 @@
 #define RBT_GET_DIR(var)    (var == var->parent->children[RBT_RIGHT])
 #define RBT_IS_RED(var)     (var != NULL && var->color)
 
+void rbt_init(rbt_tree* root)
+{
+    root->rbt_leftmost = NULL;
+    root->rbt_root = NULL;
+    kmutex_init(&root->rbt_lock);
+}
+
 rbt_node* rbt_create_node(rbt_node* parent, uint64_t key)
 {
     rbt_node* ret = vmalloc(sizeof(rbt_node));
@@ -23,27 +30,32 @@ rbt_node* rbt_create_node(rbt_node* parent, uint64_t key)
 
 rbt_node* rbt_search(rbt_tree* root, const uint64_t key)
 {
-    rbt_node* current_node = root->rb_root;
+    kmutex_lock(&root->rbt_lock);
+    rbt_node* current_node = root->rbt_root;
     while(current_node)
     {
         if(current_node->key == key)
         {
+            kmutex_unlock(&root->rbt_lock);
             return current_node;
         }
 
         current_node = current_node->children[key > current_node->key];
     }
 
+    kmutex_unlock(&root->rbt_lock);
     return NULL;
 }
 
 rbt_node* rbt_minimum(rbt_tree* root)
 {
-    rbt_node* from = root->rb_root;
+    kmutex_lock(&root->rbt_lock);
+    rbt_node* from = root->rbt_root;
     while(from->children[RBT_LEFT])
     {
         from = from->children[RBT_LEFT];
     }
+    kmutex_unlock(&root->rbt_lock);
     return from;
 }
 
@@ -60,7 +72,7 @@ static inline void __rotate(rbt_tree* root, rbt_node* rotating_node, const uint8
     pivot->parent = rotating_node->parent;
     if(!rotating_node->parent)
     {
-        root->rb_root = pivot;
+        root->rbt_root = pivot;
     } else if(rotating_node == rotating_node->parent->children[dir])
     {
         rotating_node->parent->children[dir] = pivot;
@@ -84,7 +96,7 @@ static inline void __insert_fixup(rbt_tree* root, rbt_node* ptr)
     rbt_node* parent_ptr = NULL;
     rbt_node* grand_parent_ptr = NULL;
 
-    while((ptr != root->rb_root)
+    while((ptr != root->rbt_root)
         && (ptr->color != RBT_BLACK)
         && (ptr->parent->color == RBT_RED))
     {
@@ -117,20 +129,22 @@ static inline void __insert_fixup(rbt_tree* root, rbt_node* ptr)
         }
     }
 
-    root->rb_root->color = RBT_BLACK;
+    root->rbt_root->color = RBT_BLACK;
 }
 
 rbt_node* rbt_insert(rbt_tree* root, uint64_t key)
 {
-    if(!root->rb_root)
+    kmutex_lock(&root->rbt_lock);
+    if(!root->rbt_root)
     {
-        root->rb_root = rbt_create_node(0, key);
-        root->rb_root->color = RBT_BLACK;
-        return root->rb_root;
+        root->rbt_root = rbt_create_node(0, key);
+        root->rbt_root->color = RBT_BLACK;
+        kmutex_unlock(&root->rbt_lock);
+        return root->rbt_root;
     }
 
     rbt_node* parent_branch = NULL;
-    rbt_node* current_branch = root->rb_root;
+    rbt_node* current_branch = root->rbt_root;
     uint8_t dir = 0;
 
     while(current_branch)
@@ -139,6 +153,7 @@ rbt_node* rbt_insert(rbt_tree* root, uint64_t key)
 
         if(current_branch->key == key)
         {
+            kmutex_unlock(&root->rbt_lock);
             return current_branch;
         }
 
@@ -155,6 +170,7 @@ rbt_node* rbt_insert(rbt_tree* root, uint64_t key)
 
     __insert_fixup(root, current_branch);
 
+    kmutex_unlock(&root->rbt_lock);
     return current_branch;
 }
 
@@ -217,6 +233,7 @@ static inline void __delete_fixup(rbt_tree* root, rbt_node* unbalanced_entry, ui
 
 void rbt_delete(rbt_tree* root, rbt_node* to_delete)
 {
+    kmutex_lock(&root->rbt_lock);
     if(to_delete != NULL)
     {
         rbt_node* unbalanced_parent = NULL;
@@ -278,7 +295,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
         */
         if(to_delete->parent == NULL)
         {
-            root->rb_root = promoted;
+            root->rbt_root = promoted;
         } else 
         {
             /*
@@ -306,6 +323,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
             }
             vmfree(to_delete);
 
+            kmutex_unlock(&root->rbt_lock);
             return;
         } else 
         {
@@ -322,6 +340,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
 
         __delete_fixup(root, unbalanced_parent, dir);
     }
+    kmutex_unlock(&root->rbt_lock);
 }
 
 void rbt_delete_key(rbt_tree* root, uint64_t key)
@@ -354,5 +373,7 @@ void _rbt_clear(rbt_node* root)
 
 void rbt_clear_tree(rbt_tree* root)
 {
-    _rbt_clear(root->rb_root);
+    kmutex_lock(&root->rbt_lock);
+    _rbt_clear(root->rbt_root);
+    kmutex_unlock(&root->rbt_lock);
 }

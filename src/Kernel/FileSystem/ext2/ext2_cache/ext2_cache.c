@@ -11,6 +11,11 @@ struct _ext2_cache
     rbt_tree inode_tree;
 } ext2_cache;
 
+void ext2_cache_init()
+{
+    rbt_init(&ext2_cache.inode_tree);
+}
+
 uint32_t ext2_cache_search_bitmaps(fs_device* dev, uint8_t type)
 {
     return 0;

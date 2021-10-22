@@ -11,6 +11,7 @@
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/CPU/Scheduler/Scheduler.h"
 #include "BalrogOS/Tasking/tasking.h"
+#include "BalrogOS/Tasking/process.h"
 #include "BalrogOS/Debug/exception.h"
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/Syscall/syscall.h"
@@ -85,6 +86,9 @@ void initialize_kernel(void* SMAP, void* size)
     /*    SCHEDULER     */
     init_scheduler();
     KERNEL_LOG_OK("CPU scheduler initialization : done");
+
+    /* PROCESS */
+    init_process();
 
     /*    KEYBOARD      */
     init_keyboard();

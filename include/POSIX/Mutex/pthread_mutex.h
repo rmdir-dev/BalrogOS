@@ -11,7 +11,11 @@ typedef struct __pthread_mutex_t
     uint8_t flag;
     /* counting waiting threads    */
     unsigned int count;
-    /* a queue of currently waiting process */
+    /* 
+    a queue of currently waiting process
+    This queue is non thread safe queue and should only be accessed once 
+    the lock is aquired. So this queue is protected by the lock itself.
+    */
     uqueue_t wait_queue;
 } pthread_mutex_t;
 

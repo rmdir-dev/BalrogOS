@@ -64,7 +64,7 @@ void initialize_kernel(void* SMAP, void* size)
     SMAP_entry* SMAPinfo = P2V(SMAP);
 	uint16_t* SMAPsize = P2V(size);
     
-    /*    Kernel Heap    */
+    /*    Kernel Heap     */
     init_kheap(); // Kernel Logical
     
     /*    Virtual Memory  */
@@ -79,26 +79,26 @@ void initialize_kernel(void* SMAP, void* size)
     init_vmheap();  // Kernel Virtual
     KERNEL_LOG_OK("Kernel heap initialization : done");
 
-    /*    GDT and TSS   */
+    /*    GDT and TSS    */
     init_gdt();
     KERNEL_LOG_OK("GDT and TSS : done");
 
-    /*    SCHEDULER     */
+    /*    SCHEDULER      */
     init_scheduler();
     KERNEL_LOG_OK("CPU scheduler initialization : done");
 
-    /* PROCESS */
+    /*    PROCESS        */
     init_process();
 
-    /*    KEYBOARD      */
+    /*    KEYBOARD       */
     init_keyboard();
     KERNEL_LOG_OK("Keyboard initialization : done");
 
-    /*    FILE SYSTEM   */
+    /*    FILE SYSTEM    */
     init_file_system();
     KERNEL_LOG_OK("File system initialization : done");
 
-    /*    TEST PROCESS */
+    /*    TEST PROCESS   */
     char test_arg1[8] = "/bin/sh";
     char test_arg2[9] = "/boot/";
     uintptr_t argv[5] = { &test_arg1, &test_arg2, 0, 0, 0 };

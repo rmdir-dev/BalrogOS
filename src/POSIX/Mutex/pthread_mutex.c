@@ -20,6 +20,8 @@ int pthread_mutex_lock(pthread_mutex_t* lock)
         then return the old value.
         If the old value is equal to 0 then the lock is free
         else the lock is aquire by someone.
+        This lock is only protecting the flag, it is then 
+        released once the flag state is changed.
     */
     while(xchg(&lock->lock, 1))
     {}
@@ -27,7 +29,7 @@ int pthread_mutex_lock(pthread_mutex_t* lock)
     /*
     We first test with the solaris park unpark.
     The futex work a little differently :
-        here the waiting queue in contain into the mutex
+        here the waiting queue is contain into the mutex
         the futex implement the waiting queue on the kernel side,
         probably inside an hashtable with the mutex address as index.
         Could also use the RBT but this does not need to be sorted,

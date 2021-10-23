@@ -1,5 +1,5 @@
 #include "plib/unsafe_queue.h"
-#include "BalrogOS/Memory/kheap.h" // TEMPORARY!! switch to malloc once it is implemented!
+#include <stdlib.h>
 
 void uqueue_init(uqueue_t* queue)
 {
@@ -9,8 +9,7 @@ void uqueue_init(uqueue_t* queue)
 
 void uqueue_enqueue(uqueue_t* queue, uint64_t value)
 {
-    //TODO Change to malloc
-    uqueue_node_t* node = vmalloc(sizeof(uqueue_node_t));
+    uqueue_node_t* node = malloc(sizeof(uqueue_node_t));
     
     node->value = value;
     node->next = NULL;
@@ -37,8 +36,7 @@ int uqueue_dequeue(uqueue_t* queue, uint64_t* value)
     *value = tmp->value;
     queue->head = tmp->next;
 
-    // TODO change to free()
-    vmfree(tmp);
+    free(tmp);
 
     return 0;
 }

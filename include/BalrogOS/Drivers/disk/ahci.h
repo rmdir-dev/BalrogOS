@@ -9,7 +9,7 @@
  * 
  * @param device 
  */
-int ahci_get_boot_device(fs_device* device);
+int ahci_get_boot_device(fs_device_t* device);
 
 /**
  * @brief initialize AHCI drives if they exist.

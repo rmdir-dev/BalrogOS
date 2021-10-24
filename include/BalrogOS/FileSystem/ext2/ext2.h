@@ -171,4 +171,4 @@ enum ext2_dir_entry_type
     EXT2_TYPE_SYMBOLIC_LINK = 7
 };
 
-int ext2_probe(fs_device* dev);
+int ext2_probe(fs_device_t* dev);

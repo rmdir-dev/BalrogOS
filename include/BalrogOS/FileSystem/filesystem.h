@@ -4,7 +4,7 @@
 #include "balrog/fs/fs_struct.h"
 #include "klib/Threading/kmutex.h"
 
-struct _file_system;
+struct _file_system_t;
 
 typedef enum _fs_format
 {
@@ -37,31 +37,31 @@ typedef struct _fs_fd
     uint8_t* offset;
 } __attribute__((packed)) fs_fd;
 
-typedef struct _fs_device
+typedef struct _fs_device_t
 {
     char* name;
     kmutex_t lock;
     uint32_t unique_id;
     uint8_t type;
-    void (*read)(struct _fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len);
-    void (*write)(struct _fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len);
-    struct _file_system* fs;
-} __attribute__((packed)) fs_device;
+    void (*read)(struct _fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
+    void (*write)(struct _fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
+    struct _file_system_t* fs;
+} __attribute__((packed)) fs_device_t;
 
-typedef struct _file_system
+typedef struct _file_system_t
 {
     char* name;
-    int (*probe)(fs_device* device);
-    int (*open)(fs_device* dev, char* filename, fs_fd* fd);
-    int (*close)(fs_device* dev, fs_fd* fd);
-    int (*stat)(fs_device* dev, fs_fd* fd, fs_file_stat* stat);
-    int (*read)(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
-    int (*write)(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
-    int (*touch)(fs_device* dev, char* filename);
-    int (*list)(fs_device* dev, char* dirname, uint8_t* buffer);
-    int (*mkdir)(fs_device* dev, char* dirname);
+    int (*probe)(fs_device_t* device);
+    int (*open)(fs_device_t* dev, char* filename, fs_fd* fd);
+    int (*close)(fs_device_t* dev, fs_fd* fd);
+    int (*stat)(fs_device_t* dev, fs_fd* fd, fs_file_stat* stat);
+    int (*read)(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
+    int (*write)(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
+    int (*touch)(fs_device_t* dev, char* filename);
+    int (*list)(fs_device_t* dev, char* dirname, uint8_t* buffer);
+    int (*mkdir)(fs_device_t* dev, char* dirname);
     void* fs_data;
-} __attribute__((packed)) file_system;
+} __attribute__((packed)) file_system_t;
 
 void init_file_system();
 

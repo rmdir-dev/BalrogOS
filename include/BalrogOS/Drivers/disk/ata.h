@@ -12,7 +12,7 @@
  * @param lba logical block address
  * @param len length
  */
-void ata_read(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len);
+void ata_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
 
 /**
  * @brief write data to the ata drive
@@ -22,14 +22,14 @@ void ata_read(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len);
  * @param lba logical block address
  * @param len length
  */
-void ata_write(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len);
+void ata_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
 
 /**
  * @brief set the boot device.
  * 
  * @param device 
  */
-int ata_get_boot_device(fs_device* device);
+int ata_get_boot_device(fs_device_t* device);
 
 /**
  * @brief initialize ATA drives

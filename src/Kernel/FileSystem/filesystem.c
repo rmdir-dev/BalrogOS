@@ -12,7 +12,7 @@
 #include <string.h>
 #include "klib/IO/kprint.h"
 
-fs_device dev;
+fs_device_t dev;
 
 int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
 {

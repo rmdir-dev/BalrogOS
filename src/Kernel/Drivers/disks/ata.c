@@ -156,7 +156,7 @@ static inline int _ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_t
     return -1;
 }
 
-void ata_read(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
+void ata_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
     ata_drive* drive = &drives[device->unique_id];
     for(size_t i = 0; i < len; i++)
@@ -171,13 +171,13 @@ static inline void _ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_
 
 }
 
-void ata_write(fs_device* device, uint8_t* buffer, uint64_t lba, uint64_t len)
+void ata_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
 
 }
 
 
-int ata_get_boot_device(fs_device* device)
+int ata_get_boot_device(fs_device_t* device)
 {
     uint16_t* buffer = vmalloc(512);
     for(size_t i = 0; i < 4; i++)

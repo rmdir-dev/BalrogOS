@@ -16,14 +16,14 @@ void ext2_cache_init()
     rbt_init(&ext2_cache.inode_tree);
 }
 
-uint32_t ext2_cache_search_bitmaps(fs_device* dev, uint8_t type)
+uint32_t ext2_cache_search_bitmaps(fs_device_t* dev, uint8_t type)
 {
     return 0;
 }
 
-extern ext2_inode ext2_get_inode(fs_device* dev, uint32_t inode_idx);
+extern ext2_inode ext2_get_inode(fs_device_t* dev, uint32_t inode_idx);
 
-ext2_idata* ext2_cache_search_inode(fs_device* dev, uint32_t inode_nbr)
+ext2_idata* ext2_cache_search_inode(fs_device_t* dev, uint32_t inode_nbr)
 {
     rbt_node* node = rbt_search(&ext2_cache.inode_tree, inode_nbr);
  

@@ -82,7 +82,7 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
     return ret;
 }
 
-static inline uint32_t _ext2_find_free_bitmap(fs_device* dev, size_t bitmap_size, size_t start_idx, uint32_t sec_per_block, size_t map_idx_start)
+static inline uint32_t _ext2_find_free_bitmap(fs_device_t* dev, size_t bitmap_size, size_t start_idx, uint32_t sec_per_block, size_t map_idx_start)
 {
     size_t allocated = 0;
 
@@ -114,7 +114,7 @@ static inline uint32_t _ext2_find_free_bitmap(fs_device* dev, size_t bitmap_size
     return -1;
 }
 
-static int _ext2_update_sb_and_blk_desc(fs_device* dev, ext2_fs_data* fs_data)
+static int _ext2_update_sb_and_blk_desc(fs_device_t* dev, ext2_fs_data* fs_data)
 {
     dev->write(dev, (void*)&fs_data->sb, 2, 2);
     if(fs_data->block_size == 1024)
@@ -131,7 +131,7 @@ static int _ext2_update_sb_and_blk_desc(fs_device* dev, ext2_fs_data* fs_data)
     BLOCKS
 */
 
-static int _ext2_free_alloc_block(fs_device* dev, uint32_t block_id)
+static int _ext2_free_alloc_block(fs_device_t* dev, uint32_t block_id)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
@@ -148,7 +148,7 @@ static int _ext2_free_alloc_block(fs_device* dev, uint32_t block_id)
     return 0;
 }
 
-static uint32_t _ext2_find_higher_half_free_blocks(fs_device* dev)
+static uint32_t _ext2_find_higher_half_free_blocks(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
@@ -167,7 +167,7 @@ static uint32_t _ext2_find_higher_half_free_blocks(fs_device* dev)
     return block_id;
 }
 
-static uint32_t _ext2_find_free_blocks(fs_device* dev)
+static uint32_t _ext2_find_free_blocks(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
@@ -189,7 +189,7 @@ static uint32_t _ext2_find_free_blocks(fs_device* dev)
     INODES
 */
 
-static uint32_t _ext2_find_free_inode(fs_device* dev)
+static uint32_t _ext2_find_free_inode(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
@@ -205,7 +205,7 @@ static uint32_t _ext2_find_free_inode(fs_device* dev)
     return block_id;
 }
 
-static int _ext2_update_inode_table(fs_device* dev, uint32_t inode_idx, ext2_inode* inode)
+static int _ext2_update_inode_table(fs_device_t* dev, uint32_t inode_idx, ext2_inode* inode)
 {
     uint32_t tbl_str_blc_addr = inode_idx / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
@@ -217,7 +217,7 @@ static int _ext2_update_inode_table(fs_device* dev, uint32_t inode_idx, ext2_ino
     return 0;
 }
 
-ext2_inode ext2_get_inode(fs_device* dev, uint32_t inode_idx)
+ext2_inode ext2_get_inode(fs_device_t* dev, uint32_t inode_idx)
 {
     uint32_t tbl_str_blc_addr = inode_idx / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
@@ -231,7 +231,7 @@ ext2_inode ext2_get_inode(fs_device* dev, uint32_t inode_idx)
     return ret;
 }
 
-static uint32_t _ext2_create_new_inode(fs_device* dev, uint16_t file_size, uint16_t mode)
+static uint32_t _ext2_create_new_inode(fs_device_t* dev, uint16_t file_size, uint16_t mode)
 {
     uint32_t new_id_inode = _ext2_find_free_inode(dev);
     
@@ -265,7 +265,7 @@ static uint32_t _ext2_create_new_inode(fs_device* dev, uint16_t file_size, uint1
     return new_id_inode;
 }
 
-static uint32_t _ext2_get_entry_inode_idx(fs_device* dev, ext2_dir_entry* dir, const char* filename)
+static uint32_t _ext2_get_entry_inode_idx(fs_device_t* dev, ext2_dir_entry* dir, const char* filename)
 {
     // if file name is too large return 0
     if(strlen(filename) > 255)
@@ -304,7 +304,7 @@ static int _ext2_read(uint8_t* data, uint8_t* buffer, uint64_t offset, uint64_t 
     return 0;
 }
 
-static uint8_t _ext2_read_file(fs_device* dev, uint8_t* buffer, ext2_inode* inode)
+static uint8_t _ext2_read_file(fs_device_t* dev, uint8_t* buffer, ext2_inode* inode)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
     for(size_t i = 0; i < 12; i++)
@@ -333,7 +333,7 @@ static uint8_t _ext2_read_file(fs_device* dev, uint8_t* buffer, ext2_inode* inod
     return 0;
 }
 
-static int _ext2_update_file(fs_device* dev, uint8_t* buffer, uint64_t offset, uint64_t len, ext2_inode* inode, uint32_t inode_id)
+static int _ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset, uint64_t len, ext2_inode* inode, uint32_t inode_id)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
@@ -408,7 +408,7 @@ static int _ext2_update_file(fs_device* dev, uint8_t* buffer, uint64_t offset, u
     DIRECTORIES
 */
 
-static int _ext2_update_dir_entry(fs_device* dev, ext2_inode* dir_inode, ext2_dir_entry* dir)
+static int _ext2_update_dir_entry(fs_device_t* dev, ext2_inode* dir_inode, ext2_dir_entry* dir)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
@@ -445,7 +445,7 @@ static int _ext2_read_dir_entry(void* dir_ptr, entry_read_dir_entries* read_entr
     return -1;
 }
 
-static int _ext2_initialize_dir(fs_device* dev, ext2_dir_entry* dir, ext2_inode* dir_inode, uint32_t dir_inode_id, 
+static int _ext2_initialize_dir(fs_device_t* dev, ext2_dir_entry* dir, ext2_inode* dir_inode, uint32_t dir_inode_id, 
     ext2_inode* prev_dir_inode, uint32_t prev_dir_inode_id)
 {
     void* dir_ptr = dir;
@@ -491,7 +491,7 @@ static int _ext2_initialize_dir(fs_device* dev, ext2_dir_entry* dir, ext2_inode*
     return 0;
 }
 
-static uint32_t _ext2_create_new_dir_entry(fs_device* dev, ext2_dir_entry* dir, const char* filename, 
+static uint32_t _ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* dir, const char* filename, 
     ext2_inode* dir_inode, uint64_t size, enum ext2_dir_entry_type type)
 {
     if(strlen(filename) > 255)
@@ -543,7 +543,7 @@ static uint32_t _ext2_create_new_dir_entry(fs_device* dev, ext2_dir_entry* dir, 
     return 0;
 }
 
-static uint32_t _ext2_find_file(fs_device* dev, char** path, size_t* index, uint8_t new)
+static uint32_t _ext2_find_file(fs_device_t* dev, char** path, size_t* index, uint8_t new)
 {
     if(*index == 0)
     {
@@ -641,7 +641,7 @@ static uint8_t _ext2_list_dir(uint8_t* dir)
 /*
     REGULAR FILE
 */
-static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
+static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
 {
     size_t index;
     uint8_t from_root;
@@ -674,14 +674,14 @@ static int ext2_open(fs_device* dev, char* filename, fs_fd* fd)
     return 0;
 }
 
-static int ext2_close(fs_device* dev, fs_fd* fd)
+static int ext2_close(fs_device_t* dev, fs_fd* fd)
 {
     ext2_idata* file_inode = ext2_cache_search_inode(dev, fd->inode_nbr);
     ext2_close_file_from_cache(file_inode, fd);
     return 0;
 }
 
-static int ext2_stat(fs_device* dev, fs_fd* fd, fs_file_stat* stat)
+static int ext2_stat(fs_device_t* dev, fs_fd* fd, fs_file_stat* stat)
 {
     ext2_idata* file_inode = ext2_cache_search_inode(dev, fd->inode_nbr);
 
@@ -693,7 +693,7 @@ static int ext2_stat(fs_device* dev, fs_fd* fd, fs_file_stat* stat)
     return 0;
 }
 
-static int ext2_touch(fs_device* dev, char* filename)
+static int ext2_touch(fs_device_t* dev, char* filename)
 {
     int i = 0;
     int last_part = 0;
@@ -720,7 +720,7 @@ static int ext2_touch(fs_device* dev, char* filename)
     return 0;
 }
 
-static int ext2_read(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
+static int ext2_read(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
     fs_file* file = fs_cache_get_file(fd->ftable_idx);
     ext2_idata* inode =  ext2_cache_search_inode(dev, file->inode_nbr);
@@ -735,7 +735,7 @@ static int ext2_read(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
     return 0;
 }
 
-static int ext2_write(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
+static int ext2_write(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
     // TODO
     return 0;
@@ -745,7 +745,7 @@ static int ext2_write(fs_device* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
     DIRECTORIES
 */
 
-static int ext2_list(fs_device* dev, char* dirname, uint8_t* buffer)
+static int ext2_list(fs_device_t* dev, char* dirname, uint8_t* buffer)
 {
     kprint("$ ls %s\n", dirname);
     size_t index;
@@ -760,7 +760,7 @@ static int ext2_list(fs_device* dev, char* dirname, uint8_t* buffer)
     return 0;
 }
 
-static int ext2_mkdir(fs_device* dev, char* dirname)
+static int ext2_mkdir(fs_device_t* dev, char* dirname)
 {
     if(strlen(dirname) > 255)
     {
@@ -796,7 +796,7 @@ static int ext2_mkdir(fs_device* dev, char* dirname)
     FILE SYSTEM
 */
 
-int ext2_probe(fs_device* dev)
+int ext2_probe(fs_device_t* dev)
 {
     ext2_superblock* sb = vmalloc(sizeof(ext2_superblock));
     
@@ -837,7 +837,7 @@ int ext2_probe(fs_device* dev)
     memcpy(&fs_data->blk_grp_desc, block_desc, sizeof(ext2_block_group_descriptor));
     vmfree(block_desc);
 
-    dev->fs = vmalloc(sizeof(file_system));
+    dev->fs = vmalloc(sizeof(file_system_t));
     dev->fs->probe = ext2_probe;
     dev->fs->open = ext2_open;
     dev->fs->close = ext2_close;

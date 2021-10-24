@@ -16,7 +16,7 @@ void ext2_cache_init();
  * @param type 
  * @return int 
  */
-uint32_t ext2_cache_search_bitmaps(fs_device* dev, uint8_t type);
+uint32_t ext2_cache_search_bitmaps(fs_device_t* dev, uint8_t type);
 
 /**
  * @brief 
@@ -25,7 +25,7 @@ uint32_t ext2_cache_search_bitmaps(fs_device* dev, uint8_t type);
  * @param inode_nbr 
  * @return ext2_idata* 
  */
-ext2_idata* ext2_cache_search_inode(fs_device* dev, uint32_t inode_nbr);
+ext2_idata* ext2_cache_search_inode(fs_device_t* dev, uint32_t inode_nbr);
 
 /**
  * @brief remove an inode from the cache

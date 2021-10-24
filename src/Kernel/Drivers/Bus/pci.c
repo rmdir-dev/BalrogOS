@@ -108,6 +108,6 @@ void init_pci()
                 __pci_probe_bus(function);
             }
         }
-        while(1){}
+        //while(1){}
     }
 }

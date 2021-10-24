@@ -84,8 +84,9 @@ void initialize_kernel(void* SMAP, void* size)
     init_gdt();
     KERNEL_LOG_OK("GDT and TSS : done");
 
-    /*    PCI DRIVERS    */
+    /*    PCI BUS        */
     init_pci();
+    KERNEL_LOG_OK("PCI Bus : done");
 
     /*    SCHEDULER      */
     init_scheduler();
@@ -111,6 +112,7 @@ void initialize_kernel(void* SMAP, void* size)
 
     KERNEL_LOG_OK("start CPU scheduler : done");
     KERNEL_LOG_OK("start process : done");
+    kclear();
 
     enable_interrupt();
 }

@@ -56,11 +56,7 @@ size_t vga_column;
 uint8_t vga_color;
 uint16_t* vga_buffer;
 
-/**
- * @brief Clear the screen.
- * 
- */
-static void vga_clear()
+void vga_clear()
 {
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
@@ -68,6 +64,8 @@ static void vga_clear()
 			vga_buffer[index] = vga_entry(' ', vga_color);
 		}
 	}
+	vga_row = 0;
+	vga_column = 0;
 }
 
 /**

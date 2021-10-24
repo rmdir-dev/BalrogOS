@@ -24,3 +24,8 @@ int kputs(const char* str);
  * @return int 
  */
 int kputchar(int c);
+
+/**
+ * @brief clear the console.
+ */
+void kclear();

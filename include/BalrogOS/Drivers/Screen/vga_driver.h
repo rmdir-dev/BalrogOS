@@ -15,3 +15,9 @@ void vga_init();
  * @param size the size of the string
  */
 void vga_write(const char* data, size_t size);
+
+/**
+ * @brief Clear the screen.
+ * 
+ */
+void vga_clear();

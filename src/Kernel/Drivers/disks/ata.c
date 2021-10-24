@@ -1,6 +1,6 @@
-#include "BalrogOS/Drivers/disk/ata.h"
-#include "BalrogOS/Drivers/disk/ata_device.h"
-#include "BalrogOS/Drivers/disk/ata_command.h"
+#include "BalrogOS/Drivers/Disk/ata.h"
+#include "BalrogOS/Drivers/Disk/ata_device.h"
+#include "BalrogOS/Drivers/Disk/ata_command.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 #include "BalrogOS/Memory/kheap.h"
 

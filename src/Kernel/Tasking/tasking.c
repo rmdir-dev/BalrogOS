@@ -7,7 +7,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/CPU/GDT/gdt.h"
 #include "BalrogOS/CPU/RFLAGS/rflag.h"
-#include "BalrogOS/Tasking/elf/elf.h"
+#include "BalrogOS/Tasking/Elf/elf.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "balrog/memory/proc_mem.h"
 #include <string.h>

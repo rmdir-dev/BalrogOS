@@ -1,4 +1,4 @@
-#include "BalrogOS/Tasking/elf/elf.h"
+#include "BalrogOS/Tasking/Elf/elf.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/pmm.h"
 #include "klib/IO/kprint.h"

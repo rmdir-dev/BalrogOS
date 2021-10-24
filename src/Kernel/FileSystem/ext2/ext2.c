@@ -2,7 +2,7 @@
 #include "BalrogOS/FileSystem/ext2/ext2.h"
 #include "BalrogOS/FileSystem/fs_cache.h"
 #include "BalrogOS/Debug/debug_output.h"
-#include "BalrogOS/Drivers/disk/ata.h"
+#include "BalrogOS/Drivers/Disk/ata.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/pmm.h"

@@ -30,8 +30,19 @@ typedef struct __pci_t
 {
     uint8_t bus;
     uint8_t slot;
-    uint8_t func;
+    uint8_t func;   
 } __attribute__((packed)) pci_t;
+
+typedef struct __pci_device_t
+{
+    pci_t bus;
+    uint8_t class;
+    uint8_t subclass;
+    uint8_t prog_if;
+    uint8_t revision_id;
+    uint16_t vendor_id;
+    uint16_t device_id;
+} __attribute__((packed)) pci_device_t;
 
 /**
  * @brief initialize the PCI bus

@@ -1,51 +1,61 @@
 #include "BalrogOS/Drivers/Bus/pci.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 #include "klib/IO/kprint.h"
+#include "BalrogOS/Debug/debug_output.h"
+#include "BalrogOS/Memory/kheap.h"
 
-static void __pci_probe_bus(uint8_t bus);
+static void __pci_probe_bus(pci_t bus);
 
-static void __pci_check_function(pci_t device)
+static void __pci_check_function(pci_t dev)
 {
-    uint8_t class = pci_read_byte(device, PCI_B_CLASS_CODE);
-    uint8_t subclass = pci_read_byte(device, PCI_B_SUBCLASS);
+    pci_device_t* device = vmalloc(sizeof(pci_device_t));
+    device->class = pci_read_byte(dev, PCI_B_CLASS_CODE);
+    device->subclass = pci_read_byte(dev, PCI_B_SUBCLASS);
+    device->prog_if = pci_read_byte(dev, PCI_B_PROG_IF);
+    device->revision_id = pci_read_byte(dev, PCI_B_REVISION_ID);
+    device->vendor_id = pci_read_word(dev, PCI_W_VENDOR_ID);
+    device->device_id = pci_read_word(dev, PCI_W_DEVICE_ID);
 
+    kprint("dev_id %x | vend_id %x \n", device->device_id, device->vendor_id);
     // if class is a PCI to PCI bridge
-    if((class == PCI_CLASS_BRIDGE) && (subclass == PCI_SUBCLASS_PCI_TO_PCI_BRIDGE))
+    if((device->class == PCI_CLASS_BRIDGE) && (device->subclass == PCI_SUBCLASS_PCI_TO_PCI_BRIDGE))
     {
-        uint8_t secondary_bus = pci_read_byte(device, PCI_B_SECONDAY_BUS_NUMBER);
+        pci_t secondary_bus = { 0, 0, 0 };
+        secondary_bus.bus = pci_read_byte(dev, PCI_B_SECONDAY_BUS_NUMBER);
         __pci_probe_bus(secondary_bus);
     }
 }
 
-static void __pci_probe_device(uint8_t bus, uint8_t device)
+static void __pci_probe_device(pci_t bus)
 {
-    pci_t pci_device = { bus, device, 0 };
-    uint16_t vendor = pci_read_word(pci_device, PCI_W_VENDOR_ID);
+    uint16_t vendor = pci_read_word(bus, PCI_W_VENDOR_ID);
 
     if(vendor != 0xffff)
     {
-        uint8_t header = pci_read_byte(pci_device, PCI_B_HEADER_TYPE);
+        __pci_check_function(bus);
+        uint8_t header = pci_read_byte(bus, PCI_B_HEADER_TYPE);
 
         if((header & PCI_MULTIFUNCTIONAL_DEVICE) != 0)
         {
             for(uint8_t function = 1; function < 8; function++)
             {
-                pci_t fct_dev = { bus, device, function };
-                uint16_t fct_vendor = pci_read_word(fct_dev, PCI_W_VENDOR_ID);
+                bus.func = function;
+                uint16_t fct_vendor = pci_read_word(bus, PCI_W_VENDOR_ID);
                 if(fct_vendor != 0xffff)
                 {
-                    __pci_check_function(fct_dev);
+                    __pci_check_function(bus);
                 }
             }
         }
     }
 }
 
-static void __pci_probe_bus(uint8_t bus)
+static void __pci_probe_bus(pci_t bus)
 {
-    for(uint8_t device_id; device_id < 32; device_id++)
+    for(uint8_t device_id = 0; device_id < 32; device_id++)
     {
-        __pci_probe_device(bus, device_id);
+        bus.slot = device_id;
+        __pci_probe_device(bus);
     }
 }
 
@@ -88,26 +98,26 @@ void init_pci()
     // Check if the PCI bus does exist.
     out_dword(PCI_CONFIG_ADDRESS, 0x80000000);
     if(in_dword(PCI_CONFIG_ADDRESS) == 0x80000000)
-    {       
+    {
         pci_t pci = { 0, 0, 0 };
         if((pci_read_byte(pci, PCI_B_HEADER_TYPE) & PCI_MULTIFUNCTIONAL_DEVICE) == 0)
         {
             /* Single PCI host controller */
-            __pci_probe_bus(pci.bus);
+            __pci_probe_bus(pci);
 
         } else
         {
             /* Multiple PCI host controllers */
             for(uint8_t function = 0; function < 8; function++)
             {
-                pci_t fct_pci = { pci.bus, pci.slot, function };
-                if(pci_read_word(fct_pci, PCI_W_VENDOR_ID) != 0xffff)
+                pci.func = function;
+                if(pci_read_word(pci, PCI_W_VENDOR_ID) != 0xffff)
                 {
                     break;
                 }
-                __pci_probe_bus(function);
+                __pci_probe_bus(pci);
             }
         }
-        //while(1){}
+        while(1){}
     }
 }

@@ -32,6 +32,8 @@
     wait for a process with pid to exit.
 62	    sys_kill	        pid_t pid	        int sig
     send a signal to a process
+169      sys_reboot        	int magic1          int magic2              unsigned int cmd    void *arg
+    shutdown the system.
 202     sys_park            uint64 pid
     park the current process if pid == 0 else unpark the process with that pid
 203     sys_setpark         
@@ -52,6 +54,7 @@
 #define SYS_EXIT        60
 #define SYS_WAIT        61
 #define SYS_KILL        62
+#define SYS_REBOOT      169
 #define SYS_FUTEX       202
 #define SYS_PARK        202 // TODO switch to futex
 #define SYS_SETPARK     203 // TODO switch to futex

@@ -4,11 +4,7 @@
         "pthread_mutex_attr.h": "c",
         "stdio.h": "c",
         "park.h": "c",
-<<<<<<< HEAD
         "vmm.h": "c",
         "debug_output.h": "c"
-=======
-        "cstddef": "c"
->>>>>>> a6b60dc3ed95d9df936ed68a39d4e58cb8def0e6
     }
 }

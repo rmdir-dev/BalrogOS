@@ -204,6 +204,10 @@ static size_t vga_check_text(const char* data, size_t start_index)
 	{
 		vga_setcolor(VGA_COLOR_WHITE);
 		start_index += 2;
+	} else if(data[start_index] == '[' && data[start_index + 1] == '3' && data[start_index + 2] == 'j')
+	{
+		vga_clear();
+		start_index += 2;
 	}
 
 	return start_index;

@@ -20,6 +20,8 @@ LS_SRC = src/tool-kit/ls/
 SH_SRC = src/tool-kit/sh/
 ECHO_SRC = src/tool-kit/echo/
 CAT_SRC = src/tool-kit/cat/
+AUTH_SRC = src/tool-kit/auth/
+CLEAR_SRC = src/tool-kit/clear/
 HELLO_SRC = src/tool-kit/hello/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
@@ -46,6 +48,8 @@ SH_SRCS = $(shell find $(SH_SRC) -name *.c)
 HELLO_SRCS = $(shell find $(HELLO_SRC) -name *.c)
 ECHO_SRCS = $(shell find $(ECHO_SRC) -name *.c)
 CAT_SRCS = $(shell find $(CAT_SRC) -name *.c)
+AUTH_SRCS = $(shell find $(AUTH_SRC) -name *.c)
+CLEAR_SRCS = $(shell find $(CLEAR_SRC) -name *.c)
 
 ########################################################
 #	OBJECT FILES
@@ -69,6 +73,8 @@ ALL_SH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SH_SRCS))
 ALL_HELLO_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(HELLO_SRCS))
 ALL_ECHO_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(ECHO_SRCS))
 ALL_CAT_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CAT_SRCS))
+ALL_AUTH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(AUTH_SRCS))
+ALL_CLEAR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CLEAR_SRCS))
 
 ########################################################
 #	COMPILER
@@ -101,7 +107,7 @@ LD_OPTIMIZATION = -flto
 K_OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
 LIBC_OBJECTS = $(LIBC_SRCS:.c=.o)
 LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
-TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o)
+TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) $(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o)
 
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
@@ -119,8 +125,9 @@ os:
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=512 count=1 conv=notrunc
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=1 skip=512 seek=4014080 conv=notrunc
 	cp files/filesys.dd build/os/os-image
-	#rm VBox/os-image.vdi || true
-	#VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
+	mkdir VBox/ || true
+	rm VBox/os-image.vdi || true
+	VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	mkdir -p $(BIN_BUILD_DIR)
@@ -129,7 +136,13 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64)
-	#$(PSXC_OBJECTS64)	
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/auth $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/clear $(ALL_CLEAR_OBJECT64) $(LIBC_OBJECTS64)
+	#$(PSXC_OBJECTS64)
+	sudo mount -o loop files/filesys.dd files/root/
+	sudo cp -R build/bin/* files/root/bin/
+	sudo cp files/shadow files/root/etc/
+	sudo umount files/filesys.dd
 
 run:
 	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown

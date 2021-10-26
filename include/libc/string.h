@@ -91,6 +91,24 @@ char* strdup(char* str1);
  */
 int strcmp(const char* first, const char* second);
 
+/**
+ * @brief 
+ * 
+ * @param str 
+ * @param delim 
+ * @return uintptr_t 
+ */
+uintptr_t strspn(char * __restrict str, const char delim);
+
+/**
+ * @brief 
+ * 
+ * @param str 
+ * @param delim 
+ * @return uintptr_t 
+ */
+uintptr_t strcspn(char * __restrict str, const char delim);
+
 #ifdef __cplusplus
 }
 #endif

@@ -18,14 +18,10 @@ static char* _asdfghjkl = "asdfghjkl;'\\ASDFGHJKL:\"|";
 static char* _zxcvbnm = "zxcvbnm,./ZXCVBNM<>?";
 static char* _num = "1234567890-=!@#$%^&*()_+";
 static int shift = 0;
+static int ctrl = 0;
 
 int sh_exec_cmd(char** args)
-{
-    if(buf_idx == 0)
-    {
-        return 0;
-    }
-    
+{    
     int fd = open(args[0], 0);
 
     if(fd == -1)
@@ -69,6 +65,18 @@ void sh_parse_cmd()
     }
 }
 
+char manage_ctrl(uint16_t code)
+{
+    if(code == KEY_L)
+    {
+        buf_idx = 6;
+        memset(buffer, 0, 255);
+        memcpy(buffer, "clear", 6);
+    }
+    
+    return -1;
+}
+
 char sh_process_input(struct input_event input)
 {
     if(input.type == EV_KEY)
@@ -76,7 +84,11 @@ char sh_process_input(struct input_event input)
         if(input.value && keys[input.code] != input.value)
         {
             shift = keys[KEY_RIGHTSHIFT] || keys[KEY_LEFTSHIFT];
-
+            
+            if((keys[KEY_LEFTCTRL] || keys[KEY_RIGHTCTRL]))
+            {
+                return manage_ctrl(input.code);
+            }
             uint8_t bckspace = 0;
             if(input.code == KEY_ENTER)
             {
@@ -150,7 +162,7 @@ void sh_read_input()
         read(STDIN_FILENO, &input, sizeof(struct input_event));
         if(sh_process_input(input) != 0 && buf_idx != 0)
         {
-            keys[KEY_ENTER] = 1;
+            //keys[KEY_ENTER] = 1;
             break;
         }
     }

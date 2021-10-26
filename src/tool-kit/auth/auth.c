@@ -200,6 +200,7 @@ void try_log_user()
 
     if(check_password(password) != 0)
     {
+        printf("\nlogin incorrect!\n\n");
         login();
     }
     free(username);

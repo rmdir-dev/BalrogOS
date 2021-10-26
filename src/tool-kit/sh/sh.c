@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <balrog/input.h>
+#include <balrog/fs/fs_struct.h>
 
 static char** historic = 0;
 static int hist_index = 0;
@@ -142,12 +143,12 @@ void sh_read_input()
     {
         free(arguments[0]);
     }
-
+    
     printf("\e[0;96mBalrog\e[0m:/$ ");
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));
-        if(sh_process_input(input) != 0)
+        if(sh_process_input(input) != 0 && buf_idx != 0)
         {
             keys[KEY_ENTER] = 1;
             break;

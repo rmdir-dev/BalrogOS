@@ -33,5 +33,6 @@ void main(int argc, char** argv)
         printf(buf);
         close(fd);
     }
+    printf("\n");
     exit(0);
 }

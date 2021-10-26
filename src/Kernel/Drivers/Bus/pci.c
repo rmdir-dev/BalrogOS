@@ -3,25 +3,46 @@
 #include "klib/IO/kprint.h"
 #include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/kheap.h"
+#include "klib/DataStructure/rbt.h"
+
+rbt_tree device_tree;
 
 static void __pci_probe_bus(pci_t bus);
 
-static void __pci_check_function(pci_t dev)
+static void __pci_check_function(pci_t bus)
 {
     pci_device_t* device = vmalloc(sizeof(pci_device_t));
-    device->class = pci_read_byte(dev, PCI_B_CLASS_CODE);
-    device->subclass = pci_read_byte(dev, PCI_B_SUBCLASS);
-    device->prog_if = pci_read_byte(dev, PCI_B_PROG_IF);
-    device->revision_id = pci_read_byte(dev, PCI_B_REVISION_ID);
-    device->vendor_id = pci_read_word(dev, PCI_W_VENDOR_ID);
-    device->device_id = pci_read_word(dev, PCI_W_DEVICE_ID);
+    device->bus = bus;
+    // common header.
+    device->vendor_id = pci_read_word(bus, PCI_W_VENDOR_ID);
+    device->device_id = pci_read_word(bus, PCI_W_DEVICE_ID);
+    device->revision_id = pci_read_byte(bus, PCI_B_REVISION_ID);
+    device->prog_if = pci_read_byte(bus, PCI_B_PROG_IF);
+    device->subclass = pci_read_byte(bus, PCI_B_SUBCLASS);
+    device->class = pci_read_byte(bus, PCI_B_CLASS_CODE);
+    device->cache_line_size = pci_read_byte(bus, PCI_B_CACHE_LINE_SIZE);
+    device->latency_timer = pci_read_byte(bus, PCI_B_LATENCY_TIMER);
+    device->header_type = pci_read_byte(bus, PCI_B_HEADER_TYPE);
+    device->bist = pci_read_byte(bus, PCI_B_BIST);
+    // TODO manage different header type.
+    //Base Address
+    device->bar[0] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_0);
+    device->bar[1] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_1);
+    device->bar[2] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_2);
+    device->bar[3] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_3);
+    device->bar[4] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_4);
+    device->bar[5] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_5);
 
-    kprint("dev_id %x | vend_id %x \n", device->device_id, device->vendor_id);
+    device->key = (bus.bus << 16) | (bus.slot << 8) | (bus.func);
+    rbt_node* node = rbt_insert(&device_tree, device->key);
+    node->value = device;
+    KERNEL_LOG_OK("PCI device: %x vendor: %x class: %x subclass: %x progif: %x", 
+        device->device_id, device->vendor_id, device->class, device->subclass, device->prog_if);
     // if class is a PCI to PCI bridge
     if((device->class == PCI_CLASS_BRIDGE) && (device->subclass == PCI_SUBCLASS_PCI_TO_PCI_BRIDGE))
     {
         pci_t secondary_bus = { 0, 0, 0 };
-        secondary_bus.bus = pci_read_byte(dev, PCI_B_SECONDAY_BUS_NUMBER);
+        secondary_bus.bus = pci_read_byte(bus, PCI_B_SECONDAY_BUS_NUMBER);
         __pci_probe_bus(secondary_bus);
     }
 }
@@ -99,6 +120,8 @@ void init_pci()
     out_dword(PCI_CONFIG_ADDRESS, 0x80000000);
     if(in_dword(PCI_CONFIG_ADDRESS) == 0x80000000)
     {
+        rbt_init(&device_tree);
+        //KERNEL_LOG_INFO("Initialize PCI bus");
         pci_t pci = { 0, 0, 0 };
         if((pci_read_byte(pci, PCI_B_HEADER_TYPE) & PCI_MULTIFUNCTIONAL_DEVICE) == 0)
         {
@@ -118,6 +141,5 @@ void init_pci()
                 __pci_probe_bus(pci);
             }
         }
-        while(1){}
     }
 }

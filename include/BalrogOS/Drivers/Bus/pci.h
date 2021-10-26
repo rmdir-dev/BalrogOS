@@ -35,13 +35,43 @@ typedef struct __pci_t
 
 typedef struct __pci_device_t
 {
+    uint32_t key;
     pci_t bus;
-    uint8_t class;
-    uint8_t subclass;
-    uint8_t prog_if;
-    uint8_t revision_id;
     uint16_t vendor_id;
     uint16_t device_id;
+    uint8_t revision_id;
+    uint8_t prog_if;
+    uint8_t subclass;
+    uint8_t class;
+    uint8_t cache_line_size;
+    uint8_t latency_timer;
+    uint8_t header_type;
+    uint8_t bist;
+    union 
+    {
+        // Header type 0x00
+        uint32_t bar[6];
+        
+        // Header type 0x01
+        struct 
+        {
+            uint32_t bar0;
+            uint32_t bar1;
+            uint8_t primary_bus_nbr;
+            uint8_t secondary_bus_nbr;
+            uint8_t subordinate_bus_nbr;
+            uint8_t sec_latency_timer;
+            uint8_t io_base;
+            uint8_t io_limit;
+            uint16_t secondary_status;
+            uint16_t memory_base;
+            uint16_t memory_limit;
+            uint16_t prefetchable_mem_base;
+            uint16_t prefetchable_mem_limit;
+        };
+        
+    };
+    
 } __attribute__((packed)) pci_device_t;
 
 /**

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "ahci_structures.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 
 /*

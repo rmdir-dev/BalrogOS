@@ -4,8 +4,9 @@
 #include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "klib/DataStructure/rbt.h"
+#include "klib/DataStructure/hash_table.h"
 
-rbt_tree device_tree;
+hash_t hash_table;
 
 static void __pci_probe_bus(pci_t bus);
 
@@ -34,7 +35,7 @@ static void __pci_check_function(pci_t bus)
     device->bar[5] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_5);
 
     device->key = (bus.bus << 16) | (bus.slot << 8) | (bus.func);
-    rbt_node* node = rbt_insert(&device_tree, device->key);
+    list_node_t* node = hash_insert(&hash_table, device->key);
     node->value = device;
     KERNEL_LOG_OK("PCI device: %x vendor: %x class: %x subclass: %x progif: %x", 
         device->device_id, device->vendor_id, device->class, device->subclass, device->prog_if);
@@ -120,7 +121,7 @@ void init_pci()
     out_dword(PCI_CONFIG_ADDRESS, 0x80000000);
     if(in_dword(PCI_CONFIG_ADDRESS) == 0x80000000)
     {
-        rbt_init(&device_tree);
+        hash_init(&hash_table);
         //KERNEL_LOG_INFO("Initialize PCI bus");
         pci_t pci = { 0, 0, 0 };
         if((pci_read_byte(pci, PCI_B_HEADER_TYPE) & PCI_MULTIFUNCTIONAL_DEVICE) == 0)

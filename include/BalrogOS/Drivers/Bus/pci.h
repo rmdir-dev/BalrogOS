@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "pci_class.h"
 #include "pci_header.h"
+#include "klib/DataStructure/list.h"
 
 /*
 Peripheral Component Interconnect
@@ -79,6 +80,8 @@ typedef struct __pci_device_t
  * 
  */
 void init_pci();
+
+list_t* pci_get_devices(uint8_t device_type);
 
 /**
  * @brief read double word from the pci bus.

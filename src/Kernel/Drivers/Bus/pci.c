@@ -6,7 +6,7 @@
 #include "klib/DataStructure/rbt.h"
 #include "klib/DataStructure/hash_table.h"
 
-hash_t hash_table;
+list_t pci_devices[PCI_MAX_CLASS];
 
 static void __pci_probe_bus(pci_t bus);
 
@@ -35,7 +35,10 @@ static void __pci_check_function(pci_t bus)
     device->bar[5] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_5);
 
     device->key = (bus.bus << 16) | (bus.slot << 8) | (bus.func);
-    list_node_t* node = hash_insert(&hash_table, device->key);
+    // get the class index, PCI_CLASS_CO_PROCESSOR = 0x40
+    // So it'll be at index 20 to keep the array shorter.
+    uint8_t class_hash_index = device->class < PCI_MAX_CLASS ? device->class : 20;
+    list_node_t* node = list_insert(&pci_devices[class_hash_index], device->key);
     node->value = device;
     KERNEL_LOG_OK("PCI device: %x vendor: %x class: %x subclass: %x progif: %x", 
         device->device_id, device->vendor_id, device->class, device->subclass, device->prog_if);
@@ -115,13 +118,26 @@ void pci_write_dword(pci_t pci, uint32_t value, uint16_t offset)
     out_dword(PCI_CONFIG_DATA, value);
 }
 
+list_t* pci_get_devices(uint8_t device_type)
+{
+    uint8_t class_hash_index = device_type < PCI_MAX_CLASS ? device_type : 20;
+    if(class_hash_index < PCI_MAX_CLASS)
+    {
+        return &pci_devices[class_hash_index];
+    }
+    return NULL;
+}
+
 void init_pci()
 {
     // Check if the PCI bus does exist.
     out_dword(PCI_CONFIG_ADDRESS, 0x80000000);
     if(in_dword(PCI_CONFIG_ADDRESS) == 0x80000000)
     {
-        hash_init(&hash_table);
+        for(int i = 0; i < PCI_MAX_CLASS; i++)
+        {
+            list_init(&pci_devices[i]);
+        }
         //KERNEL_LOG_INFO("Initialize PCI bus");
         pci_t pci = { 0, 0, 0 };
         if((pci_read_byte(pci, PCI_B_HEADER_TYPE) & PCI_MULTIFUNCTIONAL_DEVICE) == 0)

@@ -1,5 +1,7 @@
 #pragma once
 
+#define PCI_MAX_CLASS                               21
+
 #define PCI_SUBCLASS_OTHER                              0x80
 
 #define PCI_CLASS_UNCLASSIFIED                      0x00

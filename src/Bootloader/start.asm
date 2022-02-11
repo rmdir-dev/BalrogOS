@@ -49,8 +49,6 @@ init:
     mov [BOOT_DRIVE], dl    ; the bios store our boot drive id into dl
                             ; so we store it into BOOT_DRIVE to be able to use it.
 
-    PrintStringNextLine MSG ; print MSG
-
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
     mov dh, 128             ; we want to read 128 sectors from it 128 * 512B = 65KiB
     mov di, 0x1ea0          ; read sector 0x1ea0
@@ -65,8 +63,19 @@ init:
                             ; 0x200 = 512
                             ; BIOS will store data at address es:bx
                             ; so here 0x00007e00
-
+                            ; Next OS load address : 
+                            ; 0x7c00 + 0x0200 + 0x10400 => 0x18200
+                            
     call _DiskLoad          ; load the disk data
+
+    ; mov dl, [BOOT_DRIVE]    ; load second part of the OS.
+    ; mov dh, 2
+    ; mov di, 0x1f22
+    ; mov bx, 0x0001
+    ; mov es, bx
+    ; mov bx, 0x8200
+
+    ; call _DiskLoad
 
     mov esp, init           ; set the stack pointer to main
 
@@ -82,9 +91,6 @@ init:
 
 BOOT_DRIVE:
     db 0
-
-MSG:    
-    db "Loading...",0
 
     times 510-($-$$) db 0   ; here we fill the rest of our bootloader with 0
                             ; the bootloader size is 512, the last 2 bytes must be 0xaa55

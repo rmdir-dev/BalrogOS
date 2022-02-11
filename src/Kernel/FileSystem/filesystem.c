@@ -3,7 +3,8 @@
 #include "BalrogOS/FileSystem/ext2/ext2.h"
 #include "BalrogOS/FileSystem/fs_cache.h"
 #include "BalrogOS/Debug/debug_output.h"
-#include "BalrogOS/Drivers/Disk/ata.h"
+#include "BalrogOS/Drivers/Disk/ahci/ahci.h"
+#include "BalrogOS/Drivers/Disk/ata/ata.h"
 #include "BalrogOS/Tasking/Elf/elf.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
@@ -62,10 +63,14 @@ int fs_fstat(fs_fd* fd, fs_file_stat* stat)
 void init_file_system()
 {
     init_ata();
+    init_ahci();
+    while(1)
+    {}
     kmutex_init(&dev.lock);
     kmutex_lock(&dev.lock);
     if(ata_get_boot_device(&dev) != 0)
     {
+        kmutex_unlock(&dev.lock);
         KERNEL_LOG_FAIL("file system : No suitable drive found!");
         while(1){}
     }

@@ -1,4 +1,5 @@
 #include "BalrogOS/Drivers/Bus/pci.h"
+#include "BalrogOS/Drivers/Bus/pci_command.h"
 #include "BalrogOS/CPU/Ports/ports.h"
 #include "klib/IO/kprint.h"
 #include "BalrogOS/Debug/debug_output.h"
@@ -33,6 +34,9 @@ static void __pci_check_function(pci_t bus)
     device->bar[3] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_3);
     device->bar[4] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_4);
     device->bar[5] = pci_read_dword(bus, PCI_D_BASE_ADDRESS_5);
+
+    device->command = pci_read_word(bus, PCI_W_COMMAND);
+    device->status = pci_read_word(bus, PCI_W_STATUS);
 
     device->key = (bus.bus << 16) | (bus.slot << 8) | (bus.func);
     // get the class index, PCI_CLASS_CO_PROCESSOR = 0x40
@@ -126,6 +130,13 @@ list_t* pci_get_devices(uint8_t device_type)
         return &pci_devices[class_hash_index];
     }
     return NULL;
+}
+
+void pci_set_command_register(pci_device_t* device, uint16_t cmd)
+{
+    uint16_t status = 0x00;
+    uint32_t cmdstat = (status << 16) | cmd;
+    pci_write_dword(device->bus, cmdstat, PCI_W_COMMAND);
 }
 
 void init_pci()

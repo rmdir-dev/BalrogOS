@@ -40,6 +40,8 @@ typedef struct __pci_device_t
     pci_t bus;
     uint16_t vendor_id;
     uint16_t device_id;
+    uint16_t command;
+    uint16_t status;
     uint8_t revision_id;
     uint8_t prog_if;
     uint8_t subclass;
@@ -81,6 +83,20 @@ typedef struct __pci_device_t
  */
 void init_pci();
 
+/**
+ * @brief 
+ * 
+ * @param device 
+ * @param cmd 
+ */
+void pci_set_command_register(pci_device_t* device, uint16_t cmd);
+
+/**
+ * @brief 
+ * 
+ * @param device_type 
+ * @return list_t* 
+ */
 list_t* pci_get_devices(uint8_t device_type);
 
 /**

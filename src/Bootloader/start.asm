@@ -68,15 +68,6 @@ init:
                             
     call _DiskLoad          ; load the disk data
 
-    ; mov dl, [BOOT_DRIVE]    ; load second part of the OS.
-    ; mov dh, 2
-    ; mov di, 0x1f22
-    ; mov bx, 0x0001
-    ; mov es, bx
-    ; mov bx, 0x8200
-
-    ; call _DiskLoad
-
     mov esp, init           ; set the stack pointer to main
 
     call _TestA20
@@ -103,6 +94,20 @@ BOOT_DRIVE:
                             ; it will look if there is this number at the end of the first sector
 
 _sector_two:
+    push ax                 ; save ax
+    xor ax, ax              ; clear ax
+    int 0x13                ; Reset the disk to be sure that we're starting at the begining
+    pop ax                  ; recover ax
+
+    mov dl, [BOOT_DRIVE]    ; load second part of the OS.
+    mov dh, 128
+    mov di, 0x1f22
+    mov bx, 0x1000
+    mov es, bx
+    mov bx, 0x8200
+
+    call _DiskLoad
+
     PrintStringNextLine SEC_TWO_MSG 
     call _DetectMemorySize
     mov ax, MEMORY_SIZE_KB

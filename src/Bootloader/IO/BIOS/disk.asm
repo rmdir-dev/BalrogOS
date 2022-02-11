@@ -5,7 +5,7 @@
 ; bx = lower address word
 ; es = higher address word
 ; es:bx = address to write to
-; eg: es = 0x000f bx = 0x9521
+; eg: es = 0xf000 bx = 0x9521
 ; eg: address is 0x000f9521
 _DiskLoad:
     pusha               ; push everything register to the stack

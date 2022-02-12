@@ -9,7 +9,10 @@
 Advance Host Controller Interface
 
 Documentation :
-    AHCI : https://wiki.osdev.org/AHCI
+    AHCI : 
+        https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/serial-ata-ahci-spec-rev1-3-1.pdf
+        https://wiki.osdev.org/AHCI
+        http://kurtqiao.github.io/uefi/2014/12/24/AHCI-mode.html
 */
 
 #define AHCI_DEVICE_NULL        0x00    // No Drive

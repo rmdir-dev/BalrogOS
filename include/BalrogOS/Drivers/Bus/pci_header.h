@@ -30,7 +30,7 @@ HEADER TYPE 0x00
 #define PCI_W_SUBSYSTEM_ID              0x2e
 #define PCI_D_EXPANSION_ROM_BASE_ADDR   0x30
 #define PCI_B_CAPABILITIES_PTR          0x34
-#define PCI_B_INTERUPT_LINE             0x3c
+#define PCI_B_INTERRUPT_LINE            0x3c
 #define PCI_B_INTERRUPT_PIN             0x3d
 #define PCI_B_MIN_GRANT                 0x3e
 #define PCI_B_MAX_GRANT                 0x3f

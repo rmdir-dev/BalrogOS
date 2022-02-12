@@ -38,6 +38,8 @@ Documentation :
 #define GHC_INTERRUPT_ENABLED   (1 << 1)
 #define GHC_HBA_RESET           (1)
 
+#define AHCI_64_BIT_CAP         (1 << 31)
+
 /**
  * @brief set the boot device.
  * 

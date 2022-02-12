@@ -19,7 +19,10 @@ Frame Information Structure
 typedef struct __fis_device_reg_t
 {
 	uint8_t fis_type;	            // FIS_TYPE
-    uint8_t options;                // options
+
+    uint8_t port_multiplier: 4;    // Options        
+    uint8_t rsv: 3;            
+    uint8_t is_cmd: 1;              // Is command
 
     union
     {
@@ -49,4 +52,4 @@ typedef struct __fis_device_reg_t
 	uint8_t control;	            // Control register
 
 	uint8_t rsv1[4];	            // Reserved
-} fis_device_reg_t;
+} __attribute__((packed)) fis_device_reg_t;

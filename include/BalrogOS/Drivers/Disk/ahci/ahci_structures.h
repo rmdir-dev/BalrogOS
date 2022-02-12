@@ -1,12 +1,7 @@
 #pragma once
 
-
-typedef struct _ahci_device_t 
-{
-    void* abar; // AHCI Base Memory Register
-
-    uint32_t key; // hash map key
-} ahci_device_t;
+#include "BalrogOS/Drivers/Bus/pci.h"
+#include "ahci_command.h"
 
 typedef volatile struct _hba_port_t
 {
@@ -29,7 +24,7 @@ typedef volatile struct _hba_port_t
 	uint32_t fbs;		    // 0x40, FIS-based switch control
 	uint32_t rsv1[11];	    // 0x44 ~ 0x6F, Reserved
 	uint32_t vendor[4];	    // 0x70 ~ 0x7F, vendor specific
-} hba_port_t;
+} __attribute__((packed)) hba_port_t;
 
 typedef volatile struct _hba_mem_t
 {
@@ -49,11 +44,26 @@ typedef volatile struct _hba_mem_t
 	uint32_t bohc;		    // 0x28, BIOS/OS handoff control and status
  
 	// 0x2C - 0x9F, Reserved
-	uint8_t  rsv[0xA0-0x2C];
+	uint8_t rsv[0xA0-0x2C];
  
 	// 0xA0 - 0xFF, Vendor specific registers
-	uint8_t  vendor[0x100-0xA0];
+	uint8_t vendor[0x100-0xA0];
  
 	// 0x100 - 0x10FF, Port control registers
-	hba_port_t	ports[1];	// 1 ~ 32
-} hba_mem_t;
+	hba_port_t ports[1];	// 1 ~ 32
+} __attribute__((packed)) hba_mem_t;
+
+typedef struct __ahci_device_t 
+{
+    void* abar;                 // AHCI Base Memory Register
+    pci_device_t* pci;          // Linked PCI device
+    uint32_t key;               // hash map key
+
+	uint8_t cap_64_bit;
+	hba_port_t* port;
+	uint32_t port_no;
+
+	ahci_cmd_table_t* cmd_table;
+	ahci_cmd_list_t* cmd_list;
+	fis_device_reg_t* fis;
+} __attribute__((packed)) ahci_device_t;

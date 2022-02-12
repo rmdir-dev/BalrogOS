@@ -121,6 +121,8 @@ Read Alternate Status Register	A duplicate of the Status Register which does not
 
 #define ATAPI_LBA_MAGIC 0xEB1401
 
+#define ATA_SECTOR_SIZE 512
+
 typedef struct _ata_id
 {
     uint16_t config;                    //

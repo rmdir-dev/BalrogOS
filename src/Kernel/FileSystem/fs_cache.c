@@ -52,6 +52,8 @@ uint8_t* fs_cache_get_new_buffer(uint64_t size)
     uint64_t buffer_size = 0;
     uint8_t contiguous = 0;
     
+    // Loop through the free pages buffer map
+    // to find a contiguous free buffer that can hold the file.
     for(size_t i = 0; i < 4096; i++)
     {
         if(free_buffer_map[i] == 0 && buffer_size == 0)
@@ -77,14 +79,17 @@ uint8_t* fs_cache_get_new_buffer(uint64_t size)
 
     if(buffer_size >= size)
     {
+        // get the index of the last block buffer
         uint64_t end_block_buffer = start_buffer_index + (buffer_size / FS_BUFFER_SIZE);
         void* addr = (void*)(FS_CACHE_OFFSET | (start_buffer_index * FS_BUFFER_SIZE));
 
+        // set all blocks to 1 (taken)
         for(size_t i = start_buffer_index; i < end_block_buffer; i++)
         {
             free_buffer_map[i] = 1;
         }
         
+        // create the file pages
         for(size_t i = 0; i < size; i += PAGE_SIZE)
         {
             vmm_set_page(0, addr + i, pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);

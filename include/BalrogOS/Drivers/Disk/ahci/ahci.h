@@ -21,6 +21,19 @@ Documentation :
 #define HBA_PORT_IPM_ACTIVE     0x01
 #define HBA_PORT_DET_PRESENT    0x03
 
+#define	SATA_SIG_ATA	        0x00000101	// SATA drive
+#define	SATA_SIG_ATAPI	        0xEB140101	// SATAPI drive
+#define	SATA_SIG_SEMB	        0xC33C0101	// Enclosure management bridge
+#define	SATA_SIG_PM	            0x96690101	// Port multiplier
+ 
+#define HBA_PORT_CMD_ST         0x0001
+#define HBA_PORT_CMD_FRE        0x0010
+#define HBA_PORT_CMD_FR         0x4000
+#define HBA_PORT_CMD_CR         0x8000
+
+#define GHC_AHCI_ENABLED        (1 << 31)
+#define GHC_INTERRUPT_ENABLED   (1 << 1)
+
 /**
  * @brief set the boot device.
  * 

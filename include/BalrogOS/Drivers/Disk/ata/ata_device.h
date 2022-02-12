@@ -123,25 +123,31 @@ Read Alternate Status Register	A duplicate of the Status Register which does not
 
 #define ATA_SECTOR_SIZE 512
 
+#define ATA_MODEL_LENGTH 40
+#define ATA_IDENT_MODEL 54;
+
+#define ATA_DEV_BUSY    0x80
+#define ATA_DEV_DRQ     0x08
+
 typedef struct _ata_id
 {
-    uint16_t config;                    //
-    uint16_t UNUSED_FIELD_1[9];         // unused file
-    char serial[20];                    //
-    uint16_t UNUSED_FIELD_2[3];         // unused file
-    char firmware[8];                   //
-    char model[40];                     //
-    uint8_t UNUSED_FIELD_3;             // unused file
-    uint8_t sectors_per_interrupt;      //
-    uint16_t UNUSED_FIELD_4;            // unused file
-    uint16_t capabilities[2];           //
-    uint16_t UNUSED_FIELD_5[2];         // unused file
-    uint16_t validity;                  //
-    uint16_t UNUSED_FIELD_6[3];         // unused file
-    uint32_t capacity_sectors;          //
-    uint16_t sectors_per_cmd;           //
-    uint32_t capacity_lba28;            //
-    uint16_t UNUSED_FIELD_7[38];        // unused file
+    uint16_t config;                    // 2
+    uint16_t UNUSED_FIELD_1[9];         // unused file 20
+    char serial[20];                    // 40
+    uint16_t UNUSED_FIELD_2[3];         // unused file 46
+    char firmware[8];                   // 54
+    char model[40];                     // 94
+    uint8_t UNUSED_FIELD_3;             // unused file 95
+    uint8_t sectors_per_interrupt;      // 96
+    uint16_t UNUSED_FIELD_4;            // unused file 98
+    uint16_t capabilities[2];           // 102
+    uint16_t UNUSED_FIELD_5[2];         // unused file 106
+    uint16_t validity;                  // 108
+    uint16_t UNUSED_FIELD_6[3];         // unused file 114
+    uint32_t capacity_sectors;          // 118
+    uint16_t sectors_per_cmd;           // 120
+    uint32_t capacity_lba28;            // 124
+    uint16_t UNUSED_FIELD_7[38];        // unused file 200
     uint64_t capacity_lba48;            //
     uint16_t UNUSED_FIELD_8[152];       // unused file
 } __attribute__((packed)) ata_id; 

@@ -230,7 +230,10 @@ umount:
 	sudo umount files/root | true
 
 run:
-	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
+	qemu-system-x86_64 -monitor stdio -m 128 -no-reboot -no-shutdown \
+		-drive id=disk,file=build/os/os-image,if=none \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=disk,bus=ahci.0
 
 iso:
 	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b Booloader files/

@@ -202,6 +202,7 @@ int ata_get_boot_device(fs_device_t* device)
 
 void init_ata()
 {
+    KERNEL_LOG_INFO("Looking for ATA devices.");
     drives[0].io_bus = ATA_DEV_IO_PREMARY;
     drives[0].ctr_bus = ATA_DEV_CTR_PRIMARY;
     drives[0].exist = 0;

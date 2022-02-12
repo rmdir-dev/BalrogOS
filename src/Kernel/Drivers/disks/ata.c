@@ -191,6 +191,7 @@ int ata_get_boot_device(fs_device_t* device)
                 device->unique_id = i;
                 device->read = ata_read;
                 device->write = ata_write;
+                device->drive = &drives[i];
                 vmfree(buffer);
                 return 0;
             }

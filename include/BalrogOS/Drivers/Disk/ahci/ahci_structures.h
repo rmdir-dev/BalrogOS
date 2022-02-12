@@ -3,6 +3,24 @@
 #include "BalrogOS/Drivers/Bus/pci.h"
 #include "ahci_command.h"
 
+#define HBA_PxIS_CPDS		(1 << 31)	// Cold Port Detect Status
+#define HBA_PxIS_TFES		(1 << 30)	// Task File Error Status
+#define HBA_PxIS_HBFS		(1 << 29)	// Host Bus Fatal Error Status
+#define HBA_PxIS_HBDS		(1 << 28)	// Host Bus Data Error Status
+#define HBA_PxIS_IFS		(1 << 27)	// Interface Fatal Error Status 
+#define HBA_PxIS_INFS		(1 << 26)	// Interface Non-fatal Error Status
+#define HBA_PxIS_OFS		(1 << 24)	// Overflow Status
+#define HBA_PxIS_IPMS		(1 << 23)	// Incorrect Port Multiplier Status 
+#define HBA_PxIS_PRCS		(1 << 22)	// PhyRdy Change Status 
+#define HBA_PxIS_DMPS		(1 << 7)	// Device Mechanical Presence Status
+#define HBA_PxIS_PCS		(1 << 6)	// Port Connect Change Status 
+#define HBA_PxIS_DPS		(1 << 5)	// Descriptor Processed
+#define HBA_PxIS_UFS		(1 << 4)	// Unknown FIS Interrupt
+#define HBA_PxIS_SDBS		(1 << 3)	// Set Device Bits Interrupt
+#define HBA_PxIS_DDS		(1 << 2)	// DMA Setup FIS Interrupt
+#define HBA_PxIS_PSS		(1 << 1)	// PIO Setup FIS Interrupt
+#define HBA_PxIS_DHRS		(1)			// Device to Host Register FIS Interrupt 
+
 typedef volatile struct _hba_port_t
 {
 	uint32_t clb;		    // 0x00, command list base address, 1K-byte aligned
@@ -66,4 +84,6 @@ typedef struct __ahci_device_t
 	ahci_cmd_table_t* cmd_table;
 	ahci_cmd_list_t* cmd_list;
 	fis_device_reg_t* fis;
+
+	uint8_t initialized;
 } __attribute__((packed)) ahci_device_t;

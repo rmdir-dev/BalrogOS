@@ -51,23 +51,97 @@ static void __ahci_cmd_stop(hba_port_t *port)
 	{}
 }
 
+static uint32_t __find_free_cmd_clot(ahci_device_t* dev)
+{
+    uint32_t slots = (dev->port->sact | dev->port->ci);
+
+    for(size_t i = 0; i < 32; i++)
+    {
+        if((slots & 1) == 0)
+        {
+            return i;
+        }
+        slots >>= 1;
+    }
+    return -1;
+}
+
 static void __ahci_sata_ident(ahci_device_t* dev)
 {
-    uint8_t* buff = kmalloc(ATA_SECTOR_SIZE);
+    // KERNEL_LOG_INFO("AHCI IDENT SATA");
+    ata_id* buff = kmalloc(512);
+    uint32_t slot = __find_free_cmd_clot(dev);
 
-    ahci_cmd_header_t* header = &dev->cmd_list->cmd[0];
+    memset(dev->cmd_list, 0, sizeof(ahci_cmd_list_t));
+    ahci_cmd_header_t* header = &dev->cmd_list->cmd[slot];
     header->cflen = sizeof(fis_device_reg_t) / sizeof(uint32_t);
+    header->w = 0;
     header->prdtlen = 1;
+    uintptr_t* ctable = &header->ctba;
+    *ctable = V2P(dev->cmd_table);
 
+    memset(dev->cmd_table, 0, sizeof(ahci_cmd_table_t));
     ahci_cmd_table_t* table = dev->cmd_table;
     uintptr_t* addr = &table->prdt_entry[0].dba;
-    *addr = buff;
+    *addr = V2P(buff);
     table->prdt_entry[0].dbc = ATA_SECTOR_SIZE - 1;
+    table->prdt_entry[0].i = 0;
 
+    memset(&table->cfis[0], 0, sizeof(fis_device_reg_t));
     fis_device_reg_t* fis = &table->cfis[0];
     fis->fis_type = FIS_TYPE_REG_H2D;
     fis->is_cmd = 1;
     fis->command = ATA_CMD_IDENT_DEV;
+
+    // reset interrupt flags
+    dev->port->is = 0;
+    // dev->port->ie = 0;
+    uint32_t tmp = dev->port->cmd;
+    tmp |= HBA_PORT_CMD_ST;
+    tmp |= HBA_PORT_CMD_FR;
+    dev->port->cmd = tmp;
+
+    int counter = 0;
+    while((dev->port->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && counter < 1000000)
+    {
+        counter++;
+    }
+
+    if(counter == 1000000)
+    {
+        KERNEL_LOG_FAIL("port is hung.");
+    }
+
+    KERNEL_LOG_INFO("AHCI command issue : 0%b", dev->port->ci);
+    dev->port->ci = 1 << slot;
+
+    while(dev->port->ci & (1 << slot))
+    {
+        if(dev->port->is &HBA_PxIS_TFES)
+        {
+            KERNEL_LOG_FAIL("cannot read device.");
+            while(1)
+            {}
+        }
+    }
+
+    KERNEL_LOG_INFO("AHCI command issued");
+    tmp = dev->port->cmd;
+    tmp &= ~HBA_PORT_CMD_ST;
+    tmp &= ~HBA_PORT_CMD_FR;
+    dev->port->cmd = tmp;
+
+    ata_id* ident = buff;
+
+    if(!(dev->port->is & HBA_PxIS_TFES))
+    {
+        KERNEL_LOG_INFO("AHCI sata device : %s %dMiB", &ident->model[0], (ident->capacity_lba48 / 1024) / 2);
+
+        dev->initialized = 1;
+    } else 
+    {
+        KERNEL_LOG_FAIL("could not initialize device");
+    }
 }
 
 static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
@@ -104,11 +178,8 @@ static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
 
     __ahci_cmd_start(dev->port);
 
-    KERNEL_LOG_INFO("port : 0%x initialized.", dev->key);
-
     __ahci_sata_ident(dev);
 
-    while(1){}
     return 0;
 }
 
@@ -158,6 +229,7 @@ static ahci_device_t* __ahci_create_device(pci_device_t* dev, hba_mem_t* hba, hb
     device->key = dev->key;
     device->pci = dev;
     device->cap_64_bit = (hba->cap & 1 << 31 ? 1 : 0);
+    device->initialized = 0;
 
     list_insert(&ahci_devices, device->key);
 
@@ -212,13 +284,13 @@ static int __ahci_check_device(pci_device_t* dev, hba_mem_t* hba)
     {
         // Make sure that interrupts are enabled
         hba->ghc |= GHC_INTERRUPT_ENABLED;
-        KERNEL_LOG_INFO("==================== HBA INFO ====================");
-        KERNEL_LOG_INFO("HBA host capability       : 0%x", hba->cap);
-        KERNEL_LOG_INFO("HBA host 64bit capability : %s", (hba->cap & 1 << 31 ? "true" : "false"));
-        KERNEL_LOG_INFO("HBA global host control   : 0%x", hba->ghc);
-        KERNEL_LOG_INFO("HBA port implemented      : 0%b", hba->pi);
-        KERNEL_LOG_INFO("HBA version               : 0%x", hba->vs);
-        KERNEL_LOG_INFO("==================== END INFO ====================");
+        // KERNEL_LOG_INFO("==================== HBA INFO ====================");
+        // KERNEL_LOG_INFO("HBA host capability       : 0%x", hba->cap);
+        // KERNEL_LOG_INFO("HBA host 64bit capability : %s", (hba->cap & 1 << 31 ? "true" : "false"));
+        // KERNEL_LOG_INFO("HBA global host control   : 0%x", hba->ghc);
+        // KERNEL_LOG_INFO("HBA port implemented      : 0%b", hba->pi);
+        // KERNEL_LOG_INFO("HBA version               : 0%x", hba->vs);
+        // KERNEL_LOG_INFO("==================== END INFO ====================");
 
         return __ahci_probe_ports(dev, hba);
     }
@@ -234,13 +306,13 @@ static int __ahci_probe_device(pci_device_t* dev)
         // The BAR[5] point to AHCI base memory called ABAR (AHCI Base Memory Register).
         if(dev->bar[5])
         {
-            KERNEL_LOG_INFO("AHCI suitable PCI device found");
-            KERNEL_LOG_INFO("PCI device id       : 0%x", dev->device_id);
-            KERNEL_LOG_INFO("PCI vendor id       : 0%x", dev->vendor_id);
-            KERNEL_LOG_INFO("PCI cmd register    : 0%b", dev->command);
-            KERNEL_LOG_INFO("PCI interrupt pin   : 0%x", dev->interrupt_pin);
-            KERNEL_LOG_INFO("PCI interrupt line  : 0%x", dev->interrupt_line);
-            KERNEL_LOG_INFO("PCI AHCI ABAR addr  : 0%p", dev->bar[5]);
+            // KERNEL_LOG_INFO("AHCI suitable PCI device found");
+            // KERNEL_LOG_INFO("PCI device id       : 0%x", dev->device_id);
+            // KERNEL_LOG_INFO("PCI vendor id       : 0%x", dev->vendor_id);
+            // KERNEL_LOG_INFO("PCI cmd register    : 0%b", dev->command);
+            // KERNEL_LOG_INFO("PCI interrupt pin   : 0%x", dev->interrupt_pin);
+            // KERNEL_LOG_INFO("PCI interrupt line  : 0%x", dev->interrupt_line);
+            // KERNEL_LOG_INFO("PCI AHCI ABAR addr  : 0%p", dev->bar[5]);
 
             hba_mem_t* hba = (void*)P2V(dev->bar[5]);
 

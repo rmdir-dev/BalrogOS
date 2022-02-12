@@ -38,6 +38,9 @@ static void __pci_check_function(pci_t bus)
     device->command = pci_read_word(bus, PCI_W_COMMAND);
     device->status = pci_read_word(bus, PCI_W_STATUS);
 
+    device->interrupt_pin = pci_read_byte(bus, PCI_B_INTERRUPT_PIN);
+    device->interrupt_line = pci_read_byte(bus, PCI_B_INTERRUPT_LINE);
+
     device->key = (bus.bus << 16) | (bus.slot << 8) | (bus.func);
     // get the class index, PCI_CLASS_CO_PROCESSOR = 0x40
     // So it'll be at index 20 to keep the array shorter.

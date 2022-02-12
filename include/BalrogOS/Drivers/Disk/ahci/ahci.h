@@ -33,6 +33,7 @@ Documentation :
 
 #define GHC_AHCI_ENABLED        (1 << 31)
 #define GHC_INTERRUPT_ENABLED   (1 << 1)
+#define GHC_HBA_RESET           (1)
 
 /**
  * @brief set the boot device.

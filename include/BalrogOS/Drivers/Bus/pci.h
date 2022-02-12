@@ -19,7 +19,7 @@ Documentation :
 
 /*
 PCI HEADERS 
-https://wiki.osdev.org/PCI#Common_Header_Fields
+    https://wiki.osdev.org/PCI#Common_Header_Fields
 */
 
 #define PCI_CONFIG_ADDRESS              0xcf8
@@ -74,6 +74,8 @@ typedef struct __pci_device_t
         };
         
     };
+    uint8_t interrupt_pin;      // Use if APIC
+    uint8_t interrupt_line;     // Use for IRQ
     
 } __attribute__((packed)) pci_device_t;
 

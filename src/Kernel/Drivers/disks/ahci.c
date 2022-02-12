@@ -137,9 +137,12 @@ static int __ahci_probe_device(pci_device_t* dev)
         if(dev->bar[5])
         {
             KERNEL_LOG_INFO("AHCI suitable PCI device found");
-            KERNEL_LOG_INFO("AHCI device : 0%x", dev->device_id);
-            KERNEL_LOG_INFO("AHCI vendor : 0%x", dev->vendor_id);
-            KERNEL_LOG_INFO("AHCI addr : 0%p", dev->bar[5]);
+            KERNEL_LOG_INFO("PCI device id : 0%x", dev->device_id);
+            KERNEL_LOG_INFO("PCI vendor id : 0%x", dev->vendor_id);
+            KERNEL_LOG_INFO("PCI cmd register : 0%b", dev->command);
+            KERNEL_LOG_INFO("PCI interrupt pin : 0%x", dev->interrupt_pin);
+            KERNEL_LOG_INFO("PCI interrupt line : 0%x", dev->interrupt_line);
+            KERNEL_LOG_INFO("PCI AHCI ABAR addr : 0%p", dev->bar[5]);
 
             ahci_device_t* device = kmalloc(sizeof(ahci_device_t));
 

@@ -119,10 +119,10 @@ typedef struct _ext2_inode
     uint32_t nbr_sectors;
     uint32_t flags;
     uint32_t os_value1;
-    uint32_t dbp[12];
-    uint32_t sibp;
-    uint32_t dibp;
-    uint32_t tibp;
+    uint32_t dbp[12];           // Direct block pointer
+    uint32_t sibp;              // singly indirect block pointer
+    uint32_t dibp;              // doubly indirect block pointer
+    uint32_t tibp;              // Triply indirect block pointer
     uint32_t generation;        // Generation number is use for network file sys
     uint32_t file_acl;
     uint32_t dir_acl;

@@ -66,7 +66,12 @@ static uint32_t __find_free_cmd_clot(ahci_device_t* dev)
     return -1;
 }
 
-static void __ahci_sata_ident(ahci_device_t* dev)
+static int __ahci_read_sata(ahci_device_t* dev)
+{
+    return 0;
+}
+
+static int __ahci_sata_ident(ahci_device_t* dev)
 {
     KERNEL_LOG_INFO("AHCI IDENT SATA");
     ata_id* buff = kmalloc(512);
@@ -117,8 +122,9 @@ static void __ahci_sata_ident(ahci_device_t* dev)
         if(dev->port->is &HBA_PxIS_TFES || to_counter++ == 1000000)
         {
             KERNEL_LOG_FAIL("cannot read device.");
-            while(1)
-            {}
+            // while(1)
+            // {}
+            return -1;
         }
     }
 
@@ -135,6 +141,8 @@ static void __ahci_sata_ident(ahci_device_t* dev)
     {
         KERNEL_LOG_FAIL("could not initialize device");
     }
+
+    return 0;
 }
 
 static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
@@ -171,9 +179,7 @@ static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
 
     __ahci_cmd_start(dev->port);
 
-    __ahci_sata_ident(dev);
-
-    return 0;
+    return __ahci_sata_ident(dev);
 }
 
 static int __ahci_get_port_type(hba_port_t* port)
@@ -224,8 +230,6 @@ static ahci_device_t* __ahci_create_device(pci_device_t* dev, hba_mem_t* hba, hb
     device->cap_64_bit = (hba->cap & 1 << 31 ? 1 : 0);
     device->initialized = 0;
 
-    list_insert(&ahci_devices, device->key);
-
     return device;
 }
 
@@ -244,8 +248,13 @@ static int __ahci_probe_ports(pci_device_t* dev, hba_mem_t* hba)
                 case AHCI_DEVICE_SATA:
                     KERNEL_LOG_INFO("AHCI device found : type SATA");
                     ahci_device_t* device = __ahci_create_device(dev, hba, &hba->ports[i]);
-
-                    return __ahci_port_rebase(device, i);
+                    if(__ahci_port_rebase(device, i))
+                    {
+                        list_node_t* node = list_insert(&ahci_devices, device->key);
+                        node->value = device;
+                        return 0;
+                    }
+                    return -1;
                     break;
 
                 case AHCI_DEVICE_SATAPI:
@@ -322,6 +331,11 @@ static int __ahci_probe_device(pci_device_t* dev)
     return 0;
 }
 
+void ahci_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
+{
+    ahci_device_t* drive = device->drive;
+}
+
 void init_ahci()
 {
     KERNEL_LOG_INFO("Looking for AHCI devices");
@@ -337,14 +351,17 @@ void init_ahci()
         __ahci_probe_device(dev);
         node = node->next;
     }
-    while(1){}
+    // while(1){}
 }
 
-int get_ahci_boot_device()
+int ahci_get_boot_device(fs_device_t* device)
 {
     for(list_node_t* node = ahci_devices.head; node; node = node->next)
     {
-        
+        if(__ahci_read_sata(node))
+        {
+            
+        }
     }
     return -1;
 }

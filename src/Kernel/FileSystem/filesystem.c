@@ -15,6 +15,14 @@
 
 fs_device_t dev;
 
+static const size_t boot_lookout_len = 2;
+
+static int (*fs_boot_lookout[])(fs_device_t*) = 
+{
+    [0] ata_get_boot_device,
+    [1] ahci_get_boot_device,
+};
+
 int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
 {
     size_t len = strlen(name);
@@ -60,20 +68,35 @@ int fs_fstat(fs_fd* fd, fs_file_stat* stat)
     return ret;
 }
 
+static int __root_device_lookout()
+{
+    for(size_t i = 0; i < boot_lookout_len; i++)
+    {
+        if(fs_boot_lookout[i](&dev) == 0)
+        {
+            return 0;
+        }    
+    }
+
+    return -1;
+}
+
 void init_file_system()
 {
     init_ata();
     init_ahci();
-    while(1)
-    {}
+    // while(1)
+    // {}
     kmutex_init(&dev.lock);
     kmutex_lock(&dev.lock);
-    if(ata_get_boot_device(&dev) != 0)
+    
+    if(__root_device_lookout() != 0)
     {
         kmutex_unlock(&dev.lock);
         KERNEL_LOG_FAIL("file system : No suitable drive found!");
         while(1){}
     }
+
     /*
     Initialize ext2 cache datastructures.
     */

@@ -7,5 +7,22 @@
         "vmm.h": "c",
         "debug_output.h": "c",
         "kheap.h": "c"
-    }
+    },
+
+    // Require restore terminal extensions
+    "restoreTerminals.runOnStartup": true,
+
+    "restoreTerminals.terminals": [
+        {
+            "splitTerminals": [
+                {
+                    "name": "Terminal",
+                    "commands": [
+                        "git pull",
+                        "clear",
+                    ]
+                }
+            ]
+        }
+    ]
 }

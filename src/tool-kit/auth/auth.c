@@ -1,9 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
+#include <stat.h>
 #include <balrog/input.h>
 #include <balrog/fs/fs_struct.h>
+#include <balrog/terminal/term.h>
 
 #define USERNAME_MODE   1
 #define PASSWORD_MODE   0
@@ -19,6 +23,10 @@ static char* _asdfghjkl = "asdfghjkl;'\\ASDFGHJKL:\"|";
 static char* _zxcvbnm = "zxcvbnm,./ZXCVBNM<>?";
 static char* _num = "1234567890-=!@#$%^&*()_+";
 static int shift = 0;
+static int uid = -1;
+static char* username = NULL;
+static char* password = NULL;
+static char* shell = NULL;
 
 static int process_input(struct input_event input, int mode)
 {
@@ -87,17 +95,28 @@ static int process_input(struct input_event input, int mode)
     return 0;
 }
 
+void start_login();
+
 void log_user()
 {
+    printf(TERM_CLEAR);
     pid_t id = fork();
 
     if(id != 0)
     {
         waitpid(id, 0, 0);
-        execv("/bin/sh", NULL);
-    } else 
+        free(username);
+        free(password);
+        free(shell);
+        start_login();
+    } else
     {
-        execv("/bin/clear", NULL);
+        setuid(uid);
+        if(shell) {
+            execv(shell, NULL);
+        } else {
+            execv("/bin/sh", NULL);
+        }
     }
 }
 
@@ -146,7 +165,6 @@ int check_password(const char* password)
 
 char* parse_shadow(const char* username)
 {
-    char* password = NULL;
     int fd = open("/etc/shadow", 0);
 
     if(fd == -1)
@@ -166,9 +184,16 @@ char* parse_shadow(const char* username)
     read(fd, &file_buf[0], stat.size);
     file_buf[stat.size] = 0;
 
+    char* user_line = NULL;
     char* cmd = strtok(file_buf, '\n');
     while(cmd)
     {
+        if(cmd[0] == '#')
+        {
+            cmd = strtok(NULL, '\n');
+            continue;
+        }
+
         int len = strlen(cmd);
         int pwd_start = strcspn(cmd, ':');
         if(pwd_start != len)
@@ -177,15 +202,35 @@ char* parse_shadow(const char* username)
             int usrn_len = strlen(username);
             if(compare_entries(cmd, username) == 0)
             {
-                len = strlen(&cmd[pwd_start + 1]);
-                password = malloc(len + 1);
-                memcpy(password, &cmd[pwd_start + 1], len);
-                password[len] = 0;
-                return password;
+                user_line = &cmd[pwd_start + 1];
+                break;
             }
         }
         cmd = strtok(NULL, '\n');
     }
+
+    if(user_line == NULL)
+    {
+        password = NULL;
+        return NULL;
+    }
+
+    char* pwd = strtok(user_line, ':');
+    password = malloc(strlen(pwd) + 1);
+    password[strlen(pwd)] = 0;
+    memcpy(password, pwd, strlen(pwd));
+
+    uid = atoi(strtok(NULL, ':'));
+    char* gid = strtok(NULL, ':');
+    char* home = strtok(NULL, ':');
+    char* sh = strtok(NULL, ':');
+    if(sh) {
+        shell = malloc(strlen(sh) + 1);
+        shell[strlen(sh)] = 0;
+        memcpy(shell, sh, strlen(sh));
+    }
+
+    close(fd);
     return NULL;
 }
 
@@ -193,18 +238,15 @@ void login();
 
 void try_log_user()
 {
-    char* username = malloc(buf_idx + 1);
+    username = malloc(buf_idx + 1);
     memcpy(username, buffer, buf_idx);
-    
-    char* password = parse_shadow(username);
+    parse_shadow(username);
 
     if(check_password(password) != 0)
     {
         printf("\nlogin incorrect!\n\n");
         login();
     }
-    free(username);
-    free(password);
 
     log_user();
 }
@@ -217,9 +259,13 @@ void login()
     try_log_user();
 }
 
-void main(int argc, char** argv)
-{
+void start_login() {
     printf("BalrogOS apha\n");
     login();
+}
+
+void main(int argc, char** argv)
+{
+    start_login();
     exit(0);
 }

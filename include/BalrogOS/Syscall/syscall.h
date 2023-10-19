@@ -54,6 +54,11 @@
 #define SYS_EXIT        60
 #define SYS_WAIT        61
 #define SYS_KILL        62
+#define SYS_GETCWD      79
+#define SYS_CHDIR       80
+#define SYS_GETUID      102
+#define SYS_SETUID      105
+#define SYS_GETPPID     110
 #define SYS_REBOOT      169
 #define SYS_FUTEX       202
 #define SYS_PARK        202 // TODO switch to futex

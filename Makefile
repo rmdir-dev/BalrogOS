@@ -18,10 +18,13 @@ C_LIB_SRC = src/Libc/
 C_POSIX_SRC = src/POSIX
 LS_SRC = src/tool-kit/ls/
 SH_SRC = src/tool-kit/sh/
+BESH_SRC = src/tool-kit/besh/
 ECHO_SRC = src/tool-kit/echo/
 CAT_SRC = src/tool-kit/cat/
 AUTH_SRC = src/tool-kit/auth/
 CLEAR_SRC = src/tool-kit/clear/
+SL_SRC = src/tool-kit/sl/
+PWD_SRC = src/tool-kit/pwd/
 HELLO_SRC = src/tool-kit/hello/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
@@ -45,11 +48,14 @@ PTHREADC_SRCS += $(shell find $(C_POSIX_SRC) -name *.c)
 # tools
 LS_SRCS = $(shell find $(LS_SRC) -name *.c)
 SH_SRCS = $(shell find $(SH_SRC) -name *.c)
+BESH_SRCS = $(shell find $(BESH_SRC) -name *.c)
 HELLO_SRCS = $(shell find $(HELLO_SRC) -name *.c)
 ECHO_SRCS = $(shell find $(ECHO_SRC) -name *.c)
 CAT_SRCS = $(shell find $(CAT_SRC) -name *.c)
 AUTH_SRCS = $(shell find $(AUTH_SRC) -name *.c)
 CLEAR_SRCS = $(shell find $(CLEAR_SRC) -name *.c)
+SL_SRCS = $(shell find $(SL_SRC) -name *.c)
+PWD_SRCS = $(shell find $(PWD_SRC) -name *.c)
 
 ########################################################
 #	OBJECT FILES
@@ -70,11 +76,14 @@ PSXC_OBJECTS64 	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PTHREADC_SRCS))
 #tools
 ALL_LS_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(LS_SRCS))
 ALL_SH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SH_SRCS))
+ALL_BESH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(BESH_SRCS))
 ALL_HELLO_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(HELLO_SRCS))
 ALL_ECHO_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(ECHO_SRCS))
 ALL_CAT_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CAT_SRCS))
 ALL_AUTH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(AUTH_SRCS))
 ALL_CLEAR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CLEAR_SRCS))
+ALL_SL_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SL_SRCS))
+ALL_PWD_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PWD_SRCS))
 
 ########################################################
 #	COMPILER
@@ -107,7 +116,7 @@ LD_OPTIMIZATION = -flto
 K_OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
 LIBC_OBJECTS = $(LIBC_SRCS:.c=.o)
 LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
-TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) $(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o)
+TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) $(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o)
 
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
@@ -125,24 +134,48 @@ os:
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=512 count=1 conv=notrunc
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=1 skip=512 seek=4014080 conv=notrunc
 	cp files/filesys.dd build/os/os-image
-	mkdir VBox/ || true
-	rm VBox/os-image.vdi || true
-	VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
+#	mkdir VBox/ || true
+#	rm VBox/os-image.vdi || true
+#	VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	mkdir -p $(BIN_BUILD_DIR)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) 
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/besh $(ALL_BESH_OBJECT64) $(LIBC_OBJECTS64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/auth $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/clear $(ALL_CLEAR_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sl $(ALL_SL_OBJECT64) $(LIBC_OBJECTS64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64)
 	#$(PSXC_OBJECTS64)
 	sudo mount -o loop files/filesys.dd files/root/
 	sudo cp -R build/bin/* files/root/bin/
-	sudo cp files/shadow files/root/etc/
+	sudo chmod -R 777 files/root/bin/*
+	sudo cp -R files/fs/* files/root/
+	sudo chown -R root:root files/root/*
+	sudo chmod -R 664 files/root/etc/*
+	sudo chmod 600 files/root/etc/shadow
+	sudo chown root:root files/root/etc/shadow
+	sudo chown -R 1000:1000 files/root/home/rmdir
 	sudo umount files/filesys.dd
+
+mount:
+	sudo mount -o loop files/filesys.dd files/root/
+	#sudo chown -R $(USER):$(USER) files/root/
+
+mount_os_dd:
+	sudo mount -o loop build/os/os-image files/root/
+	#sudo chown -R $(USER):$(USER) files/root/
+
+
+umount:
+	#sudo chown -R root:root files/root/* | true
+	sudo umount files/filesys.dd | true
+	sudo umount files/os-image | true
+	sudo umount files/root | true
 
 run:
 	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown

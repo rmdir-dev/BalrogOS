@@ -107,7 +107,7 @@ void proc_kill(process* proc)
     // if proc is not a child then clean it.
     if(proc->child == 0)
     {
-        //kprint("clean process pid : %d\n", proc->pid);
+//        kprint("clean process pid : %d\n", proc->pid);
         clean_process(proc);
     }
 

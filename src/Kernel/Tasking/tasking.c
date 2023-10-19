@@ -10,6 +10,8 @@
 #include "BalrogOS/Tasking/Elf/elf.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "balrog/memory/proc_mem.h"
+#include "BalrogOS/User/user_manager.h"
+#include "klib/IO/kprint.h"
 #include <string.h>
 
 uint64_t next_pid = 0;
@@ -67,7 +69,10 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     proc->rip = mode == 3 ? PROCESS_TEXT : addr; 
     uintptr_t* virt = P2V(proc->PML4T); // Kernel space
     virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
-    uint32_t user = mode == 3 ? PAGE_USER : 0; 
+    uint32_t user = mode == 3 ? PAGE_USER : 0;
+    proc->uid = 0;
+    proc->gid = 0;
+    proc->cwd = NULL;
 
     /*
     TEXT & DATA
@@ -157,6 +162,9 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 int clean_process(process* proc)
 {
     vmm_clean_page_table(proc->PML4T);
+    if(proc->cwd) {
+        vmfree(proc->cwd);
+    }
     vmfree(proc);
     return 0;
 }
@@ -238,6 +246,13 @@ int fork_process(process* proc, interrupt_regs* regs)
     process* new = new_process(proc->name);
     copy_pages(proc->PML4T, new->PML4T, 4, 0);
     new->child = 1;
+    new->uid = proc->uid;
+    new->gid = proc->gid;
+    if(proc->cwd) {
+        new->cwd = vmalloc(strlen(proc->cwd) + 1);
+        memcpy(new->cwd, proc->cwd, strlen(proc->cwd) + 1);
+    }
+    new->parent = proc;
 
     // KERNEL STACK
     page_table* newkstack = P2V(new->PML4T);
@@ -339,6 +354,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
         active stack top : 
             0x00007ffd0e212000
     */
+
     fs_fd fd;
     fs_file file;
     fs_get_file(name, &file, &fd);
@@ -346,6 +362,29 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     if(current_running)
     {
+        proc->uid = current_running->uid;
+        proc->gid = current_running->gid;
+        if(current_running->cwd) {
+            proc->cwd = vmalloc(strlen(current_running->cwd) + 1);
+            memcpy(proc->cwd, current_running->cwd, strlen(current_running->cwd) + 1);
+        }
+
+        if(!proc->cwd) {
+            user_data* user = usm_get_user_data(proc->uid);
+            proc->cwd = vmalloc(strlen(user->home) + 1);
+            memcpy(proc->cwd, user->home, strlen(user->home) + 1);
+        }
+
+        if(strcmp(name, "/bin/auth") == 0)
+        {
+            proc->uid = 0;
+            proc->gid = 0;
+            if(proc->cwd) {
+                vmfree(proc->cwd);
+            }
+            proc->cwd = NULL;
+        }
+
         if(current_running->wait_size != 0)
         {
             for(size_t i = 0; i < 5; i++)
@@ -365,6 +404,10 @@ int exec_process(const char* name, char** argv, uint8_t kill)
         current_running->state = PROCESS_STATE_WAITING;
         proc_insert_to_ready_queue(proc);
         //proc_insert_to_ready_queue(current_running);
+
+        if(current_running->parent) {
+            proc->parent = current_running->parent;
+        }
     } else 
     {
         proc_insert_to_ready_queue(proc);

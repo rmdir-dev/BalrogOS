@@ -19,6 +19,7 @@
 #include "BalrogOS/FileSystem/fs_cache.h"
 #include "BalrogOS/Memory/kstack.h"
 #include "BalrogOS/Drivers/Bus/pci.h"
+#include "BalrogOS/User/user_manager.h"
 
 /* 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -103,7 +104,14 @@ void initialize_kernel(void* SMAP, void* size)
     init_file_system();
     KERNEL_LOG_OK("File system initialization : done");
 
+    /*    USER MANAGER   */
+    init_user_manager();
+    KERNEL_LOG_OK("User manager initialization : done");
+    KERNEL_LOG_OK("Kernel initialization : done");
+    KERNEL_LOG_OK("Welcome to BalrogOS");
+
     /*    TEST PROCESS   */
+    KERNEL_LOG_INFO("start process : waiting...");
     char test_arg1[10] = "/bin/auth";
     char test_arg2[9] = "/boot/";
     uintptr_t argv[5] = { &test_arg1, &test_arg2, 0, 0, 0 };

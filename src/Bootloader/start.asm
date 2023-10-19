@@ -54,9 +54,9 @@ init:
     mov di, 0x1ea0          ; read sector 0x1ea0
                             ; sector 0x1ea0 is at 0x3d4000 byte offset
                             ; So 4014080byte (written in make file)
-                            ; next 65kib => 66560 + 4014080 => 3e4400 / 512 
+                            ; next 65kib => 65536 + 4014080 => 3E4000 / 512
                             ; So if the OS is larger than 65KiB then you need to load the 
-                            ; next part at 0x1f22
+                            ; next part at 0x1f20
     mov bx, 0x0000          ; higher word of the memory address we want to store our data to
     mov es, bx              ; set the higher word of the address into es
     mov bx, 0x7c00 + 512    ; lower word of the memory addres into bx
@@ -101,10 +101,10 @@ _sector_two:
 
     mov dl, [BOOT_DRIVE]    ; load second part of the OS.
     mov dh, 128
-    mov di, 0x1f22
+    mov di, 0x1f20
     mov bx, 0x1000
     mov es, bx
-    mov bx, 0x8200
+    mov bx, 0x7e00
 
     call _DiskLoad
 

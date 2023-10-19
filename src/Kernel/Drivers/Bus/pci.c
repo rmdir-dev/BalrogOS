@@ -44,7 +44,7 @@ static void __pci_check_function(pci_t bus)
     uint8_t class_hash_index = device->class < PCI_MAX_CLASS ? device->class : 20;
     list_node_t* node = list_insert(&pci_devices[class_hash_index], device->key);
     node->value = device;
-    KERNEL_LOG_OK("PCI device: %x vendor: %x class: %x subclass: %x progif: %x", 
+    KERNEL_LOG_OK("PCI device: %x vendor: %x class: %x subclass: %x progif: %x",
         device->device_id, device->vendor_id, device->class, device->subclass, device->prog_if);
     // if class is a PCI to PCI bridge
     if((device->class == PCI_CLASS_BRIDGE) && (device->subclass == PCI_SUBCLASS_PCI_TO_PCI_BRIDGE))
@@ -90,9 +90,9 @@ static void __pci_probe_bus(pci_t bus)
 
 uint32_t pci_read_dword(pci_t pci, uint16_t offset)
 {
-    uint32_t addr = (uint32_t)((pci.bus << 16) | 
-                    (pci.slot << 11) | 
-                    (pci.func << 8) | 
+    uint32_t addr = (uint32_t)((pci.bus << 16) |
+                    (pci.slot << 11) |
+                    (pci.func << 8) |
                     (offset & 0xfc) |
                     ((uint32_t) 0x80000000));
 
@@ -112,9 +112,9 @@ uint8_t pci_read_byte(pci_t pci, uint16_t offset)
 
 void pci_write_dword(pci_t pci, uint32_t value, uint16_t offset)
 {
-    uint32_t addr = (uint32_t)((pci.bus << 16) | 
-                    (pci.slot << 11) | 
-                    (pci.func << 8) | 
+    uint32_t addr = (uint32_t)((pci.bus << 16) |
+                    (pci.slot << 11) |
+                    (pci.func << 8) |
                     (offset & 0xfc) |
                     ((uint32_t) 0x80000000));
 

@@ -5,9 +5,7 @@
 
 extern process* current_running;
 
-int sys_execve(interrupt_regs* stack_frame)
+int sys_getuid(interrupt_regs* stack_frame)
 {
-    exec_process(stack_frame->rdi, stack_frame->rsi, stack_frame->rdx);
-    kprint("error execve! SHOULD NOT PRINT!\n");
-    return -1;
+    return (int) current_running->uid;
 }

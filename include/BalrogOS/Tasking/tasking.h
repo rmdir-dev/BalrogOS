@@ -41,7 +41,11 @@ typedef struct process_t
     uint8_t fd_size;
     fs_fd fd_table[10];
     uint8_t state;
+    char* cwd;
+    uint32_t uid;
+    uint32_t gid;
     struct process_t* next;
+    struct process_t* parent;
 } process;
 
 /**

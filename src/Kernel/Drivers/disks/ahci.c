@@ -30,7 +30,7 @@ int get_ahci_boot_device()
 {
     for(list_node_t* node = devices.head; node; node = node->next)
     {
-        
+
     }
     return -1;
 }

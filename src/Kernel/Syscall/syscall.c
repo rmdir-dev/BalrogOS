@@ -15,29 +15,46 @@ extern int sys_execve(interrupt_regs* stack_frame);
 extern void sys_exit(interrupt_regs* stack_frame);
 extern int sys_wait(interrupt_regs* stack_frame);
 extern int sys_kill(interrupt_regs* stack_frame);
+extern void* sys_getcwd(interrupt_regs* stack_frame);
+extern int sys_chdir(interrupt_regs* stack_frame);
+extern int sys_getuid(interrupt_regs* stack_frame);
+extern void sys_setuid(interrupt_regs* stack_frame);
+extern int sys_getppid(interrupt_regs* stack_frame);
 extern void sys_park(interrupt_regs* stack_frame);
 extern void sys_setpark(interrupt_regs* stack_frame);
 
-static int (*syscall[])(interrupt_regs*) = 
+static int (*syscall[255])(interrupt_regs*) =
 {
-    [SYS_READ] sys_read,
-    [SYS_WRITE] sys_write,
-    [SYS_OPEN] sys_open,
-    [SYS_CLOSE] sys_close,
-    [SYS_FSTAT] sys_fstat,
-    [SYS_BRK] sys_brk,
-    [SYS_GETPID] sys_getpid,
-    [SYS_FORK] sys_fork,
-    [SYS_EXECVE] sys_execve,
-    [SYS_EXIT] sys_exit,
-    [SYS_WAIT] sys_wait,
-    [SYS_KILL] sys_kill,
-    [SYS_PARK] sys_park,
-    [SYS_SETPARK] sys_setpark,
+    [SYS_READ] &sys_read,
+    [SYS_WRITE] &sys_write,
+    [SYS_OPEN] &sys_open,
+    [SYS_CLOSE] &sys_close,
+    [SYS_FSTAT] &sys_fstat,
+    [SYS_BRK] &sys_brk,
+    [SYS_GETPID] &sys_getpid,
+    [SYS_FORK] &sys_fork,
+    [SYS_EXECVE] &sys_execve,
+    [SYS_EXIT] &sys_exit,
+    [SYS_WAIT] &sys_wait,
+    [SYS_KILL] &sys_kill,
+    [SYS_GETCWD] &sys_getcwd,
+    [SYS_CHDIR] &sys_chdir,
+    [SYS_GETUID] &sys_getuid,
+    [SYS_SETUID] &sys_setuid,
+    [SYS_GETPPID] &sys_getppid,
+    [SYS_PARK] &sys_park,
+    [SYS_SETPARK] &sys_setpark,
 };
 
 static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
 {
+    if(!syscall[stack_frame->rax])
+    {
+        kprint("Unknown syscall %d\n", stack_frame->rax);
+        while(1) {}
+        return stack_frame;
+    }
+
     /*
         Syscall dispatcher
     */

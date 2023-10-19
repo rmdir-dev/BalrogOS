@@ -27,6 +27,14 @@ void free(void* pointer);
  */
 void* malloc(size_t memory_size);
 
+/**
+ * @brief
+ *
+ * @param str
+ * @return int
+ */
+int atoi(const char* str);
+
 #ifdef __cplusplus
 }
 #endif

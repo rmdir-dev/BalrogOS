@@ -89,6 +89,37 @@ int close(int fd);
  */
 int brk(void* addr);
 
+/**
+ * @brief
+ *
+ * @param uid
+ */
+void setuid(int uid);
+
+/**
+ * @brief
+ *
+ * @return
+ */
+int getuid();
+
+/**
+ * @brief
+ *
+ * @param buf
+ * @param size
+ * @return
+ */
+char* getcwd(char* buf, int size);
+
+/**
+ * @brief
+ *
+ * @param dir
+ * @return
+ */
+int chdir(char* dir);
+
 #ifdef __cplusplus
 }
 #endif

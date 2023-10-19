@@ -63,9 +63,9 @@ int fs_fstat(fs_fd* fd, fs_file_stat* stat)
 void init_file_system()
 {
     init_ata();
-    init_ahci();
-    while(1)
-    {}
+//    init_ahci();
+//    while(1)
+//    {}
     kmutex_init(&dev.lock);
     kmutex_lock(&dev.lock);
     if(ata_get_boot_device(&dev) != 0)

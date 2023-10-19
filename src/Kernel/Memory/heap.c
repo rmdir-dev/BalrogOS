@@ -81,7 +81,8 @@ void* alloc(size_t size, block_info* current_block, block_info* prev_block, bloc
 
 void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free, uint64_t block_max_size)
 {
-    //kprint("vh freeing : 0%p \n", block);
+//    kprint("vh freeing : 0%p \n", block);
+//    kprint("freeing size : 0%d\n", block->_size);
     if(!block->_is_mmapped)
     {
         kprint("double vmfree() 0%p", block);

@@ -8,25 +8,20 @@
 #include <balrog/fs/fs_struct.h>
 #include <fcntl.h>
 #include <stat.h>
+#include <errno.h>
+#include "toolkit/tool_read_keyboard.h"
 
 static char** historic = 0;
+static int hist_len = 5;
 static int hist_index = 0;
 static char buffer[255] = {};
 static int buf_idx = 0;
-static uint8_t keys[255] = {};
 static char* arguments[32] = {};
 static int argc_count = 0;
-static char* _qwertyuiop = "qwertyuiop[]QWERTYUIOP{}";
-static char* _asdfghjkl = "asdfghjkl;'\\ASDFGHJKL:\"|";
-static char* _zxcvbnm = "zxcvbnm,./ZXCVBNM<>?";
-static char* _num = "1234567890-=!@#$%^&*()_+";
-static int shift = 0;
-static int ctrl = 0;
-static char* username = NULL;
-static char* hostname = NULL;
-static char* user_home = NULL;
 static char* cwd[100] = {};
+static char* hostname = NULL;
 static int uid;
+static user_info_t user_info = {};
 
 int sh_exec_cmd(char** args)
 {
@@ -73,8 +68,9 @@ void change_directory(char* dir) {
         memcpy(tmp_cwd, "/", 2);
         tmp_cwd[1] = 0;
     } else if(strcmp(dir, "~") == 0) {
-        memcpy(tmp_cwd, user_home, strlen(user_home));
-        tmp_cwd[strlen(user_home)] = 0;
+        int len = strlen(user_info.home_dir);
+        memcpy(tmp_cwd, user_info.home_dir, len);
+        tmp_cwd[len] = 0;
     } else {
         int dir_len = strlen(dir);
         if(dir[dir_len - 1] == '/') {
@@ -82,10 +78,13 @@ void change_directory(char* dir) {
         }
 
         int len = strlen(tmp_cwd);
+        char* start_copy = &tmp_cwd[len];
+
         if(tmp_cwd[len - 1] != '/') {
             tmp_cwd[len] = '/';
+            start_copy = &tmp_cwd[++len];
         }
-        char* start_copy = &tmp_cwd[len + 1];
+
         if(dir[0] == '/') {
             start_copy = &tmp_cwd[0];
             len = 0;
@@ -97,10 +96,20 @@ void change_directory(char* dir) {
     int fd = open(tmp_cwd, 0);
 
     if(fd == -1) {
-        printf("cd: '%s' : No such file or directory\n", dir);
+        switch (errno) {
+            case ENOENT:
+                printf("cd: '%s' : No such file or directory\n", dir);
+                break;
+            case EACCES:
+                printf("cd: '%s' : Permission denied\n", dir);
+                break;
+            default:
+                break;
+        }
     } else {
-        close(fd);
         chdir(tmp_cwd);
+        close(fd);
+
         memcpy(cwd, tmp_cwd, 100);
     }
 
@@ -146,7 +155,7 @@ void sh_parse_cmd()
     argc_count++;
 }
 
-char manage_ctrl(uint16_t code)
+int manage_ctrl(uint16_t code, uint8_t * keys)
 {
     if(code == KEY_L)
     {
@@ -162,76 +171,12 @@ char manage_ctrl(uint16_t code)
     return -1;
 }
 
-char sh_process_input(struct input_event input)
-{
-    if(input.type == EV_KEY)
-    {
-        if(input.value && keys[input.code] != input.value)
-        {
-            shift = keys[KEY_RIGHTSHIFT] || keys[KEY_LEFTSHIFT];
-
-            if((keys[KEY_LEFTCTRL] || keys[KEY_RIGHTCTRL]))
-            {
-                return manage_ctrl(input.code);
-            }
-            uint8_t bckspace = 0;
-            if(input.code == KEY_ENTER)
-            {
-                buffer[buf_idx] = 0;
-                return -1;
-            } else
-            if(input.code == KEY_SPACE)
-            {
-                buffer[buf_idx] = ' ';
-            } else
-            if(input.code == KEY_BACKSPACE)
-            {
-                bckspace = 1;
-                if(buf_idx > 0)
-                {
-                    buffer[buf_idx - 1] = 0;
-                    buffer[buf_idx] = '\r';
-                } else
-                {
-                    buffer[buf_idx] = 0;
-                }
-            } else
-            if(input.code >= KEY_1 && input.code <= KEY_0 + 2)
-            {
-                buffer[buf_idx] = _num[(input.code - KEY_1) + (shift * 12)];
-            } else
-            if (input.code >= KEY_Q && input.code <= KEY_P + 2)
-            {
-                buffer[buf_idx] = _qwertyuiop[(input.code - KEY_Q) + (shift * 12)];
-            } else
-            if (input.code >= KEY_A && input.code <= KEY_L + 3)
-            {
-                buffer[buf_idx] = _asdfghjkl[(input.code - KEY_A) + (shift * 12)];
-            } else
-            if (input.code >= KEY_Z && input.code <= KEY_M + 3)
-            {
-                buffer[buf_idx] = _zxcvbnm[(input.code - KEY_Z) + (shift * 10)];
-            }
-
-            if(buffer[buf_idx] != 0)
-            {
-                putchar(buffer[buf_idx]);
-                if(bckspace == 0)
-                {
-                    buf_idx++;
-                } else
-                {
-                    buf_idx--;
-                }
-            }
-        }
-        keys[input.code] = input.value;
-    }
-    return 0;
+int manage_alt(uint16_t code, uint8_t * keys) {
+    return -1;
 }
 
 char* get_cwd_value() {
-    if(strcmp(cwd, user_home) == 0) {
+    if(strcmp(cwd, user_info.home_dir) == 0) {
         return "~";
     }
 
@@ -249,63 +194,19 @@ void sh_read_input()
         free(arguments[0]);
     }
 
-    printf("\e[0;94m%s\e[0;92m@\e[0;96m%s\e[0m:%s%s ", username, hostname, get_cwd_value(), uid == 0 ? "#" : "$");
+    printf("\e[0;94m%s\e[0;92m@\e[0;96m%s\e[0m:%s%s ", user_info.username, hostname, get_cwd_value(), uid == 0 ? "#" : "$");
+
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));
-        if(sh_process_input(input) != 0 && buf_idx != 0)
+
+        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl, &manage_alt) != 0 && buf_idx != 0)
         {
             //keys[KEY_ENTER] = 1;
             break;
         }
     }
     printf("\n");
-}
-
-void get_user_details() {
-    uid = getuid();
-
-    int fd = open("/etc/passwd", 0);
-
-    if(fd == -1) {
-        return;
-    }
-
-    fs_file_stat stat = {};
-    fstat(fd, &stat);
-
-    char* file_data = malloc(stat.size);
-    read(fd, file_data, stat.size);
-    close(fd);
-
-    char* line = strtok(file_data, '\n');
-    int current_pos = 0;
-
-    while(line != NULL) {
-        int len = strlen(line);
-        current_pos += len + 1;
-        if(line[0] == '#') {
-            line = strtok(NULL, '\n');
-            continue;
-        }
-
-        char* user = strtok(line, ':');
-        char* pass = strtok(NULL, ':');
-        char* uid_str = strtok(NULL, ':');
-        char* gid = strtok(NULL, ':');
-        char* home = strtok(NULL, ':');
-        char* shell = strtok(NULL, ':');
-
-        if(atoi(uid_str) == uid) {
-            username = malloc(strlen(user) + 1);
-            memcpy(username, user, strlen(user) + 1);
-            user_home = malloc(strlen(home) + 1);
-            memcpy(user_home, home, strlen(home) + 1);
-            return;
-        }
-
-        line = strtok(&file_data[current_pos], '\n');
-    }
 }
 
 void get_hostname() {
@@ -326,10 +227,99 @@ void get_hostname() {
     }
 }
 
+void process_config() {
+    int home_dir_len = strlen(user_info.home_dir);
+    char* config_file = malloc(home_dir_len + 12);
+    memcpy(config_file, user_info.home_dir, home_dir_len);
+    memcpy(&config_file[home_dir_len],
+           user_info.home_dir[home_dir_len - 1] != '/' ? "/.spade" : ".spade", 9);
+    int fd = open(config_file, 0);
+
+    if(fd == -1) {
+        printf("No config file found at : %s ", config_file);
+        return; // default config
+    }
+
+    fs_file_stat stat = {};
+    fstat(fd, &stat);
+
+    char* buf = malloc(stat.size);
+    read(fd, buf, stat.size);
+    buf[stat.size] = 0;
+
+    char* line = strtok(buf, '\n');
+    char* cursor_char = NULL;
+    uint8_t show_cursor = 0;
+    int index = 0;
+    while(line != NULL) {
+        index += strlen(line) + 1;
+        if(line[0] == '#') {
+            line = strtok(NULL, '\n');
+            continue;
+        }
+
+        char* key = strtok(line, '=');
+
+        if(key)
+        {
+            char* value = strtok(NULL, '\n');
+            if(strcmp(key, "CURSOR") == 0)
+            {
+                cursor_char = strdup(value);
+                show_cursor = 1;
+            }
+
+            if(strcmp(key, "CURSOR_COLOR") == 0)
+            {
+                cursor_color = strdup(value);
+                show_cursor = 1;
+            }
+
+            if(strcmp(key, "HISTORIC_LEN") == 0)
+            {
+                hist_len = atoi(value);
+            }
+            key = NULL;
+        }
+
+        if(index < stat.size) {
+            line = strtok(&buf[index], '\n');
+        } else {
+            line = NULL;
+        }
+    }
+
+    if(show_cursor)
+    {
+        // cursor must be equal to \e[0; + cursor_color + m + cursor_char + \e[0m
+        int cursor_char_len = 1;
+        int cursor_len = 9 + strlen(cursor_color) + cursor_char_len;
+        cursor = malloc(cursor_len);
+        memcpy(cursor, "\e[0;", 4);
+        memcpy(&cursor[4], cursor_color, strlen(cursor_color));
+        memcpy(&cursor[4 + strlen(cursor_color)], "m", 1);
+        if(cursor_char) {
+            memcpy(&cursor[5 + strlen(cursor_color)], cursor_char, cursor_char_len);
+        } else {
+            memcpy(&cursor[5 + strlen(cursor_color)], " ", 1);
+        }
+        memcpy(&cursor[5 + strlen(cursor_color) + cursor_char_len], "\e[0m", 4);
+        cursor[cursor_len] = 0;
+    }
+
+    close(fd);
+    free(buf);
+    free(config_file);
+    if(cursor_char){
+        free(cursor_char);
+    }
+}
+
 void main(int argc, char** argv)
 {
-    get_user_details();
+    get_user_info(&user_info);
     get_hostname();
+    process_config();
     getcwd(&cwd[0], 100);
 
     historic = malloc(sizeof(char*) * 10);
@@ -351,7 +341,7 @@ void main(int argc, char** argv)
         {
             if(argc_count == 1)
             {
-                change_directory(user_home);
+                change_directory(user_info.home_dir);
             } else {
                 change_directory(arguments[1]);
             }

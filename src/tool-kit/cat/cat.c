@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 #include <balrog/fs/fs_struct.h>
 
 char buf[4096 * 100];
@@ -33,7 +34,17 @@ void main(int argc, char** argv)
         
         if(fd == -1)
         {
-            printf("file '%s' does not exist.\n", argv[1]);
+            switch (errno) {
+                case ENOENT:
+                    printf("cat: %s: No such file or directory\n", argv[1]);
+                    break;
+                case EACCES:
+                    printf("cat: %s: Permission denied\n", argv[1]);
+                    break;
+                default:
+                    printf("cat: %s: Unknown error\n", argv[1]);
+                    break;
+            }
             exit(0);
         }
 

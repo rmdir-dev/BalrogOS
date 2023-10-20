@@ -6,20 +6,16 @@
 #include <string.h>
 #include <balrog/input.h>
 #include <balrog/fs/fs_struct.h>
+#include <errno.h>
+static char* cwd[100] = {};
+#include "toolkit/tool_read_keyboard.h"
 
 static char** historic = 0;
 static int hist_index = 0;
 static char buffer[255] = {};
 static int buf_idx = 0;
-static uint8_t keys[255] = {};
 static char* arguments[32] = {};
 static int count_idx = 0;
-static char* _qwertyuiop = "qwertyuiop[]QWERTYUIOP{}";
-static char* _asdfghjkl = "asdfghjkl;'\\ASDFGHJKL:\"|";
-static char* _zxcvbnm = "zxcvbnm,./ZXCVBNM<>?";
-static char* _num = "1234567890-=!@#$%^&*()_+";
-static int shift = 0;
-static int ctrl = 0;
 
 
 int sh_exec_cmd(char** args)
@@ -44,6 +40,76 @@ int sh_exec_cmd(char** args)
     }
 
     return 0;
+}
+
+void change_directory(char* dir) {
+    // TODO move this into the kernel sys_chdir
+    char* tmp_cwd = malloc(100);
+    memcpy(tmp_cwd, cwd, 100);
+
+    if(strcmp(dir, "..") == 0) {
+        int len = strlen(tmp_cwd);
+        int i = len - 1;
+        for(; i >= 0; i--) {
+            if(tmp_cwd[i] == '/') {
+                if(i == 0) {
+                    tmp_cwd[i + 1] = 0;
+                    break;
+                }
+                tmp_cwd[i] = 0;
+                break;
+            }
+        }
+    } else if(strcmp(dir, "/") == 0) {
+        memcpy(tmp_cwd, "/", 2);
+        tmp_cwd[1] = 0;
+    } else if(strcmp(dir, "~") == 0) {
+//        int len = strlen(user_info.home_dir);
+//        memcpy(tmp_cwd, user_info.home_dir, len);
+//        tmp_cwd[len] = 0;
+    } else {
+        int dir_len = strlen(dir);
+        if(dir[dir_len - 1] == '/') {
+            dir[dir_len - 1] = 0;
+        }
+
+        int len = strlen(tmp_cwd);
+        char* start_copy = &tmp_cwd[len];
+
+        if(tmp_cwd[len - 1] != '/') {
+            tmp_cwd[len] = '/';
+            start_copy = &tmp_cwd[++len];
+        }
+
+        if(dir[0] == '/') {
+            start_copy = &tmp_cwd[0];
+            len = 0;
+        }
+        memcpy(start_copy, dir, strlen(dir));
+        tmp_cwd[len + strlen(dir)] = 0;
+    }
+
+//    printf("cd to %s\n", tmp_cwd);
+    int fd = chdir(tmp_cwd);
+
+    if(fd == -1) {
+        switch (errno) {
+            case ENOENT:
+                printf("cd: '%s' : No such file or directory\n", dir);
+                break;
+            case EACCES:
+                printf("cd: '%s' : Permission denied\n", dir);
+                break;
+            default:
+                break;
+        }
+    } else {
+//        close(fd);
+
+        memcpy(cwd, tmp_cwd, 100);
+    }
+
+    free(tmp_cwd);
 }
 
 void disconect_user() {
@@ -75,9 +141,15 @@ void sh_parse_cmd()
     {
         arguments[count_idx] = strtok(NULL, ' ');
     }
+
+    if(count_idx == 0) {
+        arguments[1] = 0;
+    }
+
+    count_idx++;
 }
 
-char manage_ctrl(uint16_t code)
+int manage_ctrl(uint16_t code, uint8_t* keys)
 {
     if(code == KEY_L)
     {
@@ -93,72 +165,8 @@ char manage_ctrl(uint16_t code)
     return -1;
 }
 
-char sh_process_input(struct input_event input)
-{
-    if(input.type == EV_KEY)
-    {
-        if(input.value && keys[input.code] != input.value)
-        {
-            shift = keys[KEY_RIGHTSHIFT] || keys[KEY_LEFTSHIFT];
-            
-            if((keys[KEY_LEFTCTRL] || keys[KEY_RIGHTCTRL]))
-            {
-                return manage_ctrl(input.code);
-            }
-            uint8_t bckspace = 0;
-            if(input.code == KEY_ENTER)
-            {
-                buffer[buf_idx] = 0;
-                return -1;
-            } else
-            if(input.code == KEY_SPACE)
-            {
-                buffer[buf_idx] = ' ';
-            } else
-            if(input.code == KEY_BACKSPACE)
-            {
-                bckspace = 1;
-                if(buf_idx > 0)
-                {
-                    buffer[buf_idx - 1] = 0;
-                    buffer[buf_idx] = '\r';
-                } else 
-                {
-                    buffer[buf_idx] = 0;
-                }
-            } else
-            if(input.code >= KEY_1 && input.code <= KEY_0 + 2)
-            {
-                buffer[buf_idx] = _num[(input.code - KEY_1) + (shift * 12)];
-            } else 
-            if (input.code >= KEY_Q && input.code <= KEY_P + 2)
-            {
-                buffer[buf_idx] = _qwertyuiop[(input.code - KEY_Q) + (shift * 12)];
-            } else
-            if (input.code >= KEY_A && input.code <= KEY_L + 3)
-            {
-                buffer[buf_idx] = _asdfghjkl[(input.code - KEY_A) + (shift * 12)];
-            } else 
-            if (input.code >= KEY_Z && input.code <= KEY_M + 3)
-            {
-                buffer[buf_idx] = _zxcvbnm[(input.code - KEY_Z) + (shift * 10)];
-            }
-
-            if(buffer[buf_idx] != 0)
-            {
-                putchar(buffer[buf_idx]);
-                if(bckspace == 0)
-                {
-                    buf_idx++;
-                } else 
-                {
-                    buf_idx--;
-                }
-            }
-        }
-        keys[input.code] = input.value;
-    }
-    return 0;
+int manage_alt(uint16_t code, uint8_t* keys) {
+    return -1;
 }
 
 void sh_read_input()
@@ -176,7 +184,7 @@ void sh_read_input()
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));
-        if(sh_process_input(input) != 0 && buf_idx != 0)
+        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl, &manage_alt) != 0 && buf_idx != 0)
         {
             //keys[KEY_ENTER] = 1;
             break;
@@ -199,10 +207,19 @@ void main(int argc, char** argv)
         sh_read_input();
         sh_parse_cmd();
 
-        if(strcmp(arguments[0], "exit") == 0)
+        if(strcmp(arguments[0], "/bin/exit") == 0)
         {
             disconect_user();
-        } else {
+        } if(strcmp(arguments[0], "/bin/cd") == 0)
+        {
+            if(count_idx == 1)
+            {
+                change_directory("/");
+            } else {
+                change_directory(arguments[1]);
+            }
+        }
+        else {
             sh_exec_cmd(&arguments);
         }
 

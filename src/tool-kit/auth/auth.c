@@ -8,6 +8,7 @@
 #include <balrog/input.h>
 #include <balrog/fs/fs_struct.h>
 #include <balrog/terminal/term.h>
+#include "toolkit/tool_read_keyboard.h"
 
 #define USERNAME_MODE   1
 #define PASSWORD_MODE   0
@@ -18,82 +19,10 @@ static int buf_idx = 0;
 static uint8_t keys[255] = {};
 static char* arguments[32] = {};
 static int count_idx = 0;
-static char* _qwertyuiop = "qwertyuiop[]QWERTYUIOP{}";
-static char* _asdfghjkl = "asdfghjkl;'\\ASDFGHJKL:\"|";
-static char* _zxcvbnm = "zxcvbnm,./ZXCVBNM<>?";
-static char* _num = "1234567890-=!@#$%^&*()_+";
-static int shift = 0;
 static int uid = -1;
 static char* username = NULL;
 static char* password = NULL;
 static char* shell = NULL;
-
-static int process_input(struct input_event input, int mode)
-{
-    if(input.type == EV_KEY)
-    {
-        if(input.value && keys[input.code] != input.value)
-        {
-            shift = keys[KEY_RIGHTSHIFT] || keys[KEY_LEFTSHIFT];
-
-            uint8_t bckspace = 0;
-            if(input.code == KEY_ENTER)
-            {
-                buffer[buf_idx] = 0;
-                return -1;
-            } else
-            if(input.code == KEY_SPACE)
-            {
-                buffer[buf_idx] = ' ';
-            } else
-            if(input.code == KEY_BACKSPACE)
-            {
-                bckspace = 1;
-                if(buf_idx > 0)
-                {
-                    buffer[buf_idx - 1] = 0;
-                    buffer[buf_idx] = '\r';
-                } else 
-                {
-                    buffer[buf_idx] = 0;
-                }
-            } else
-            if(input.code >= KEY_1 && input.code <= KEY_0 + 2)
-            {
-                buffer[buf_idx] = _num[(input.code - KEY_1) + (shift * 12)];
-            } else 
-            if (input.code >= KEY_Q && input.code <= KEY_P + 2)
-            {
-                buffer[buf_idx] = _qwertyuiop[(input.code - KEY_Q) + (shift * 12)];
-            } else
-            if (input.code >= KEY_A && input.code <= KEY_L + 3)
-            {
-                buffer[buf_idx] = _asdfghjkl[(input.code - KEY_A) + (shift * 12)];
-            } else 
-            if (input.code >= KEY_Z && input.code <= KEY_M + 3)
-            {
-                buffer[buf_idx] = _zxcvbnm[(input.code - KEY_Z) + (shift * 10)];
-            }
-
-            if(buffer[buf_idx] != 0)
-            {
-                if(mode)
-                {
-                    putchar(buffer[buf_idx]);
-                }
-                if(bckspace == 0)
-                {
-                    buf_idx++;
-                } else 
-                {
-                    buf_idx--;
-                }
-            }
-        }
-        keys[input.code] = input.value;
-    }
-    return 0;
-}
 
 void start_login();
 
@@ -129,9 +58,8 @@ void manage_input(int mode)
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));
-        if(process_input(input, mode) != 0 && buf_idx != 0)
+        if(process_input(&input, buffer, &buf_idx, mode, NULL, NULL) != 0 && buf_idx != 0)
         {
-            keys[KEY_ENTER] = 1;
             break;
         }
     }
@@ -266,6 +194,8 @@ void start_login() {
 
 void main(int argc, char** argv)
 {
+    cursor = "\e[0;97m_\e[0m";
+
     start_login();
     exit(0);
 }

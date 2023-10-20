@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 // TEMPORARY
 #include "BalrogOS/Memory/kheap.h"
 

@@ -207,7 +207,7 @@ static uint32_t _ext2_find_free_inode(fs_device_t* dev)
 
 static int _ext2_update_inode_table(fs_device_t* dev, uint32_t inode_idx, ext2_inode* inode)
 {
-    uint32_t tbl_str_blc_addr = inode_idx / 32;
+    uint32_t tbl_str_blc_addr = (inode_idx - 1) / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
     ext2_inode* inode_table = (void*)P2V(pmm_calloc());
     dev->read(dev, (void*)inode_table, (fs_data->blk_grp_desc.block_addr_of_inode_table + tbl_str_blc_addr) * fs_data->sec_per_block, 8);
@@ -219,19 +219,18 @@ static int _ext2_update_inode_table(fs_device_t* dev, uint32_t inode_idx, ext2_i
 
 ext2_inode ext2_get_inode(fs_device_t* dev, uint32_t inode_idx)
 {
-    uint32_t tbl_str_blc_addr = inode_idx / 32;
+    uint32_t tbl_str_blc_addr = (inode_idx - 1) / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
     ext2_inode* inode_table = (void*)P2V(pmm_calloc());
     dev->read(dev, (void*)inode_table, (fs_data->blk_grp_desc.block_addr_of_inode_table + tbl_str_blc_addr) * fs_data->sec_per_block, 8);
 
     ext2_inode ret = inode_table[(inode_idx - 1) % 32];
-    //kprint("inode %d info mode : %d | 0%p \n", ((inode_idx - 1) % 32), ret.mode, inode_table);
     pmm_free((void*)V2P(inode_table));
 
     return ret;
 }
 
-static uint32_t _ext2_create_new_inode(fs_device_t* dev, uint16_t file_size, uint16_t mode)
+static uint32_t _ext2_create_new_inode(fs_device_t* dev, uint32_t file_size, uint16_t mode)
 {
     uint32_t new_id_inode = _ext2_find_free_inode(dev);
     

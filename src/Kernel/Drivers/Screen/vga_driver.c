@@ -114,11 +114,18 @@ static inline void vga_set_char_for_color(uint8_t high_intensity, uint8_t color)
 	if(high_intensity == 1)
 	{
 		base_color = 8;
-	}
+	} else if(high_intensity == 2 || high_intensity == 3) // if background color
+    {
+        if(high_intensity == 3) {
+            color += 8;
+        }
+        color = vga_color | color << 4;
+    }
+
 	vga_setcolor(base_color + color);
 }
 
-static void vga_check_color(const char* data, size_t index)
+static int vga_check_color(const char* data, size_t index)
 {
 	uint8_t high_intensity = -1;
 	switch (data[index])
@@ -126,10 +133,20 @@ static void vga_check_color(const char* data, size_t index)
 	case '3':
 		high_intensity = 0;
 		break;
+    case '4':
+        high_intensity = 2;
+        break;
 
 	case '9':
 		high_intensity = 1;
 		break;
+    case '1':
+        if(data[index + 1] == '0')
+        {
+            high_intensity = 3;
+            index++;
+        }
+        break;
 	
 	default:
 		break;
@@ -168,6 +185,8 @@ static void vga_check_color(const char* data, size_t index)
 			break;
 		}
 	}
+
+    return high_intensity == 3 ? -1 : 0;
 }
 
 static size_t vga_check_text(const char* data, size_t start_index)
@@ -182,10 +201,14 @@ static size_t vga_check_text(const char* data, size_t start_index)
 		case '0':
 			color_index = start_index + 3;
 			start_index += 4;
-			if(data[color_index + 2] == 'm')
+			if(data[color_index + 2] == 'm' || (data[color_index] == '1' && data[color_index + 3] == 'm'))
 			{
 				start_index++;
-				vga_check_color(data, color_index);
+				int long_nbr = vga_check_color(data, color_index);
+                if(long_nbr == -1)
+                {
+                    start_index++;
+                }
 			}
 			break;
 		
@@ -234,6 +257,7 @@ void vga_write(const char* data, size_t size)
 		switch (data[i])
 		{
 		case '\n':
+		case '\r':
 			increase_vga_row();
 			vga_column = 0;
 			if(vga_row ==0)
@@ -242,7 +266,7 @@ void vga_write(const char* data, size_t size)
 			}
 			break;
 
-		case '\r':
+		case '\b':
 			vga_column--;
 			const size_t index = vga_row * VGA_WIDTH + vga_column;
 			vga_buffer[index] = vga_entry(0, vga_color);

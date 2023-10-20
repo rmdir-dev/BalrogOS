@@ -3,6 +3,7 @@
 #include "BalrogOS/FileSystem/fs_cache.h"
 #include "klib/DataStructure/rbt.h"
 #include "BalrogOS/Memory/kheap.h"
+#include "BalrogOS/Debug/debug_output.h"
 
 struct _ext2_cache
 {
@@ -26,13 +27,14 @@ extern ext2_inode ext2_get_inode(fs_device_t* dev, uint32_t inode_idx);
 ext2_idata* ext2_cache_search_inode(fs_device_t* dev, uint32_t inode_nbr)
 {
     rbt_node* node = rbt_search(&ext2_cache.inode_tree, inode_nbr);
- 
+
     if(!node)
     {
         ext2_idata* file_data = vmalloc(sizeof(ext2_idata));
         
         if(!file_data)
         {
+            kprint("error allocating inode data\n");
             return 0;
         }
 

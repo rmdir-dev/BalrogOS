@@ -72,7 +72,9 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     uint32_t user = mode == 3 ? PAGE_USER : 0;
     proc->uid = 0;
     proc->gid = 0;
+    proc->fd_size = 0;
     proc->cwd = NULL;
+    proc->error_no = (void*) PROCESS_ERRNO;
 
     /*
     TEXT & DATA

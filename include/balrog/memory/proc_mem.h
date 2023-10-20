@@ -6,3 +6,4 @@
 #define PROCESS_STACK_BOT   0x00007ffd0e212000 - 0x800000 // stack top - 8MiB
 #define PROCESS_STACK_TOP   0x00007ffd0e212000
 #define PROCESS_START_DATA  0x00007ffd0e212000
+#define PROCESS_ERRNO       0x00007ffd0e212000 + (0x1000 - 16) // stack top + 4KiB - 16 bytes

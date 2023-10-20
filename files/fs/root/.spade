@@ -1,1 +1,4 @@
 # besh config file
+HISTORIC_LEN=15
+CURSOR_COLOR=94
+CURSOR=_

@@ -44,6 +44,7 @@ typedef struct process_t
     char* cwd;
     uint32_t uid;
     uint32_t gid;
+    uint32_t* error_no;
     struct process_t* next;
     struct process_t* parent;
 } process;

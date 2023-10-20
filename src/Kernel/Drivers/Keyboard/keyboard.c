@@ -9,7 +9,7 @@
  */
 extern void _EnableKeyboard();
 
-struct input_event key_event;
+struct input_event key_event = { 0, 0, 0 };
 
 /**
  * @brief the keyboard interrupt handler

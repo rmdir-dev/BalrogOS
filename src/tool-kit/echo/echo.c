@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     if(argc > 1)
     {
@@ -11,5 +11,5 @@ void main(int argc, char** argv)
         }
     }
     printf("\n");
-    exit(0);
+    return 0;
 }

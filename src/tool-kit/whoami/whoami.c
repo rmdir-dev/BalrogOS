@@ -4,11 +4,11 @@
 
 #include "toolkit/tool_read_keyboard.h"
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     user_info_t info = {};
     get_user_info(&info);
 
     printf("%s\n", info.username);
-    exit(0);
+    return 0;
 }

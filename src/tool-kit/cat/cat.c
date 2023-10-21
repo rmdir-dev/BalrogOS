@@ -11,7 +11,7 @@ char buf[4096 * 100];
 char name[255];
 char cwd[100] = {};
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     getcwd(cwd, 100);
     if(argc > 1)
@@ -47,7 +47,7 @@ void main(int argc, char** argv)
                     printf("cat: %s: Unknown error\n", argv[1]);
                     break;
             }
-            exit(0);
+            return 0;
         }
 
         fs_file_stat stat = {};
@@ -55,7 +55,7 @@ void main(int argc, char** argv)
         if(stat.size >= (4096 * 100))
         {
             printf("file is currently too large!\n");
-            exit(-1);
+            return -1;
         }
         read(fd, &buf[0], stat.size);
         buf[stat.size] = 0;
@@ -63,5 +63,5 @@ void main(int argc, char** argv)
         close(fd);
     }
     printf("\n");
-    exit(0);
+    return 0;
 }

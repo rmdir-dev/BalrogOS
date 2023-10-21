@@ -196,7 +196,7 @@ void sh_read_input()
     printf("\n");
 }
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     historic = malloc(sizeof(char*) * 10);
     
@@ -231,5 +231,5 @@ void main(int argc, char** argv)
         for(int i = 0; i < 1000000; i++)
         {}
     }
-    exit(0);
+    return 0;
 }

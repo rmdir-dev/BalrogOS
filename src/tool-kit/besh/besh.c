@@ -413,7 +413,7 @@ void process_config() {
     }
 }
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     list_init(&historic);
     get_user_info(&user_info);
@@ -450,5 +450,6 @@ void main(int argc, char** argv)
 
         sleep(10);
     }
-    exit(0);
+
+    return 0;
 }

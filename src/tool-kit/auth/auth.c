@@ -192,10 +192,10 @@ void start_login() {
     login();
 }
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     cursor = "\e[0;97m_\e[0m";
 
     start_login();
-    exit(0);
+    return 0;
 }

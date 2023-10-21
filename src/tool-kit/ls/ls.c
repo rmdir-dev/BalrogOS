@@ -25,7 +25,7 @@ void _print_dir(uint8_t* entires)
     }
 }
 
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     getcwd(cwd, 100);
     if(argc > 1)
@@ -58,7 +58,7 @@ void main(int argc, char** argv)
                 default:
                     break;
             }
-            exit(0);
+            return -1;
         }
         
         fs_file_stat stat = {};
@@ -76,6 +76,6 @@ void main(int argc, char** argv)
         _print_dir(buf);
         close(fd);
     }
-//    printf("before exit\n");
-    exit(0);
+
+    return 0;
 }

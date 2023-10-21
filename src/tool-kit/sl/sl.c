@@ -26,7 +26,7 @@ void clear() {
     printf(TERM_CLEAR);
 }
 
-void main(int argc, char** argv) {
+int main(int argc, char** argv) {
     clear();
     for(int a = 2 * 80; a > 0; --a) {
         clear();
@@ -56,5 +56,5 @@ void main(int argc, char** argv) {
     }
 
     clear();
-    exit(0);
+    return 0;
 }

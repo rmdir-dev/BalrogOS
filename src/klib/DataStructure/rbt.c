@@ -49,6 +49,11 @@ rbt_node* rbt_search(rbt_tree* root, const uint64_t key)
 
 rbt_node* rbt_minimum(rbt_tree* root)
 {
+    if(!root->rbt_root)
+    {
+        return NULL;
+    }
+
     kmutex_lock(&root->rbt_lock);
     rbt_node* from = root->rbt_root;
     while(from->children[RBT_LEFT])

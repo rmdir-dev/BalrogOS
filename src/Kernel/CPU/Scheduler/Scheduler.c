@@ -89,32 +89,27 @@ static void _round_robin()
     asm volatile("pop %rax");
 }
 
-interrupt_regs* schedule(interrupt_regs* stack_frame)
+void schedule(size_t tick, uint16_t ms)
 {
-    if(rdy_proc_list.head != NULL)
+    if(rdy_proc_list.head == NULL)
     {
-        if(current_running != NULL)
-        {
-            _round_robin();
-        } else 
-        {
-            current_running = rdy_proc_list.head;
-            _exec();
-        }
-    } else 
-    {
-        //kprint("Schedule work!\n");
-        irq_end(INT_IRQ_0);
+        return;
     }
-    return stack_frame;
+
+    if(current_running != NULL)
+    {
+        _round_robin();
+    } else
+    {
+        current_running = rdy_proc_list.head;
+        _exec();
+    }
 }
 
 void init_scheduler()
 {
-    irq_pic_toggle_mask_bit(INT_IRQ_0);
-    register_interrupt_handler(INT_IRQ_0, schedule);
     // TODO set the pit speed faster to 10 000 or more
-    init_pit(1000);
+    init_pit(&schedule);
 }
 
 

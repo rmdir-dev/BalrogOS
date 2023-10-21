@@ -52,9 +52,7 @@ void main(int argc, char** argv) {
             }
 //            printf("\n");
         }
-        for(int w = 0; w < 20000000; w++) {
-
-        }
+        sleep(5);
     }
 
     clear();

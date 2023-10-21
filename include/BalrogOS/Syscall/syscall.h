@@ -48,6 +48,7 @@
 #define SYS_STAT        4
 #define SYS_FSTAT       5
 #define SYS_BRK         12
+#define SYS_NANOSLEEP   35
 #define SYS_GETPID      39
 #define SYS_FORK        57
 #define SYS_EXECVE      59

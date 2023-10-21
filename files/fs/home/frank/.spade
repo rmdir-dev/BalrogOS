@@ -1,0 +1,5 @@
+# Besh config file
+HISTORIC_LEN=10
+CURSOR_COLOR=97
+# CURSOR=_
+

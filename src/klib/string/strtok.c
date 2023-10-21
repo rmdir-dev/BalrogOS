@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "BalrogOS/Debug/debug_output.h"
 
 uintptr_t strspn(char * __restrict str, const char delim)
 {

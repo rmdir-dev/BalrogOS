@@ -120,6 +120,13 @@ char* getcwd(char* buf, int size);
  */
 int chdir(char* dir);
 
+/**
+ * @brief
+ * @param ms
+ * @return
+ */
+int sleep(size_t ms);
+
 #ifdef __cplusplus
 }
 #endif

@@ -9,6 +9,7 @@ extern int sys_open(interrupt_regs* stack_frame);
 extern void sys_close(interrupt_regs* stack_frame);
 extern void sys_fstat(interrupt_regs* stack_frame);
 extern int sys_brk(interrupt_regs* stack_frame);
+extern int sys_sleep(interrupt_regs* stack_frame);
 extern int sys_getpid(interrupt_regs* stack_frame);
 extern int sys_fork(interrupt_regs* stack_frame);
 extern int sys_execve(interrupt_regs* stack_frame);
@@ -31,6 +32,7 @@ static int (*syscall[255])(interrupt_regs*) =
     [SYS_CLOSE] &sys_close,
     [SYS_FSTAT] &sys_fstat,
     [SYS_BRK] &sys_brk,
+    [SYS_NANOSLEEP] &sys_sleep,
     [SYS_GETPID] &sys_getpid,
     [SYS_FORK] &sys_fork,
     [SYS_EXECVE] &sys_execve,

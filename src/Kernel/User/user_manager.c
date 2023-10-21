@@ -41,6 +41,7 @@ void init_user_manager() {
     char* file_data = vmalloc(file.size);
     void* original_address = file_data;
     memcpy(file_data, file.data, file.size);
+    file_data[file.size] = 0;
     fs_close(&fd);
 
     uint32_t len = strlen(file_data);

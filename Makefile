@@ -11,6 +11,7 @@ DEFINES 		=
 ########################################################
 OS_BUILD_DIR = build/os
 BIN_BUILD_DIR = build/bin
+SBIN_BUILD_DIR = build/sbin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
 KLIB_SRC = src/klib
@@ -151,21 +152,26 @@ os:
 
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	mkdir -p $(BIN_BUILD_DIR)
+	mkdir -p $(SBIN_BUILD_DIR)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/besh $(ALL_BESH_OBJECT64) $(PSXC_OBJECTS64) $(LIBC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/auth $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(SBIN_BUILD_DIR)/auth $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/clear $(ALL_CLEAR_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sl $(ALL_SL_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e main -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/whoami $(ALL_WHOAMI_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	#$(PSXC_OBJECTS64)
 	sudo mount -o loop files/filesys.dd files/root/
+	sudo mkdir -p files/root/bin | true
+	sudo mkdir -p files/root/sbin | true
 	sudo cp -R build/bin/* files/root/bin/
+	sudo cp -R build/sbin/* files/root/sbin/
 	sudo chmod -R 777 files/root/bin/*
+	sudo chmod -R 700 files/root/sbin/*
 	sudo cp -R files/fs/* files/root/
 	sudo chown -R root:root files/root
 	sudo chmod 700 files/root/root

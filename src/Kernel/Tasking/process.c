@@ -3,12 +3,14 @@
 #include <stdlib.h>
 
 rbt_tree process_tree;
+rbt_tree sleeper_tree;
 process_list rdy_proc_list = { NULL, 0, NULL};
 extern process* current_running;
 
 void init_process()
 {
     rbt_init(&process_tree);
+    rbt_init(&sleeper_tree);
 }
 
 void proc_insert_to_ready_queue(process* proc)

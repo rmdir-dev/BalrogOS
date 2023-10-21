@@ -156,8 +156,7 @@ void disconect_user() {
     char* args[2] = {"/bin/clear", 0 };
     sh_exec_cmd(args, 0);
 
-    for (int i = 0; i < 100000000; ++i)
-    {}
+    sleep(500);
 
     exit(0);
 }
@@ -449,9 +448,7 @@ void main(int argc, char** argv)
             sh_exec_cmd(&arguments, is_clear_cmd ? 0 : 1);
         }
 
-        // TODO some sleep(nanosec) 
-        for(int i = 0; i < 1000000; i++)
-        {}
+        sleep(10);
     }
     exit(0);
 }

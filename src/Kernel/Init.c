@@ -20,6 +20,7 @@
 #include "BalrogOS/Memory/kstack.h"
 #include "BalrogOS/Drivers/Bus/pci.h"
 #include "BalrogOS/User/user_manager.h"
+#include "BalrogOS/CPU/FPU/fpu.h"
 
 /* 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -56,6 +57,11 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    EXCEPTIONS      */
     init_exception();
+    KERNEL_LOG_INFO("Exception status: enabled");
+
+    /*   FPU             */
+    init_fpu();
+    KERNEL_LOG_OK("FPU initialization : done");
 
     /*    SYSTEM CALL     */
     init_syscalls();

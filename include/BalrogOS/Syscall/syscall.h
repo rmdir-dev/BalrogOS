@@ -22,7 +22,7 @@
 39      sys_getpid
     get the currently running process ID.
 57	    sys_fork
-    forl current process (create a child process that is a copy of the caller).
+    fork current process (create a child process that is a copy of the caller).
     return the child PID
 59	    sys_execve	        const char *fname	const char *const argv[] const char *const envp[]
     exec a new process

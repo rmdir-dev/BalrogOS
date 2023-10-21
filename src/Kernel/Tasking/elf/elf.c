@@ -1,7 +1,7 @@
 #include "BalrogOS/Tasking/Elf/elf.h"
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/pmm.h"
-#include "klib/IO/kprint.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -44,7 +44,7 @@ static inline void _elf_load_prog(elf_program* prog, uint8_t* data, page_table* 
 
         if(phys == 0)
         {
-            kprint("should not prompt 0%p\n", vaddr);
+            kernel_debug_output(KDB_LVL_CRITICAL, "should not prompt 0%p\n", vaddr);
             phys = pmm_calloc();
             vmm_set_page(PML4T, vaddr, phys, flags);
         }

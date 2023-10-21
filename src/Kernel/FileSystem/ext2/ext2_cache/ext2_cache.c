@@ -34,7 +34,7 @@ ext2_idata* ext2_cache_search_inode(fs_device_t* dev, uint32_t inode_nbr)
         
         if(!file_data)
         {
-            kprint("error allocating inode data\n");
+            kernel_debug_output(KDB_LVL_CRITICAL, "error allocating inode data\n");
             return 0;
         }
 

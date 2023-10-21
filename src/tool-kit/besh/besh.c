@@ -222,9 +222,14 @@ void sh_parse_cmd()
     char* cmd = strtok(tmp_buf, ' ');
     size_t len = strlen(cmd);
     char* buf = malloc(5 + len);
-    memcpy(buf, "/bin/", 5);
-    memcpy(&buf[5], cmd, len);
-    buf[5 + len] = 0;
+    size_t start_write = 0;
+    if(cmd[0] != '/')
+    {
+        memcpy(buf, "/bin/", 5);
+        start_write = 5;
+    }
+    memcpy(&buf[start_write], cmd, len);
+    buf[start_write + len] = 0;
     arguments[argc_count] = &buf[0];
 
     cmd = strtok(NULL, ' ');

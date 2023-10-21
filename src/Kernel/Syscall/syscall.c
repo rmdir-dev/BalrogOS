@@ -1,7 +1,7 @@
 #include "BalrogOS/Syscall/syscall.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
-
-#include "klib/IO/kprint.h"
+#include "balrog/debug/debug.h"
+#include "BalrogOS/Debug/debug_output.h"
 
 extern void sys_read(interrupt_regs* stack_frame);
 extern void sys_write(interrupt_regs* stack_frame);
@@ -23,6 +23,7 @@ extern void sys_setuid(interrupt_regs* stack_frame);
 extern int sys_getppid(interrupt_regs* stack_frame);
 extern void sys_park(interrupt_regs* stack_frame);
 extern void sys_setpark(interrupt_regs* stack_frame);
+extern void sys_debug(interrupt_regs* stack_frame);
 
 static int (*syscall[255])(interrupt_regs*) =
 {
@@ -46,13 +47,14 @@ static int (*syscall[255])(interrupt_regs*) =
     [SYS_GETPPID] &sys_getppid,
     [SYS_PARK] &sys_park,
     [SYS_SETPARK] &sys_setpark,
+    [SYS_DEBUG] &sys_debug,
 };
 
 static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
 {
     if(!syscall[stack_frame->rax])
     {
-        kprint("Unknown syscall %d\n", stack_frame->rax);
+        kernel_debug_output(KDB_LVL_CRITICAL, "Unknown syscall %d\n", stack_frame->rax);
         while(1) {}
         return stack_frame;
     }

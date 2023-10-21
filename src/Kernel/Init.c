@@ -114,7 +114,7 @@ void initialize_kernel(void* SMAP, void* size)
     init_user_manager();
     KERNEL_LOG_OK("User manager initialization : done");
     KERNEL_LOG_OK("Kernel initialization : done");
-    KERNEL_LOG_OK("Welcome to BalrogOS");
+    KERNEL_LOG_OK("BalrogOS version : %s", __BALROG_VERSION__);
 
     /*    TEST PROCESS   */
     KERNEL_LOG_INFO("start process : waiting...");

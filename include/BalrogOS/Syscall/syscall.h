@@ -1,5 +1,7 @@
 #pragma once
 
+#include "balrog/debug/debug.h"
+
 /*
     ALL SYSTEM CALLS
 
@@ -64,6 +66,7 @@
 #define SYS_FUTEX       202
 #define SYS_PARK        202 // TODO switch to futex
 #define SYS_SETPARK     203 // TODO switch to futex
+#define SYS_DEBUG       KDB_CALL // TODO currently at 254 change to 300 + if we configure sys_inotify_add_watch
 
 /**
  * @brief Initialize system calls

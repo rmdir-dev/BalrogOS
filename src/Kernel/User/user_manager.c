@@ -11,7 +11,7 @@
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "BalrogOS/User/user_manager.h"
 #include "balrog/memory/proc_mem.h"
-#include "klib/IO/kprint.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include "klib/DataStructure/rbt.h"
 #include <string.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@ user_data* usm_get_user_data(uint32_t uid) {
     rbt_node* node = rbt_search(&user_tree, uid);
 
     if(node == NULL) {
-        kprint("user does not exist !");
+        kernel_debug_output(KDB_LVL_ERROR, "user does not exist !");
         while(1){}
     }
 

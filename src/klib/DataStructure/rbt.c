@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "klib/IO/kprint.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include "BalrogOS/Memory/kheap.h"
 
 #define RBT_GET_DIR(var)    (var == var->parent->children[RBT_RIGHT])
@@ -359,7 +359,7 @@ void rbt_print(rbt_node* root)
     if(root != NULL)
     {
         rbt_print(root->children[RBT_LEFT]);
-        kprint("%lu\n", root->key);
+        kernel_debug_output(KDB_LVL_INFO, "%lu\n", root->key);
         rbt_print(root->children[RBT_RIGHT]);
     }
 }

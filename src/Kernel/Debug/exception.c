@@ -8,35 +8,34 @@ extern process* current_running;
 
 static interrupt_regs* general_protection_fault(interrupt_regs* stack_frame)
 {
-    kprint(_KERNEL_LOG_FAILURE_MSG);
-    kprint("General protection fault : ");
+    kernel_debug_output(KDB_LVL_CRITICAL, "General protection fault : ");
     uint64_t error = stack_frame->error_code;
     if(error & 0x1)
     {
-        kprint("internal error ");
+        kernel_debug_output(KDB_LVL_CRITICAL, "internal error ");
     }
     switch ((error >> 1) & 0b11)
     {
     case 0b00:
-        kprint("GDT ");
+        kernel_debug_output(KDB_LVL_CRITICAL, "GDT ");
         break;
 
     case 0b01:
-        kprint("IDT ");
+        kernel_debug_output(KDB_LVL_CRITICAL, "IDT ");
         break;
 
     case 0b10:
-        kprint("LDT ");
+        kernel_debug_output(KDB_LVL_CRITICAL, "LDT ");
         break;
 
     case 0b11:
-       kprint("IDT ");
+       kernel_debug_output(KDB_LVL_CRITICAL, "IDT ");
         break;
     
     default:
         break;
     }
-    kprint("index : 0%x\n", ((error >> 3) & 0b1111111111111));
+    kernel_debug_output(KDB_LVL_CRITICAL, "index : 0%x\n", ((error >> 3) & 0b1111111111111));
     while(1){}
     return stack_frame;
 }
@@ -50,44 +49,43 @@ static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
 
     // protection fault in user mode on forked process
     if(current_running && (regs->error_code & 0x04 || regs->error_code & 0x01) && current_running->forked_memory) {
-        kprint("forked process memory protection fault -> copy parent memory \n");
+        kernel_debug_output(KDB_LVL_INFO, "forked process memory protection fault -> copy parent memory \n");
         uintptr_t fault_base_address = address & 0xfffffffffffff000;
         copy_forked_process_memory(current_running, fault_base_address);
         return regs;
     }
 
-    kprint(_KERNEL_LOG_FAILURE_MSG);
-    kprint("Proc %d ", current_running->pid);
+    kernel_debug_output(KDB_LVL_CRITICAL, "Proc %d ", current_running->pid);
 
     if(regs->error_code & 0x02)
     {
-        kprint("write from ", regs->error_code);
+        kernel_debug_output(KDB_LVL_CRITICAL, "write from ", regs->error_code);
     } else if(regs->error_code & 0x0e)
     {
-        kprint("execute code from ", regs->error_code);
+        kernel_debug_output(KDB_LVL_CRITICAL, "execute code from ", regs->error_code);
     } else 
     {
-        kprint("read to ", regs->error_code);
+        kernel_debug_output(KDB_LVL_CRITICAL, "read to ", regs->error_code);
     }
 
     if(regs->error_code & 0x04)
     {
-        kprint("user mode ");
+        kernel_debug_output(KDB_LVL_CRITICAL, "user mode ");
     } else
     {
-        kprint("kernel mode ");
+        kernel_debug_output(KDB_LVL_CRITICAL, "kernel mode ");
     }
 
     if(regs->error_code & 0x01)
     {
-        kprint("PROTECTION FAULT 0%p ", address);
+        kernel_debug_output(KDB_LVL_CRITICAL, "PROTECTION FAULT 0%p ", address);
     } else
     {
-        kprint("PAGE MISS 0%p ", address);
+        kernel_debug_output(KDB_LVL_CRITICAL, "PAGE MISS 0%p ", address);
     }
 
-    kprint("0%x\n", regs->rax);
-    kprint("rip 0%p\n", regs->rip);
+    kernel_debug_output(KDB_LVL_CRITICAL, "0%x\n", regs->rax);
+    kernel_debug_output(KDB_LVL_CRITICAL, "rip 0%p\n", regs->rip);
     while(1)
     {}
     

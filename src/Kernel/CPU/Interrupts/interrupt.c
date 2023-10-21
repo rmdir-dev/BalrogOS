@@ -110,8 +110,8 @@ interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
     if(!int_handlers[stack_frame->interrupt_no])
     {
         // if not print a message and loop
-        kprint("interrupt %d has no handler!\n", stack_frame->interrupt_no);
-        kprint("RFLAGS 0%x \n", stack_frame->rflags);
+        kernel_debug_output(KDB_LVL_CRITICAL, "interrupt %d has no handler!\n", stack_frame->interrupt_no);
+        kernel_debug_output(KDB_LVL_CRITICAL, "RFLAGS 0%x \n", stack_frame->rflags);
 
         while(1){}
     }

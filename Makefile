@@ -4,7 +4,7 @@
 PROJECT_NAME 	= OS
 OUTPUT_NAME 	= os-image
 SRC_BASE 		= .
-DEFINES 		= 
+DEFINES 		= -DKDB_DEBUG -D__BALROG_VERSION__=\"0.0.1\"
 
 ########################################################
 #	DIRECTORIES
@@ -12,6 +12,7 @@ DEFINES 		=
 OS_BUILD_DIR = build/os
 BIN_BUILD_DIR = build/bin
 SBIN_BUILD_DIR = build/sbin
+ROOT_BUILD_DIR = build/root/sbin
 TEMP_DIR = build/temp
 KERNEL_SRC = src/Kernel
 KLIB_SRC = src/klib
@@ -29,6 +30,7 @@ PWD_SRC = src/tool-kit/pwd/
 HELLO_SRC = src/tool-kit/hello/
 WHOAMI_SRC = src/tool-kit/whoami/
 DONUT_SRC = src/tool-kit/donut/
+SETDEBUG_SRC = src/tool-kit/setdebug/
 TLIB_SRC = src/tool-kit/tool-lib/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
@@ -61,6 +63,7 @@ CLEAR_SRCS = $(shell find $(CLEAR_SRC) -name *.c)
 SL_SRCS = $(shell find $(SL_SRC) -name *.c)
 WHOAMI_SRCS = $(shell find $(WHOAMI_SRC) -name *.c)
 DONUT_SRCS = $(shell find $(DONUT_SRC) -name *.c)
+SETDEBUG_SRCS = $(shell find $(SETDEBUG_SRC) -name *.c)
 PWD_SRCS = $(shell find $(PWD_SRC) -name *.c)
 
 # tool shared library
@@ -94,6 +97,7 @@ ALL_CLEAR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CLEAR_SRCS))
 ALL_SL_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SL_SRCS))
 ALL_WHOAMI_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(WHOAMI_SRCS))
 ALL_DONUT_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(DONUT_SRCS))
+ALL_SETDEBUG_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SETDEBUG_SRCS))
 ALL_PWD_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PWD_SRCS))
 
 # tool shared library
@@ -132,7 +136,7 @@ LIBC_OBJECTS = $(LIBC_SRCS:.c=.o)
 LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) \
 			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) \
-			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o)
+			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o)
 
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
@@ -164,6 +168,7 @@ os:
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	mkdir -p $(BIN_BUILD_DIR)
 	mkdir -p $(SBIN_BUILD_DIR)
+	mkdir -p $(ROOT_BUILD_DIR)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/besh $(ALL_BESH_OBJECT64) $(PSXC_OBJECTS64) $(LIBC_OBJECTS64) $(ALL_TLIB_OBJECT64)
@@ -176,14 +181,18 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/whoami $(ALL_WHOAMI_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/donut $(ALL_DONUT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(ROOT_BUILD_DIR)/setdebug $(ALL_SETDEBUG_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	#$(PSXC_OBJECTS64)
 	sudo mount -o loop files/filesys.dd files/root/
 	sudo mkdir -p files/root/bin | true
 	sudo mkdir -p files/root/sbin | true
+	sudo mkdir -p files/root/root/sbin | true
 	sudo cp -R build/bin/* files/root/bin/
 	sudo cp -R build/sbin/* files/root/sbin/
+	sudo cp -R build/root/sbin/* files/root/root/sbin/
 	sudo chmod -R 777 files/root/bin/*
-	sudo chmod -R 700 files/root/sbin/*
+	sudo chmod -R 750 files/root/sbin/*
+	sudo chmod -R 700 files/root/root/sbin
 	sudo cp -R files/fs/* files/root/
 	sudo chown -R root:root files/root
 	sudo chmod 700 files/root/root

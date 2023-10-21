@@ -79,7 +79,7 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
 {
     if(!block->_is_mmapped)
     {
-        kprint("double vmfree() 0%p", block);
+        kernel_debug_output(KDB_LVL_ERROR, "double vmfree() 0%p", block);
         while (1)
         {
             /* code */

@@ -23,7 +23,7 @@
  * @return
  */
 int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, uint8_t print,
-        int (*manage_ctrl)(uint16_t ctrl, uint8_t* ky), int (*manage_alt)(uint16_t ctrl, uint8_t* ky));
+        int (*manage_special_keys)(uint16_t special, uint16_t pressed, uint8_t* ky));
 
 extern char* cursor;
 extern char* cursor_color;

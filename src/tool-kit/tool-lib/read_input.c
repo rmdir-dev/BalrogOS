@@ -17,7 +17,7 @@ char* cursor = NULL;
 char* cursor_color = "97";
 
 int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, uint8_t print,
-        int (*manage_ctrl)(uint16_t ctrl, uint8_t* ky), int (*manage_alt)(uint16_t ctrl, uint8_t* ky)) {
+        int (*manage_special_keys)(uint16_t special, uint16_t pressed, uint8_t* ky)) {
 
     if(
         cursor && print
@@ -55,16 +55,16 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
 
             if((keys[KEY_LEFTCTRL] || keys[KEY_RIGHTCTRL]))
             {
-                if(manage_ctrl) {
-                    return manage_ctrl(input->code, keys);
+                if(manage_special_keys) {
+                    return manage_special_keys(KEY_RIGHTCTRL, input->code, keys);
                 }
                 return 0;
             }
 
             if((keys[KEY_LEFTALT] || keys[KEY_RIGHTALT]))
             {
-                if(manage_alt) {
-                    return manage_alt(input->code, keys);
+                if(manage_special_keys) {
+                    return manage_special_keys(KEY_RIGHTALT, input->code, keys);
                 }
                 return 0;
             }
@@ -107,7 +107,17 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
             if (input->code >= KEY_Z && input->code <= KEY_M + 3)
             {
                 buffer[*buf_idx] = _zxcvbnm[(input->code - KEY_Z) + (shift * 10)];
+            } else
+                // up, down, left, right
+            if (input->code == 72 || input->code == 80 || input->code == 75 || input->code == 77)
+            {
+                keys[input->code] = input->value;
+                if(manage_special_keys) {
+                    return manage_special_keys(input->code, 0, keys);
+                }
             }
+            // for testing arrow key code values
+//            printf("arrow key pressed : %d\n", input->code);
 
             if(buffer[*buf_idx] != 0)
             {

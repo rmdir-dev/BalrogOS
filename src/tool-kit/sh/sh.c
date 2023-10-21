@@ -149,17 +149,20 @@ void sh_parse_cmd()
     count_idx++;
 }
 
-int manage_ctrl(uint16_t code, uint8_t* keys)
+int manage_ctrl(uint16_t special, uint16_t code, uint8_t * keys)
 {
-    if(code == KEY_L)
+    if(special == KEY_RIGHTCTRL || special == KEY_LEFTCTRL)
     {
-        buf_idx = 6;
-        memset(buffer, 0, 255);
-        memcpy(buffer, "clear", 6);
-    }
+        if(code == KEY_L)
+        {
+            buf_idx = 6;
+            memset(buffer, 0, 255);
+            memcpy(buffer, "clear", 6);
+        }
 
-    if(code == KEY_D) {
-        disconect_user();
+        if(code == KEY_D) {
+            disconect_user();
+        }
     }
     
     return -1;
@@ -184,7 +187,7 @@ void sh_read_input()
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));
-        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl, &manage_alt) != 0 && buf_idx != 0)
+        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl) != 0 && buf_idx != 0)
         {
             //keys[KEY_ENTER] = 1;
             break;

@@ -23,8 +23,10 @@ void main(int argc, char** argv)
         if(argv[1][0] != '/') {
             int cwd_len = strlen(cwd);
             memcpy(tmp, cwd, cwd_len);
-            tmp[cwd_len] = '/';
-            start_index = cwd_len + 1;
+            if(cwd_len > 1) {
+                tmp[cwd_len] = '/';
+                start_index = cwd_len + 1;
+            }
             total_len = cwd_len + argv_len;
         }
         memcpy(&tmp[start_index], argv[1], argv_len);

@@ -13,7 +13,11 @@ int sys_chdir(interrupt_regs* stack_frame)
 {
     fs_fd fd;
 
-    if(fs_open((char*) stack_frame->rdi, &fd) != 0)
+    size_t len = strlen((char*) stack_frame->rdi);
+    char* path = vmalloc(len + 1);
+    memcpy(path, (char*) stack_frame->rdi, len + 1);
+    path[len] = 0;
+    if(fs_open(path, &fd) != 0)
     {
         *current_running->error_no = ENOENT;
         return -1;
@@ -21,11 +25,14 @@ int sys_chdir(interrupt_regs* stack_frame)
 
     if(__check_file_permission(&fd, 01) != 0)
     {
+        fs_close(&fd);
         return -1;
     }
 
+    fs_close(&fd);
+    vmfree(path);
     vmfree(current_running->cwd);
-    uint32_t len = strlen((char*) stack_frame->rdi);
+    len = strlen((char*) stack_frame->rdi);
     current_running->cwd = (char*) vmalloc(len + 1);
     strcpy(current_running->cwd, (char*) stack_frame->rdi);
     current_running->cwd[len] = 0;

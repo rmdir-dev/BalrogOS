@@ -10,20 +10,37 @@
 #include <stat.h>
 #include <errno.h>
 #include "toolkit/tool_read_keyboard.h"
+#include "toolkit/list.h"
 
-static char** historic = 0;
 static int hist_len = 5;
-static int hist_index = 0;
+static int hist_key_count = 0;
+static list_t historic;
+static list_node_t* hist_last_removed = NULL;
+static list_node_t* hist_index = NULL;
 static char buffer[255] = {};
 static int buf_idx = 0;
 static char* arguments[32] = {};
 static int argc_count = 0;
 static char* cwd[100] = {};
 static char* hostname = NULL;
-static int uid;
 static user_info_t user_info = {};
 
-int sh_exec_cmd(char** args)
+void register_new_history_entry(char* entry) {
+    if(hist_key_count >= hist_len)
+    {
+        hist_last_removed = list_remove_last(&historic);
+//        printf("new hist count %d\n", hist_key_count);
+//                hist_key_count = hist_last_removed->key;
+//        printf("removed %s\n", hist_last_removed->value);
+//        printf("new hist count %d\n", hist_key_count);
+        free(hist_last_removed->value);
+    }
+
+    list_node_t* node = list_insert(&historic, hist_key_count++, hist_last_removed);
+    node->value = strdup(buffer);
+}
+
+int sh_exec_cmd(char** args, uint8_t add_to_history)
 {
     int fd = open(args[0], 0);
 
@@ -38,6 +55,11 @@ int sh_exec_cmd(char** args)
     if(id != 0)
     {
         waitpid(id, 0, 0);
+
+        if(add_to_history == 1) {
+            register_new_history_entry(buffer);
+        }
+        hist_index = NULL;
     } else
     {
         execv(args[0], args);
@@ -107,7 +129,21 @@ void change_directory(char* dir) {
                 break;
         }
     } else {
-        chdir(tmp_cwd);
+        int success = chdir(tmp_cwd);
+        if(success == -1) {
+            printf("failed to change directory\n");
+            switch (errno) {
+                case ENOENT:
+                    printf("cd: '%s' : No such file or directory\n", tmp_cwd);
+                    break;
+                case EACCES:
+                    printf("cd: '%s' : Permission denied\n", tmp_cwd);
+                    break;
+                default:
+                    break;
+            }
+        }
+        register_new_history_entry(buffer);
         close(fd);
 
         memcpy(cwd, tmp_cwd, 100);
@@ -118,7 +154,7 @@ void change_directory(char* dir) {
 
 void disconect_user() {
     char* args[2] = {"/bin/clear", 0 };
-    sh_exec_cmd(args);
+    sh_exec_cmd(args, 0);
 
     for (int i = 0; i < 100000000; ++i)
     {}
@@ -133,7 +169,8 @@ void sh_parse_cmd()
     {
         arguments[i] = 0;
     }
-    char* cmd = strtok(buffer, ' ');
+    char* tmp_buf = strdup(buffer);
+    char* cmd = strtok(tmp_buf, ' ');
     size_t len = strlen(cmd);
     char* buf = malloc(5 + len);
     memcpy(buf, "/bin/", 5);
@@ -152,27 +189,89 @@ void sh_parse_cmd()
         arguments[1] = 0;
     }
 
+    free(tmp_buf);
     argc_count++;
 }
 
-int manage_ctrl(uint16_t code, uint8_t * keys)
-{
-    if(code == KEY_L)
-    {
-        buf_idx = 6;
-        memset(buffer, 0, 255);
-        memcpy(buffer, "clear", 6);
+void replace_buffer(char* str) {
+    for(int i = buf_idx - 1; i >= 0; i--) {
+        puts("\b");
     }
+    memset(buffer, 0, 255);
 
-    if(code == KEY_D) {
-        disconect_user();
-    }
-
-    return -1;
+    memcpy(buffer, str, strlen(str));
+    buf_idx = strlen(str);
+    puts(buffer);
 }
 
-int manage_alt(uint16_t code, uint8_t * keys) {
-    return -1;
+static uint8_t already_cleared = 0;
+int manage_ctrl(uint16_t special, uint16_t code, uint8_t * keys)
+{
+    if(special == KEY_RIGHTCTRL || special == KEY_LEFTCTRL)
+    {
+        if(code == KEY_L && !already_cleared)
+        {
+            buf_idx = 6;
+            memset(buffer, 0, 255);
+            memcpy(buffer, "clear", 6);
+            already_cleared = 1;
+        }
+
+        if(code == KEY_D) {
+            disconect_user();
+        }
+
+        return -1;
+    }
+
+    // key arrow up
+    if(special == 72)
+    {
+        if(hist_index == NULL)
+        {
+            hist_index = historic.head;
+        } else
+        {
+            if(hist_index->next != NULL)
+            {
+                hist_index = hist_index->next;
+            } else
+            {
+//                hist_index = NULL;
+            }
+        }
+
+        if(hist_index != NULL)
+        {
+            replace_buffer(hist_index->value);
+        }
+    // key arrow down
+    } else if(special == 80)
+    {
+        if(hist_index != NULL)
+        {
+            if(hist_index->prev)
+            {
+                hist_index = hist_index->prev;
+            } else
+            {
+//                hist_index = NULL;
+            }
+        }
+
+        if(hist_index != NULL)
+        {
+            replace_buffer(hist_index->value);
+        } else
+        {
+            if(buf_idx == 0 || hist_index)
+            {
+                replace_buffer("");
+            }
+        }
+    }
+
+    return 0;
 }
 
 char* get_cwd_value() {
@@ -189,18 +288,18 @@ void sh_read_input()
 
     buf_idx = 0;
     memset(buffer, 0, 255);
-    if(arguments[0] != 0)
+    if (arguments[0] != 0)
     {
         free(arguments[0]);
     }
 
-    printf("\e[0;94m%s\e[0;92m@\e[0;96m%s\e[0m:%s%s ", user_info.username, hostname, get_cwd_value(), uid == 0 ? "#" : "$");
+    printf("\e[0;94m%s\e[0;92m@\e[0;96m%s\e[0m:%s%s ", user_info.username, hostname, get_cwd_value(), user_info.uid == 0 ? "#" : "$");
 
     while(1)
     {
         read(STDIN_FILENO, &input, sizeof(struct input_event));
 
-        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl, &manage_alt) != 0 && buf_idx != 0)
+        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl) != 0 && buf_idx != 0)
         {
             //keys[KEY_ENTER] = 1;
             break;
@@ -317,22 +416,22 @@ void process_config() {
 
 void main(int argc, char** argv)
 {
+    list_init(&historic);
     get_user_info(&user_info);
     get_hostname();
     process_config();
     getcwd(&cwd[0], 100);
 
-    historic = malloc(sizeof(char*) * 10);
-
-    for(int i = 0; i < 10; i++)
-    {
-        historic[i] = malloc(256);
-    }
-
     while(1)
     {
         sh_read_input();
         sh_parse_cmd();
+
+        uint8_t is_clear_cmd = strcmp(arguments[0], "/bin/clear") == 0;
+        if(!is_clear_cmd)
+        {
+            already_cleared = 0;
+        }
 
         if(strcmp(arguments[0], "/bin/exit") == 0)
         {
@@ -347,7 +446,7 @@ void main(int argc, char** argv)
             }
         }
         else {
-            sh_exec_cmd(&arguments);
+            sh_exec_cmd(&arguments, is_clear_cmd ? 0 : 1);
         }
 
         // TODO some sleep(nanosec) 

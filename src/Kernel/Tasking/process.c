@@ -147,7 +147,8 @@ void proc_kill_process(int pid)
 void proc_kill(process* proc, uint8_t force_schedule)
 {
     if(
-        proc->state == PROCESS_STATE_WAITING
+        proc->state & PROCESS_STATE_WAITING
+        || proc->state & PROCESS_STATE_SLEEPING
         || proc->state == PROCESS_STATE_DEAD
         || proc->state == PROCESS_STATE_ZOMBIE
         || _proc_transfert_to_wait(proc) == 0

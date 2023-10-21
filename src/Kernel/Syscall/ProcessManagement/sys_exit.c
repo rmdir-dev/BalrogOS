@@ -5,6 +5,7 @@
 #include "klib/IO/kprint.h"
 
 extern process* current_running;
+extern void schedule(size_t tick, uint16_t ms);
 
 void sys_exit(interrupt_regs* stack_frame)
 {

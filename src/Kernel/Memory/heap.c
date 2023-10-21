@@ -8,7 +8,6 @@ void* alloc(size_t size, block_info* current_block, block_info* prev_block, bloc
     /*  check if the block is large enough 
         if yes allocate the new block of memory here.
     */
-    //kprint("current size 0%x addr: 0%p | size : %d\n", current_block->_size, current_block, size);
     if(current_block->_size >= size)
     {
         // if the previous block is free of not
@@ -42,9 +41,7 @@ void* alloc(size_t size, block_info* current_block, block_info* prev_block, bloc
                 change the current block size.
             */
             uint32_t new_block_size = size + sizeof(block_info);
-            //kprint("current block size : 0%x | 0%p\n", current_block->_size, current_block);
             current_block->_size -= new_block_size;
-            //kprint("current block size : 0%x\n", new_block_size);
 
             //move the block pointer to the new block we want to allocate
             block += current_block->_size + sizeof(block_info);
@@ -72,7 +69,6 @@ void* alloc(size_t size, block_info* current_block, block_info* prev_block, bloc
         }
 
         // return the address of the newly allocated block
-        //kprint("vh alloc : 0%p | prev 0%p\n", block + sizeof(block_info), prev_block->next_free);
         return block + sizeof(block_info);
     }
 
@@ -81,8 +77,6 @@ void* alloc(size_t size, block_info* current_block, block_info* prev_block, bloc
 
 void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free, uint64_t block_max_size)
 {
-//    kprint("vh freeing : 0%p \n", block);
-//    kprint("freeing size : 0%d\n", block->_size);
     if(!block->_is_mmapped)
     {
         kprint("double vmfree() 0%p", block);

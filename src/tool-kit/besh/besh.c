@@ -4,11 +4,13 @@
 #include <fcntl.h>
 #include <stddef.h>
 #include <string.h>
-#include <balrog/input.h>
-#include <balrog/fs/fs_struct.h>
 #include <fcntl.h>
 #include <stat.h>
 #include <errno.h>
+#include "balrog/input.h"
+#include "balrog/fs/fs_struct.h"
+#include "balrog/process/processing.h"
+#include "balrog/terminal/term.h"
 #include "toolkit/tool_read_keyboard.h"
 #include "toolkit/list.h"
 
@@ -24,6 +26,7 @@ static int argc_count = 0;
 static char* cwd[100] = {};
 static char* hostname = NULL;
 static user_info_t user_info = {};
+static pid_t child_pid = 0;
 
 void register_new_history_entry(char* entry) {
     if(hist_key_count >= hist_len)
@@ -40,12 +43,59 @@ void register_new_history_entry(char* entry) {
     node->value = strdup(buffer);
 }
 
+int process_child_process_ctrl_key(uint16_t special_key, uint16_t code, uint8_t* keys) {
+    if(special_key == KEY_RIGHTCTRL || special_key == KEY_LEFTCTRL)
+    {
+        static uint8_t killed = 0;
+        if(code == KEY_C && !killed)
+        {
+            kill(child_pid, SIGKILL);
+            killed = 1;
+        }
+    }
+
+    return 0;
+}
+
+void manage_child_input(int pid) {
+//    printf("pre kill %d\n", pid);
+    sleep(5);
+    if(kill(pid, 0) == -1) {
+        return;
+    }
+//    printf("post kill %d\n", pid);
+
+    child_pid = pid;
+    pid_t id = fork();
+
+    if(id != 0)
+    {
+        waitpid(child_pid, 0, 0);
+        kill(id, SIGKILL);
+    } else
+    {
+        struct input_event input = {};
+        while(1)
+        {
+            read(STDIN_FILENO, &input, sizeof(struct input_event));
+            process_input(&input, NULL, NULL, 0, &process_child_process_ctrl_key);
+        }
+    }
+}
+
 int sh_exec_cmd(char** args, uint8_t add_to_history)
 {
     int fd = open(args[0], 0);
 
     if(fd == -1)
     {
+        if(errno == ENOENT)
+        {
+            printf("command not found : %s\n", args[0]);
+        } else if(errno == EACCES)
+        {
+            printf("permission denied : %s\n", args[0]);
+        }
         return -1;
     }
 
@@ -54,7 +104,7 @@ int sh_exec_cmd(char** args, uint8_t add_to_history)
 
     if(id != 0)
     {
-        waitpid(id, 0, 0);
+        manage_child_input(id);
 
         if(add_to_history == 1) {
             register_new_history_entry(buffer);
@@ -447,8 +497,6 @@ int main(int argc, char** argv)
         else {
             sh_exec_cmd(&arguments, is_clear_cmd ? 0 : 1);
         }
-
-        sleep(10);
     }
 
     return 0;

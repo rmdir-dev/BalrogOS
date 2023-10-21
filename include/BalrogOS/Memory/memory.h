@@ -77,6 +77,7 @@ addr = 0x101000
 #define PT_TO_VIRT(addr)    (((uintptr_t)(addr)) << 12)
 
 #define STRIP_FLAGS(addr)       (((uintptr_t)addr) & ~PAGE_FLAG_MASK)
+#define GET_FLAGS(addr)        (((uintptr_t)addr) & PAGE_FLAG_MASK)
 #define ADD_FLAGS(addr, flags)   (((uintptr_t)addr) | (flags & PAGE_FLAG_MASK))
 
 #define PAGE_FLAG_MASK      0xfff

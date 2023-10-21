@@ -1,6 +1,7 @@
 #include "BalrogOS/Tasking/process.h"
 #include "klib/DataStructure/rbt.h"
 #include <stdlib.h>
+#include "BalrogOS/Debug/debug_output.h"
 
 rbt_tree process_tree;
 rbt_tree sleeper_tree;
@@ -20,6 +21,10 @@ void proc_insert_to_ready_queue(process* proc)
 
     if(rdy_proc_list.head == NULL)
     {
+        if(rdy_proc_list.tail != NULL)
+        {
+            while(1){}
+        }
         rdy_proc_list.head = proc;
         rdy_proc_list.tail = proc;
         proc->next = proc;
@@ -38,7 +43,7 @@ void proc_insert_to_ready_queue(process* proc)
     proc->state = PROCESS_STATE_READY;
 }
 
-extern interrupt_regs* schedule(interrupt_regs* stack_frame);
+extern void schedule(size_t tick, uint16_t ms);
 
 static int _proc_transfert_to_wait(process* proc)
 {
@@ -90,15 +95,20 @@ void proc_wake_process(int* wating, uint8_t size)
     {
         if(wating[i] != 0)
         {
-            proc_transfert_to_ready(wating[i]);
+            proc_transfert_to_ready(wating[i], PROCESS_STATE_WAITING);
         }
     }
 }
 
-void proc_kill(process* proc)
+/**
+ * @brief Process MUST BE in waiting state to enter this function !
+ *
+ * @param proc
+ */
+static void _proc_kill(process* proc)
 {
     proc->state = PROCESS_STATE_DEAD;
-    
+
     if(proc->wait_size != 0)
     {
         proc_wake_process(&proc->waiting[0], proc->wait_size);
@@ -107,9 +117,9 @@ void proc_kill(process* proc)
     _proc_remove_process(proc);
 
     // if proc is not a child then clean it.
-    if(proc->child == 0)
+    // or if the memory was copied then clean it.
+    if(proc->child == 0 || !proc->forked_memory)
     {
-//        kprint("clean process pid : %d\n", proc->pid);
         clean_process(proc);
     }
 
@@ -119,7 +129,8 @@ void proc_kill(process* proc)
         {
             current_running = NULL;
         }
-        schedule(NULL);
+
+        schedule(0, 0);
     }
 }
 
@@ -129,7 +140,24 @@ void proc_kill_process(int pid)
 
     if(_proc_transfert_to_wait(proc) == 0)
     {
-        proc_kill(proc);
+        _proc_kill(proc);
+    }
+}
+
+void proc_kill(process* proc, uint8_t force_schedule)
+{
+    if(
+        proc->state == PROCESS_STATE_WAITING
+        || proc->state == PROCESS_STATE_DEAD
+        || proc->state == PROCESS_STATE_ZOMBIE
+        || _proc_transfert_to_wait(proc) == 0
+    )
+    {
+        _proc_kill(proc);
+        if(force_schedule)
+        {
+            schedule(0, 0);
+        }
     }
 }
 
@@ -146,17 +174,19 @@ void proc_transfert_to_waiting(int pid)
 
      if(_proc_transfert_to_wait(proc) == 0)
     {
-        proc->state = PROCESS_STATE_WAITING;
+        proc->state ^= PROCESS_STATE_READY | PROCESS_STATE_RUNNING;
+         proc->state |= PROCESS_STATE_WAITING;
     }
 }
 
-void proc_to_sleep(int pid)
+void proc_to_sleep(int pid, uint8_t set_state)
 {
     process* proc = proc_get_process(pid);
 
     if(_proc_transfert_to_wait(proc) == 0)
     {
-        proc->state = PROCESS_STATE_WAITING;
+        proc->state &= ~(PROCESS_STATE_READY) & ~(PROCESS_STATE_RUNNING);
+        proc->state |= set_state;
 
         if(proc == current_running)
         {
@@ -164,8 +194,8 @@ void proc_to_sleep(int pid)
             {
                 current_running = NULL;
             }
-            //kprint("next proc : 0%p", current_running->next);
-            schedule(NULL);
+
+            schedule(0, 0);
         }
     }
 }
@@ -183,18 +213,21 @@ int proc_add_to_waiting(int pid, int to_wait_pid)
     return -1;
 }
 
-void proc_transfert_to_ready(int pid)
+void proc_transfert_to_ready(int pid, uint8_t expected_state)
 {
     process* proc = proc_get_process(pid);
-    
-    if(proc->state == PROCESS_STATE_WAITING)
+
+    if(!proc) {
+        return;
+    }
+
+    if(proc->state == expected_state)
     {
-        proc->next = rdy_proc_list.head;
-        proc->prev = rdy_proc_list.tail;
-        rdy_proc_list.tail->next = proc;
-        rdy_proc_list.tail = proc;
-        rdy_proc_list.size++;
-        proc->state = PROCESS_STATE_READY;
+        proc_insert_to_ready_queue(proc);
+    }
+
+    if(proc->state & expected_state) {
+        proc->state ^= expected_state;
     }
 }
 

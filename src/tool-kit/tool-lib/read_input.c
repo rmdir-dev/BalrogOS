@@ -18,9 +18,8 @@ char* cursor_color = "97";
 
 int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, uint8_t print,
         int (*manage_special_keys)(uint16_t special, uint16_t pressed, uint8_t* ky)) {
-
     if(
-        cursor && print
+        print && cursor
         && input->code == prev_key_ev.code
         && input->type == prev_key_ev.type
         && input->value == prev_key_ev.value
@@ -37,16 +36,13 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
         } else {
             cursor_blink_counter++;
         }
-    } else {
+    } else if(print && cursor) {
         if(cursor_blink_counter < 1000000 / 2 && cursor_blink_counter > 0) {
             puts("\b");
         }
         cursor_blink_counter = -1;
     }
 
-    prev_key_ev.code = input->code;
-    prev_key_ev.type = input->type;
-    prev_key_ev.value = input->value;
     if(input->type == EV_KEY)
     {
         if(input->value && keys[input->code] != input->value)
@@ -69,11 +65,15 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
                 return 0;
             }
 
+            if(!buffer) {
+                keys[input->code] = input->value;
+                return 0;
+            }
+
             uint8_t bckspace = 0;
             if(input->code == KEY_ENTER)
             {
                 buffer[*buf_idx] = 0;
-                keys[input->code] = input->value;
                 return -1;
             } else
             if(input->code == KEY_SPACE)
@@ -133,6 +133,11 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
                 }
             }
         }
+
+        prev_key_ev.code = input->code;
+        prev_key_ev.type = input->type;
+        prev_key_ev.value = input->value;
+
         keys[input->code] = input->value;
     }
     return 0;

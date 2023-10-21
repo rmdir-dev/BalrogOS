@@ -35,6 +35,13 @@ void* malloc(size_t memory_size);
  */
 int atoi(const char* str);
 
+/**
+ * @brief Execute a command.
+ *
+ * @param command
+ */
+void system(const char* command);
+
 #ifdef __cplusplus
 }
 #endif

@@ -19,7 +19,7 @@ _PrepareKernel:
     
     ; PAGING                                                    total paging cover 256TiB of memory
     ; PML4T address 0x1000 pointing to PDPT                     each PML4T hold 512GiB / entry total 256TiB
-    ; PDPT  address 0x2000 pointing to PDT                      each PDPT hold 1GiB / entry total 512 MiB
+    ; PDPT  address 0x2000 pointing to PDT                      each PDPT hold 1GiB / entry total 512 GiB
     ; PDT   address 0x3000 pointing to PT                       each PDT hold 2MiB / entry total 1024MiB
     ; PT    address 0x4000 pointing to the pages                each PT hold 4kiB / entry total 2MiB
 

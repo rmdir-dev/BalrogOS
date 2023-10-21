@@ -28,6 +28,7 @@ SL_SRC = src/tool-kit/sl/
 PWD_SRC = src/tool-kit/pwd/
 HELLO_SRC = src/tool-kit/hello/
 WHOAMI_SRC = src/tool-kit/whoami/
+DONUT_SRC = src/tool-kit/donut/
 TLIB_SRC = src/tool-kit/tool-lib/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
@@ -59,6 +60,7 @@ AUTH_SRCS = $(shell find $(AUTH_SRC) -name *.c)
 CLEAR_SRCS = $(shell find $(CLEAR_SRC) -name *.c)
 SL_SRCS = $(shell find $(SL_SRC) -name *.c)
 WHOAMI_SRCS = $(shell find $(WHOAMI_SRC) -name *.c)
+DONUT_SRCS = $(shell find $(DONUT_SRC) -name *.c)
 PWD_SRCS = $(shell find $(PWD_SRC) -name *.c)
 
 # tool shared library
@@ -91,6 +93,7 @@ ALL_AUTH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(AUTH_SRCS))
 ALL_CLEAR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CLEAR_SRCS))
 ALL_SL_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SL_SRCS))
 ALL_WHOAMI_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(WHOAMI_SRCS))
+ALL_DONUT_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(DONUT_SRCS))
 ALL_PWD_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PWD_SRCS))
 
 # tool shared library
@@ -128,7 +131,8 @@ K_OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
 LIBC_OBJECTS = $(LIBC_SRCS:.c=.o)
 LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) \
-			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) $(WHOAMI_SRCS:.c=.o)
+			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) \
+			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o)
 
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
@@ -138,6 +142,13 @@ kernel: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
 	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
 	ld -o $(OS_BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
+
+h_readble_kernel_asm: $(K_OBJECTS)
+	mkdir -p $(OS_BUILD_DIR)
+	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
+	ld -S -o $(OS_BUILD_DIR)/kernel.asm -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000
+	objdump -S $(OS_BUILD_DIR)/kernel.asm > $(OS_BUILD_DIR)/kernel.asm.txt
+	rm $(OS_BUILD_DIR)/kernel.asm
 
 os:
 	mkdir -p build/os
@@ -164,6 +175,7 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sl $(ALL_SL_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/whoami $(ALL_WHOAMI_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/donut $(ALL_DONUT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	#$(PSXC_OBJECTS64)
 	sudo mount -o loop files/filesys.dd files/root/
 	sudo mkdir -p files/root/bin | true

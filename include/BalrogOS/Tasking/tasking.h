@@ -10,6 +10,7 @@
 #define PROCESS_STATE_WAITING   2
 #define PROCESS_STATE_DEAD      3
 #define PROCESS_STATE_ZOMBIE    4
+#define PROCESS_STATE_SLEEPING  5
 
 #define PROCESS_USER_MODE       3
 #define PROCESS_KERNEL_MODE     0
@@ -41,6 +42,7 @@ typedef struct process_t
     uint8_t fd_size;
     fs_fd fd_table[10];
     uint8_t state;
+    uint8_t forked_memory;
     char* cwd;
     uint32_t uid;
     uint32_t gid;
@@ -68,6 +70,15 @@ int clean_process(process* proc);
  * @return int 
  */
 int fork_process(process* proc, interrupt_regs* regs);
+
+/**
+ * @brief Copy the memory of a process into its forked_memory child.
+ *        This function should only be called after recieving
+ *        a write/read exception from the child process.
+ *
+ * @param proc forked_memory process
+ */
+void copy_forked_process_memory(process* proc, uintptr_t copy_addrs);
 
 /**
  * @brief 

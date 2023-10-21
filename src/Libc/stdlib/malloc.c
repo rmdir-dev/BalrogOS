@@ -63,9 +63,7 @@ void* malloc(size_t size)
                         change the current block size.
                     */
                     uint32_t new_block_size = size + sizeof(block_info);
-                    //kprint("current block size : 0%x | 0%p\n", current_block->_size, current_block);
                     current_block->_size -= new_block_size;
-                    //kprint("current block size : 0%x\n", new_block_size);
 
                     //move the block pointer to the new block we want to allocate
                     block += current_block->_size + sizeof(block_info);

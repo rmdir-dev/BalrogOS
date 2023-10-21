@@ -58,7 +58,8 @@ static void _round_robin()
     asm volatile("push %r15");
     asm volatile("push %rbp");
     asm volatile("mov %%rsp, %%rax":"=a"(current_running->rsp));
-    
+    asm volatile("mov %%rbp, %%rax":"=a"(current_running->stack_top));
+
     current_running = current_running->next;
 
     if(!current_running->exec)

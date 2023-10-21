@@ -196,30 +196,43 @@ static void get_vaddr(size_t index, uint8_t level, uintptr_t* vaddr)
     }
 }
 
-static void copy_pages(page_table* src, page_table* dest, uint8_t level, uintptr_t vaddr)
+static void copy_pages(page_table* src, page_table* dest, uint8_t level, uintptr_t vaddr, uint8_t copy_all, uint8_t ignore_stack)
 {
     src = P2V(src);
     dest = P2V(dest);
 
     for(size_t i = 0; i < 512; i++)
     {
+        // check if page exist and if it is not the kernel page (PML4T[511])
         if(src[i] != 0 && (i < 511 || level < 4))
         {
             uintptr_t caddr = vaddr;
             get_vaddr(i, level, &caddr);
-            
+
+            // if the page is not a page table (Either a PML4T, PDPT or PDT)
             if(level > 1)
             {
-                dest[i] = pmm_calloc();
-                copy_pages(STRIP_FLAGS(src[i]), dest[i], level - 1, caddr);
+                // if there is already an assigned page do not allocate a new one
+                // or if the page is the same as the parent page
+                if(dest[i] == 0 || dest[i] == src[i]) {
+                    dest[i] = pmm_calloc();
+                }
+                copy_pages(STRIP_FLAGS(src[i]), STRIP_FLAGS(dest[i]), level - 1, caddr, copy_all, ignore_stack);
                 dest[i] |= PAGE_USER | PAGE_WRITE | PAGE_PRESENT;
             }else 
             {
                 if(caddr < PROCESS_STACK_BOT)
                 {
-                    dest[i] = P2V(dest[i]);
-                    dest[i] = STRIP_FLAGS(src[i]) | PAGE_PRESENT | PAGE_USER;
-                } else 
+                    if(copy_all) {
+                        dest[i] = pmm_calloc();
+                        uint8_t* source = P2V(STRIP_FLAGS(src[i]));
+                        memcpy(P2V(dest[i]), source, 4096);
+                        dest[i] |= PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+                    } else {
+                        dest[i] = P2V(dest[i]);
+                        dest[i] = STRIP_FLAGS(src[i]) | PAGE_PRESENT | PAGE_USER;
+                    }
+                } else if(!ignore_stack)
                 {
                     dest[i] = pmm_calloc();
                     uint8_t* source = P2V(STRIP_FLAGS(src[i]));
@@ -229,6 +242,31 @@ static void copy_pages(page_table* src, page_table* dest, uint8_t level, uintptr
             }
         }
     }
+}
+
+/**
+ * @brief Duplicate the page table from src to dest
+ *
+ * @param src
+ * @param dest
+ * @param level
+ * @param vaddr
+ */
+static void duplicate_pages(page_table* src, page_table* dest, uint8_t level, uintptr_t vaddr) {
+    copy_pages(STRIP_FLAGS(src), STRIP_FLAGS(dest), level, vaddr, 1, 1);
+}
+
+/**
+ * @brief Share the page table from src to dest
+ *        Will only duplicate the stack.
+ *
+ * @param src
+ * @param dest
+ * @param level
+ * @param vaddr
+ */
+static void share_pages(page_table* src, page_table* dest, uint8_t level, uintptr_t vaddr) {
+    copy_pages(STRIP_FLAGS(src), STRIP_FLAGS(dest), level, vaddr, 0, 0);
 }
 
 extern process* current_running;
@@ -243,11 +281,12 @@ int fork_process(process* proc, interrupt_regs* regs)
 
     TODO LATER
     COPY the page table only when a page is accessed
-    and that a page fault occure when attempting to write
+    and that a page fault occur when attempting to write
     */
     process* new = new_process(proc->name);
-    copy_pages(proc->PML4T, new->PML4T, 4, 0);
+    share_pages(proc->PML4T, new->PML4T, 4, 0);
     new->child = 1;
+    new->forked_memory = 1;
     new->uid = proc->uid;
     new->gid = proc->gid;
     if(proc->cwd) {
@@ -255,6 +294,10 @@ int fork_process(process* proc, interrupt_regs* regs)
         memcpy(new->cwd, proc->cwd, strlen(proc->cwd) + 1);
     }
     new->parent = proc;
+    new->wait_size = 0;
+    for (int i = 0; i < 5; ++i) {
+        new->waiting[i] = 0;
+    }
 
     // KERNEL STACK
     page_table* newkstack = P2V(new->PML4T);
@@ -263,15 +306,17 @@ int fork_process(process* proc, interrupt_regs* regs)
 
     uintptr_t phys = kstack_alloc();
     new->kernel_stack_top = P2V(phys) + 4095;
-
+//
+    new->exec = 0;
     proc_insert_to_ready_queue(new);
 
     uint8_t* virt = ((uint8_t*) new->kernel_stack_top) - sizeof(task_register);
 
     new->rsp = virt;
-    
+
     task_register* stack = virt;
     new->exec = 0;
+    new->stack_top = regs->rbp;
 
     stack->rflags = RFLAG_IF;
     stack->ss = SEG_UDATA | 3;
@@ -298,6 +343,16 @@ int fork_process(process* proc, interrupt_regs* regs)
     return new->pid;
 }
 
+void copy_forked_process_memory(process* proc, uintptr_t copy_addrs)
+{
+//    uintptr_t* parent_page = vmm_get_page(proc->parent->PML4T, (void*)copy_addrs);
+//    uintptr_t* child_page = pmm_alloc();
+//    memcpy(P2V(child_page), P2V(parent_page), 4096);
+//    vmm_set_page(proc->PML4T, (void*)copy_addrs, child_page, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+    duplicate_pages(proc->parent->PML4T, proc->PML4T, 4, 0);
+    proc->forked_memory = 0;
+}
+
 static int _copy_add_args_to_stack(process* proc, char** argv)
 {
     void* phys = pmm_calloc();
@@ -322,14 +377,12 @@ static int _copy_add_args_to_stack(process* proc, char** argv)
             data[len] = 0;
             array[argc] = PROCESS_START_DATA | ((uint64_t)data) % 0x1000;
             data += len + 1;
-            //kprint("argv : 0%p | len : %d | %s\n", array[argc], len, *argv);
             argc++;
             argv++;
         }
     }
 
     task_register* reg = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);
-    //kprint("count : %d | stack : 0%p \n", argc, reg);
     reg->rdi = argc;
     reg->rsi = PROCESS_START_DATA;
 
@@ -392,6 +445,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
             for(size_t i = 0; i < 5; i++)
             {
                 proc->waiting[i] = current_running->waiting[i];
+                current_running->waiting[i] = 0;
             }
             proc->wait_size = current_running->wait_size;
             current_running->wait_size = 0;
@@ -401,7 +455,6 @@ int exec_process(const char* name, char** argv, uint8_t kill)
         proc_transfert_to_waiting(current_running->pid);
         int pid = proc->pid;
         proc->pid = current_running->pid;
-        //kprint("pid : %d | 0%p \n", proc->pid, proc);
         current_running->pid = pid;
         current_running->state = PROCESS_STATE_WAITING;
         proc_insert_to_ready_queue(proc);
@@ -424,7 +477,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     if(kill == 1)
     {
-        proc_kill(current_running);
+        proc_kill(current_running, 1);
     }
 
     return 0;
@@ -440,7 +493,7 @@ int wait_process(int pid_to_wait)
     */
     if(proc_add_to_waiting(current_running->pid, pid_to_wait) == 0)
     {
-        proc_to_sleep(current_running->pid);
+        proc_to_sleep(current_running->pid, PROCESS_STATE_WAITING);
         return 0;
     }
     return -1;

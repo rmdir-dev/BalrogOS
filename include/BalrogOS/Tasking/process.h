@@ -32,17 +32,18 @@ int proc_remove_process(int pid);
 /**
  * @brief 
  * 
- * @param proc 
- */
-void proc_kill(process* proc);
-
-/**
- * @brief 
- * 
  * @param pid 
  * @return int 
  */
 void proc_kill_process(int pid);
+
+/**
+ * @brief
+ *
+ * @param pid
+ * @return int
+ */
+void proc_kill(process* proc, uint8_t force_schedule);
 
 /**
  * @brief 
@@ -56,7 +57,7 @@ void proc_transfert_to_waiting(int pid);
  * 
  * @param proc the process to transfert.
  */
-void proc_to_sleep(int pid);
+void proc_to_sleep(int pid, uint8_t set_state);
 
 /**
  * @brief 
@@ -71,7 +72,7 @@ int proc_add_to_waiting(int pid, int to_wait_pid);
  * 
  * @param pid the process ID.
  */
-void proc_transfert_to_ready(int pid);
+void proc_transfert_to_ready(int pid, uint8_t expected_state);
 
 /**
  * @brief Get the process object from it's PID

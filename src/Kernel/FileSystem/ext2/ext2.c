@@ -52,7 +52,6 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
     count += last_delimiter < (src + strlen(src) - 1);
 
     count++;
-    //kprint("count : %d \n", count);
 
     ret = vmalloc(sizeof(char*) * count);
 
@@ -65,7 +64,6 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
         {
             if(idx < count)
             {
-                //kprint("has token %s | 0%p \n", token, src);
                 *(ret + idx++) = token;
                 token = strtok(NULL, '/');
             }
@@ -153,7 +151,6 @@ static uint32_t _ext2_find_higher_half_free_blocks(fs_device_t* dev)
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
     /* TODO update superblock */
-    //kprint("number of blocks : %d/%d\n", fs_data->sb.unalloc_blocks, fs_data->sb.blocks);
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
     uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, 
@@ -172,7 +169,6 @@ static uint32_t _ext2_find_free_blocks(fs_device_t* dev)
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
     /* TODO update superblock */
-    //kprint("number of blocks : %d/%d\n", fs_data->sb.unalloc_blocks, fs_data->sb.blocks);
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
     uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, fs_data->sec_per_block, 0);
@@ -621,7 +617,6 @@ static uint8_t _ext2_list_dir(uint8_t* dir)
         next_entry = dir_ptr + entry->entry_size;
         strcpy(&name_buffer, &entry->name);
         name_buffer[entry->name_length] = 0;
-        kprint("%s \n", &name_buffer);
         dir_ptr += entry->entry_size;
         memset(&name_buffer, 0, 255);
     } while(next_entry->inode);
@@ -746,7 +741,6 @@ static int ext2_write(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd
 
 static int ext2_list(fs_device_t* dev, char* dirname, uint8_t* buffer)
 {
-    kprint("$ ls %s\n", dirname);
     size_t index;
     uint8_t from_root;
     char** path = _ext2_get_path(dirname, '/', &index, &from_root);

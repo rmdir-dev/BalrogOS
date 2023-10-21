@@ -52,6 +52,15 @@ pid_t waitpid(pid_t pid, int* status, int option);
 void exit(int code);
 
 /**
+ * @brief
+ *
+ * @param pid
+ * @param sig
+ * @return int
+ */
+int kill(pid_t pid, int sig);
+
+/**
  * @brief 
  * 
  * @param fd 

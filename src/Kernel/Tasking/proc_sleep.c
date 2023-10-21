@@ -7,6 +7,7 @@
 #include "klib/DataStructure/rbt.h"
 #include "BalrogOS/CPU/PIT/pit.h"
 #include "BalrogOS/Memory/kheap.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -33,7 +34,12 @@ void wake_up(size_t tick, uint16_t ms)
         sleeper_data* slpr = get_sleeper_data(node);
         process* process = slpr->process;
         vmfree(slpr);
-        proc_transfert_to_ready(process->pid);
+        // if the process is still sleeping, wake it up
+        // else the process has been killed or is waiting
+        // an other process
+        if(process->state == PROCESS_STATE_SLEEPING) {
+            proc_transfert_to_ready(process->pid, PROCESS_STATE_SLEEPING);
+        }
         rbt_delete(&sleeper_tree, node);
         node = rbt_minimum(&sleeper_tree);
     }
@@ -53,5 +59,5 @@ void sleep(timespec* time, process* process)
     slpr->process = process;
     slpr->time = *time;
     node->value = slpr;
-    proc_to_sleep(process->pid);
+    proc_to_sleep(process->pid, PROCESS_STATE_SLEEPING);
 }

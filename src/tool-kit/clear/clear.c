@@ -6,5 +6,6 @@
 int main(int argc, char** argv)
 {
     printf(TERM_CLEAR);
+
     return 0;
 }

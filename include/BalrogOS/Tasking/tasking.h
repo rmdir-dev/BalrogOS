@@ -61,7 +61,7 @@ typedef struct process_t
  */
 process* create_process(char* name, uintptr_t func, uint8_t mode);
 
-int clean_process(process* proc);
+int clean_process(process* proc, uint8_t clean_memory);
 
 /**
  * @brief 

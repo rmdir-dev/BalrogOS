@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <limits.h>
 #include "BalrogOS/Debug/debug_output.h"
+#include "balrog/terminal/term.h"
 
+#define _KBD_VERBOSE_MSG    "\e[0;91mINFO \e[0m : "
 #define _KBD_INFO_MSG       "\e[0;97mINFO \e[0m : "
 #define _KBD_ERROR_MSG      "\e[0;96mERROR\e[0m : "
 #define _KBD_CRITICAL_MSG   "\e[0;94mCRITICAL\e[0m : "
@@ -18,6 +20,9 @@ int __kernel_debug_output(int level)
     }
 
     switch (level) {
+        case KDB_LVL_VERBOSE:
+            kprint(_KBD_VERBOSE_MSG);
+            break;
         case KDB_LVL_INFO:
             kprint(_KBD_INFO_MSG);
             break;

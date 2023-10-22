@@ -2,6 +2,7 @@
 #include "klib/DataStructure/rbt.h"
 #include <stdlib.h>
 #include "BalrogOS/Debug/debug_output.h"
+#include "BalrogOS/Memory/kheap.h"
 
 rbt_tree process_tree;
 rbt_tree sleeper_tree;
@@ -115,13 +116,12 @@ static void _proc_kill(process* proc)
     }
 
     _proc_remove_process(proc);
+    uintptr_t proc_addr = (uintptr_t)proc;
 
     // if proc is not a child then clean it.
     // or if the memory was copied then clean it.
-    if(proc->child == 0 || !proc->forked_memory)
-    {
-        clean_process(proc);
-    }
+    clean_process(proc, proc->child == 0 || !proc->forked_memory);
+
 
     if(proc == current_running)
     {

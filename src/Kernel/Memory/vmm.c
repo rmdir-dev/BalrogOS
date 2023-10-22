@@ -150,6 +150,17 @@ static int _vmm_clean(page_table* table, uint8_t level)
             {
                 _vmm_clean((void*)tab[i], level - 1);
             }
+
+            uintptr_t vaddr = P2V(STRIP_FLAGS(tab[i]));
+
+            // if the page is a kernel page
+            // then do not free it. The kernel manage its own memory.
+            if(vaddr >= KERNEL_OFFSET)
+            {
+                kernel_debug_output(KDB_LVL_VERBOSE, "Trying to free kernel page at %p", vaddr);
+                continue;
+            }
+
             // free the page.
             pmm_free((void*)STRIP_FLAGS(tab[i]));
             tab[i] = 0;

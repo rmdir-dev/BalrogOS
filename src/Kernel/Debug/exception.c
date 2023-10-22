@@ -3,11 +3,13 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/Tasking/tasking.h"
 #include "BalrogOS/Tasking/process.h"
+#include "balrog/terminal/term.h"
 
 extern process* current_running;
 
 static interrupt_regs* general_protection_fault(interrupt_regs* stack_frame)
 {
+    kprint(TERM_CLEAR);
     kernel_debug_output(KDB_LVL_CRITICAL, "General protection fault : ");
     uint64_t error = stack_frame->error_code;
     if(error & 0x1)
@@ -55,6 +57,7 @@ static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
         return regs;
     }
 
+    kprint(TERM_CLEAR);
     kernel_debug_output(KDB_LVL_CRITICAL, "Proc %d ", current_running->pid);
 
     if(regs->error_code & 0x02)

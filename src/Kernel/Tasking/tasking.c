@@ -161,12 +161,18 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     return proc;
 }
 
-int clean_process(process* proc)
+int clean_process(process* proc, uint8_t clean_memory)
 {
-    vmm_clean_page_table(proc->PML4T);
-    if(proc->cwd) {
+    if(clean_memory)
+    {
+        vmm_clean_page_table(proc->PML4T);
+    }
+
+    if(proc->cwd)
+    {
         vmfree(proc->cwd);
     }
+
     vmfree(proc);
     return 0;
 }

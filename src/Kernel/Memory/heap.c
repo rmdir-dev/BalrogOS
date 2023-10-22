@@ -2,6 +2,7 @@
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/pmm.h"
 #include "BalrogOS/Debug/debug_output.h"
+#include "balrog/terminal/term.h"
 
 void* alloc(size_t size, block_info* current_block, block_info* prev_block, block_info* current_top, uintptr_t* first_free, uint8_t first_block)
 {
@@ -174,24 +175,27 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
     if((block_info*) *first_free > block)
     {
         kernel_debug_output(KDB_LVL_VERBOSE, "first free = 0%p", block);
+        block->next_free = (void*)*first_free;
         *first_free = (uintptr_t)block;
     } else 
     {
-        block_info* first = (void*)(*first_free);
-        
+        block_info* first = (block_info*)(*first_free);
+
+        kernel_debug_output(KDB_LVL_VERBOSE, "1 first free = 0%p | first = 0%p", first_free, first);
         while(first && first->next_free && first->next_free < block)
         {
             first = first->next_free;
+            kernel_debug_output(KDB_LVL_VERBOSE, "2 first free = 0%p", first);
         }
 
         if(first != block)
         {
-            kernel_debug_output(KDB_LVL_VERBOSE, "3 next block = 0%p, first 0%p", block, first);
-            if(first) {
-                first->next_free = (void*)block;
-            } else {
-                *first_free = (uintptr_t)block;
-            }
+            kernel_debug_output(KDB_LVL_VERBOSE, "3 next block = 0%p, first 0%p", block, *first_free);
+            first->next_free = (void*)block;
+//            if(first) {
+//            } else {
+//                *first_free = (uintptr_t)block;
+//            }
         }
     }
     block->_full = 0;

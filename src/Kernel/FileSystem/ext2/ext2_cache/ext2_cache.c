@@ -71,6 +71,7 @@ int ext2_close_file_from_cache(ext2_idata* inode, fs_fd* fd)
 {
     if(fs_cache_close_file(fd->ftable_idx) == 0)
     {
+        kernel_debug_output(KDB_LVL_INFO, "closing file\n");
         inode->open = 0;
     }
     return 0;

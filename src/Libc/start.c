@@ -1,5 +1,4 @@
 #include "libc/unistd.h"
-#include "libc/stdlib.h"
 
 extern int main(int argc, char** argv);
 

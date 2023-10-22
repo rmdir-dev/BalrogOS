@@ -49,7 +49,7 @@ void* kmalloc(size_t size)
             if(ret != 0)
             {
                 kheap_size += size;
-                kernel_debug_output(KDB_LVL_VERBOSE, "kalloc size = %d/%d KiB added : %d", BYTE_TO_KiB(kheap_size), BYTE_TO_KiB(kheap_max_size), size);
+                kernel_debug_output(KDB_LVL_VERBOSE, "kalloc size = %d/%d KiB added : %d", kheap_size, BYTE_TO_KiB(kheap_max_size), size);
                 return ret;
             }
             // current block = next block

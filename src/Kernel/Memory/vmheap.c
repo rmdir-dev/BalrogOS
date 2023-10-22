@@ -28,19 +28,22 @@ void init_vmheap()
 {
     vmheap_start = (void*)KERNEL_VIRTUAL_START;
     first_free = vmheap_start;
-    vmheap_current_top = vmheap_start + 0x1000;
-    void* alloc = pmm_calloc();
-    vmm_set_page(0, vmheap_start, alloc, PAGE_PRESENT | PAGE_WRITE);
-    vmheap_size += 0x1000;
+
+    // allocate first 1 MiB of the virtual heap
+    for(size_t i = 0; i < 256; i++) {
+        vmm_set_page(0, vmheap_start + vmheap_size, pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
+        vmheap_size += 0x1000;
+    }
+
+    vmheap_current_top = vmheap_start + vmheap_size;
 
     block_info block;
     block.previous_chunk = 0;
     block._is_mmapped = 0;
     block._non_arena = 0;
     block._present = 0;
-    block._size = 0x1000 - sizeof(block_info);
+    block._size = vmheap_size - sizeof(block_info);
     block.next_free = vmheap_current_top;
-
     block_info* first_block = vmheap_start;
     *first_block = block;
 }
@@ -87,7 +90,8 @@ void* vmalloc(size_t size)
 
                 kernel_debug_output(KDB_LVL_VERBOSE, "vmheap first free after alloc block = 0%p", first_free);
                 alloc_count++;
-                kernel_debug_output(KDB_LVL_INFO, "vmalloc size = %d/%d KiB added : %d to 0%p | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), BYTE_TO_KiB(size), ret, alloc_count);
+                kernel_debug_output(KDB_LVL_VERBOSE, "vmalloc size = %d/%d KiB added : %d to 0%p | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), size, ret, alloc_count);
+
                 return ret;
             }
             // current block = next block
@@ -96,7 +100,13 @@ void* vmalloc(size_t size)
             current_block = current_block->next_free;
         } else
         {
-            kernel_debug_output(KDB_LVL_VERBOSE, "invalid block 0%p top = 0%p", current_block, vmheap_current_top);
+            kernel_debug_output(KDB_LVL_CRITICAL, "invalid block 0%p top = 0%p", current_block, vmheap_current_top);
+            if(vmheap_size + 0x1000 == 0x5000)
+            {
+                kernel_debug_output(KDB_LVL_CRITICAL, "invalid block 0%p top = 0%p", current_block, vmheap_current_top);
+                kernel_debug_output(KDB_LVL_VERBOSE, "vmalloc size = %d/%d KiB added : %d | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), size, alloc_count);
+                while(1) {}
+            }
             // if the current virtual heap top is equal to KERNEL_VIRTUAL_TOP
             // then we don't have any space left in memory.
             // We also don't allow to allocate a block larger than 4072 bytes atm.
@@ -125,11 +135,13 @@ void* vmalloc(size_t size)
             first_block->_size = 0x1000 - sizeof(block_info);
             first_block->next_free = vmheap_current_top + 0x1000;
             if(prev_block->next_free != vmheap_current_top) {
-                kernel_debug_output(KDB_LVL_VERBOSE, "current block next free = 0%p", prev_block->next_free);
-                prev_block->next_free = first_block;
-                current_block = first_block;
+                kernel_debug_output(KDB_LVL_ERROR, "prev block next free = 0%p | vmheap current top = 0%p", prev_block->next_free, vmheap_current_top);
 //                while (1) {}
             }
+            kernel_debug_output(KDB_LVL_VERBOSE, "current block next free = 0%p", prev_block->next_free);
+            prev_block->next_free = first_block;
+            current_block = first_block;
+            first_free = first_block;
 
             // set the new virtual heap top.
             vmheap_current_top += 0x1000;
@@ -151,6 +163,7 @@ void vmfree(void* ptr)
     free(block, next_block, vmheap_current_top, (uintptr_t*)&first_free, vmheap_size);
     vmheap_current_size -= size;
     ++free_count;
-    kernel_debug_output(KDB_LVL_INFO, "vmfree size = %d/%d KiB freed : %d from 0%p | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), BYTE_TO_KiB(size), ptr, free_count);
+    alloc_count--;
+    kernel_debug_output(KDB_LVL_VERBOSE, "vmfree size = %d/%d KiB freed : %d from 0%p | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), BYTE_TO_KiB(size), ptr, free_count);
     kernel_debug_output(KDB_LVL_VERBOSE, "vmfree first free current block = 0%p", first_free);
 }

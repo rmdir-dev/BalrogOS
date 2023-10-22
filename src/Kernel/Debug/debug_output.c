@@ -11,7 +11,7 @@
 #define _KBD_ERROR_MSG      "\e[0;96mERROR\e[0m : "
 #define _KBD_CRITICAL_MSG   "\e[0;94mCRITICAL\e[0m : "
 
-int debug_mode = 3;
+int debug_mode = KDB_DEFAULT_LVL;
 
 int __kernel_debug_output(int level)
 {
@@ -40,7 +40,7 @@ int __kernel_debug_output(int level)
 void set_debug_mode(int mode)
 {
 #ifdef KDB_DEBUG
-    kernel_debug_output(KDB_LVL_INFO, "Debug mode set to %d", mode);
+//    kernel_debug_output(KDB_LVL_INFO, "Debug mode set to %d", mode);
     debug_mode = mode;
 #endif
 }

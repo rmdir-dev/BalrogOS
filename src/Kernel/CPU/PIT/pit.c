@@ -62,6 +62,7 @@ void get_relative_time(timespec* time, timespec* relative_time)
 }
 
 int pit_compare(timespec* time) {
+    // check that time is still in the future
     return timer_ticks > time->sec || (timer_ticks == time->sec && timer_ms > time->msec);
 }
 

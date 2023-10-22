@@ -40,13 +40,13 @@ void* malloc(size_t size)
                 void* block = (void*)current_block;
 
                 // check if the current block will be able to contain a new free block
-                if(current_block->_size < size + sizeof(block_info))
+                if(current_block->_size <= size + sizeof(block_info))
                 {
                     // if no the new first free block will be the next one. if first block != 0
                     if(first_block)
                     {
-                        first_free = (uintptr_t)current_block->next_free;
-                    } else 
+                        first_free = (uintptr_t*) current_block->next_free;
+                    } else
                     {
                         prev_block->next_free = current_block->next_free;
                     }
@@ -106,6 +106,7 @@ void* malloc(size_t size)
                 return 0;
             }
         }
+        first_block = 0;
     }
     return 0;
 }

@@ -96,6 +96,7 @@ void proc_wake_process(int* wating, uint8_t size)
     {
         if(wating[i] != 0)
         {
+            kernel_debug_output(KDB_LVL_VERBOSE, "proc wake process %d", wating[i]);
             proc_transfert_to_ready(wating[i], PROCESS_STATE_WAITING);
         }
     }
@@ -112,6 +113,7 @@ static void _proc_kill(process* proc)
 
     if(proc->wait_size != 0)
     {
+        kernel_debug_output(KDB_LVL_VERBOSE, "proc wake process %d children", proc->pid);
         proc_wake_process(&proc->waiting[0], proc->wait_size);
     }
 
@@ -130,15 +132,18 @@ static void _proc_kill(process* proc)
             current_running = NULL;
         }
 
+        kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill schedule");
         schedule(0, 0);
     }
 }
 
 void proc_kill_process(int pid)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill_process %d", pid);
     process* proc = proc_get_process(pid);
 
-    if(_proc_transfert_to_wait(proc) == 0)
+    // !! if proc was freed then proc->state will be 0 !!
+    if(proc && _proc_transfert_to_wait(proc) == 0)
     {
         _proc_kill(proc);
     }
@@ -146,12 +151,14 @@ void proc_kill_process(int pid)
 
 void proc_kill(process* proc, uint8_t force_schedule)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill %d", proc->pid);
     if(
-        proc->state & PROCESS_STATE_WAITING
+        proc &&
+        (proc->state & PROCESS_STATE_WAITING
         || proc->state & PROCESS_STATE_SLEEPING
         || proc->state == PROCESS_STATE_DEAD
         || proc->state == PROCESS_STATE_ZOMBIE
-        || _proc_transfert_to_wait(proc) == 0
+        || _proc_transfert_to_wait(proc) == 0)
     )
     {
         _proc_kill(proc);
@@ -171,20 +178,23 @@ int proc_remove_process(int pid)
 
 void proc_transfert_to_waiting(int pid)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "proc_transfert_to_waiting %d", pid)
     process* proc = proc_get_process(pid);
 
-     if(_proc_transfert_to_wait(proc) == 0)
+    // ! proc should never be null !
+     if(proc && _proc_transfert_to_wait(proc) == 0)
     {
         proc->state ^= PROCESS_STATE_READY | PROCESS_STATE_RUNNING;
-         proc->state |= PROCESS_STATE_WAITING;
+        proc->state |= PROCESS_STATE_WAITING;
     }
 }
 
 void proc_to_sleep(int pid, uint8_t set_state)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "proc_to_sleep %d", pid);
     process* proc = proc_get_process(pid);
 
-    if(_proc_transfert_to_wait(proc) == 0)
+    if(proc && _proc_transfert_to_wait(proc) == 0)
     {
         proc->state &= ~(PROCESS_STATE_READY) & ~(PROCESS_STATE_RUNNING);
         proc->state |= set_state;
@@ -203,6 +213,7 @@ void proc_to_sleep(int pid, uint8_t set_state)
 
 int proc_add_to_waiting(int pid, int to_wait_pid)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "proc_add_to_waiting %d", pid);
     process* proc = proc_get_process(to_wait_pid);
 
     if(proc != 0 && proc->wait_size < 5)
@@ -216,6 +227,7 @@ int proc_add_to_waiting(int pid, int to_wait_pid)
 
 void proc_transfert_to_ready(int pid, uint8_t expected_state)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "proc_transfert_to_ready %d", pid);
     process* proc = proc_get_process(pid);
 
     if(!proc) {
@@ -224,10 +236,12 @@ void proc_transfert_to_ready(int pid, uint8_t expected_state)
 
     if(proc->state == expected_state)
     {
+        kernel_debug_output(KDB_LVL_VERBOSE, "proc_transfert_to_ready is expected state %d", pid);
         proc_insert_to_ready_queue(proc);
     }
 
     if(proc->state & expected_state) {
+        kernel_debug_output(KDB_LVL_VERBOSE, "proc_transfert_to_ready has expected state flg %d", pid);
         proc->state ^= expected_state;
     }
 }
@@ -239,5 +253,6 @@ process* proc_get_process(int pid)
     {
         return (process*) proc_node->value;
     }
+    kernel_debug_output(KDB_LVL_INFO, "proc_get_process %d not found", pid);
     return NULL;
 }

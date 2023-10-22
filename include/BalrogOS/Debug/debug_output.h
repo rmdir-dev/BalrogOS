@@ -20,7 +20,12 @@
 #define KERNEL_DEBUG_MODE_ERROR     2
 #define KERNEL_DEBUG_MODE_INFO      1
 
+#ifndef KDB_DEFAULT_LVL
+#define KDB_DEFAULT_LVL 3
+#endif
+
 #define kernel_debug_output(level, ...) if(__kernel_debug_output(level) && kprint(__VA_ARGS__) && kprint("\n")){}
+#define kernel_debug_output_no_ln(level, ...) if(__kernel_debug_output(level) && kprint(__VA_ARGS__)){}
 
 int __kernel_debug_output(int level);
 

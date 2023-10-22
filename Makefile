@@ -4,7 +4,7 @@
 PROJECT_NAME 	= OS
 OUTPUT_NAME 	= os-image
 SRC_BASE 		= .
-DEFINES 		= -DKDB_DEBUG -D__BALROG_VERSION__=\"0.0.1\"
+DEFINES 		= -DKDB_DEBUG -DKDB_DEFAULT_LVL=3 -DKDB_START_SEQ=0 -D__BALROG_VERSION__=\"0.0.1\"
 
 ########################################################
 #	DIRECTORIES
@@ -227,10 +227,10 @@ run:
 	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
 
 iso:
-	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b os-image files/
+	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b Booloader files/
 
 run_debug:
-	qemu-system-x86_64 -s -S build/os/os-image -monitor stdio
+	qemu-system-x86_64 -s -S build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
 
 ########################################################
 #	GENERAL COMPILATION RULES

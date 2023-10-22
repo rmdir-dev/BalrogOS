@@ -13,8 +13,10 @@
 /**
  * @brief
  * @param ms
- * @param process
+ * @param proc
  */
-void sleep(timespec* time, process* process);
+void sleep(timespec* time, process* proc);
+
+void remove_sleeper(process* proc);
 
 #endif //BALROGOS_SLEEP_H

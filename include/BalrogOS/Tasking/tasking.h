@@ -47,6 +47,7 @@ typedef struct process_t
     uint32_t uid;
     uint32_t gid;
     uint32_t* error_no;
+    uintptr_t* sleeper_node;
     struct process_t* next;
     struct process_t* parent;
 } process;

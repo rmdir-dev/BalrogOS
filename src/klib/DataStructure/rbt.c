@@ -284,7 +284,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
         /*
             Now the node will either have one or zero child.
 
-            We will determin if the node has one child left.
+            We will determine if the node has one child left.
 
             to_delete->children[RBT_LEFT] == NULL :
                 - return 0 if RBT_LEFT is not NULL

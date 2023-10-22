@@ -1,5 +1,6 @@
 #include "BalrogOS/Tasking/tasking.h"
 #include "BalrogOS/Tasking/process.h"
+#include "BalrogOS/Tasking/proc_sleep.h"
 #include "BalrogOS/Memory/kstack.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/pmm.h"
@@ -12,6 +13,7 @@
 #include "balrog/memory/proc_mem.h"
 #include "BalrogOS/User/user_manager.h"
 #include "klib/IO/kprint.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include <string.h>
 
 uint64_t next_pid = 0;
@@ -52,6 +54,7 @@ typedef struct task_register_t
 
 process* new_process(char* name)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "creating process");
     process* proc = vmalloc(sizeof(process));
     memset(proc, 0, sizeof(process));
     proc->name = name;
@@ -163,14 +166,23 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 
 int clean_process(process* proc, uint8_t clean_memory)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process %d", proc->pid);
+
     if(clean_memory)
     {
+        kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process memory");
         vmm_clean_page_table(proc->PML4T);
     }
 
     if(proc->cwd)
     {
+        kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process cwd");
         vmfree(proc->cwd);
+    }
+
+    if(proc->sleeper_node) {
+        kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process sleeper node");
+        remove_sleeper(proc);
     }
 
     vmfree(proc);

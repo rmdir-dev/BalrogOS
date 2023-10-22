@@ -45,6 +45,20 @@ void idle_loop()
 void initialize_kernel(void* SMAP, void* size)
 {
     disable_interrupt();
+
+    /*     DEBUG OUTPUT   */
+#ifdef KDB_DEBUG
+#ifdef KDB_START_SEQ
+#if KDB_START_SEQ == 1
+    // show all debug messages at default level
+    set_debug_mode(KDB_DEFAULT_LVL);
+#elif KDB_START_SEQ == 0
+    // show only critical errors
+    set_debug_mode(3);
+#endif
+#endif
+#endif
+
     /*      SCREEN        */
     vga_init();
     KERNEL_LOG_OK("Kernel loading :");
@@ -126,6 +140,13 @@ void initialize_kernel(void* SMAP, void* size)
 
     KERNEL_LOG_OK("start CPU scheduler : done");
     KERNEL_LOG_OK("start process : done");
+
+    /*   ENABLE DEBUG   */
+#ifdef KDB_DEBUG
+    set_debug_mode(KDB_DEFAULT_LVL);
+#endif
+
+    /*    ENABLE INTERRUPT   */
     kclear();
 
     enable_interrupt();

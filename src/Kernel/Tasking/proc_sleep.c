@@ -30,16 +30,31 @@ void wake_up(size_t tick, uint16_t ms)
         return;
     }
 
-    while(node && pit_compare(&get_sleeper_data(node)->time)) {
-        sleeper_data* slpr = get_sleeper_data(node);
-        process* process = slpr->process;
+    sleeper_data* slpr = get_sleeper_data(node);
+    if(!slpr) {
+        rbt_delete(&sleeper_tree, node);
+        return;
+    }
+    kernel_debug_output(KDB_LVL_ERROR, "wake up 0%p", slpr);
+
+    process* process = slpr->process;
+    if(!process) {
+        rbt_delete(&sleeper_tree, node);
+        return;
+    }
+
+    // sleeper might have been killed by an other process so check if it's still alive
+    while(process->state & PROCESS_STATE_SLEEPING && pit_compare(&slpr->time)) {
         vmfree(slpr);
         // if the process is still sleeping, wake it up
         // else the process has been killed or is waiting
         // an other process
         if(process->state == PROCESS_STATE_SLEEPING) {
             proc_transfert_to_ready(process->pid, PROCESS_STATE_SLEEPING);
+        } else if(process->state & PROCESS_STATE_SLEEPING) {
+            process->state ^= PROCESS_STATE_SLEEPING;
         }
+        process->sleeper_node = NULL;
         rbt_delete(&sleeper_tree, node);
         node = rbt_minimum(&sleeper_tree);
     }
@@ -50,14 +65,25 @@ size_t get_tree_key(timespec* time)
     return time->sec * 1000 + time->msec;
 }
 
-void sleep(timespec* time, process* process)
+void sleep(timespec* time, process* proc)
 {
     size_t key = get_tree_key(time);
 
     rbt_node* node = rbt_insert(&sleeper_tree, key);
     sleeper_data* slpr = vmalloc(sizeof(sleeper_data));
-    slpr->process = process;
+    proc->sleeper_node = node;
+    slpr->process = proc;
     slpr->time = *time;
     node->value = slpr;
-    proc_to_sleep(process->pid, PROCESS_STATE_SLEEPING);
+    proc_to_sleep(proc->pid, PROCESS_STATE_SLEEPING);
+}
+
+void remove_sleeper(process* proc)
+{
+    if(proc->sleeper_node == NULL) {
+        return;
+    }
+
+    rbt_delete(&sleeper_tree, (rbt_node*) proc->sleeper_node);
+    proc->sleeper_node = NULL;
 }

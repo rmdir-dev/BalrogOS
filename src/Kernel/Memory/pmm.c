@@ -83,6 +83,7 @@ void* pmm_calloc()
 {
     void* p = pmm_alloc();
 
+    kernel_debug_output(KDB_LVL_VERBOSE, "pmm alloc %p", p);
     // set the bits inside the page to 0.
     memset((void*)P2V(p), 0, PAGE_SIZE);
     

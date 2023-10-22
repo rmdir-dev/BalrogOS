@@ -16,7 +16,8 @@ int __check_file_permission(fs_fd* fd, uint16_t mode) {
     fs_file_stat current_file_stat;
     fs_fstat(fd, &current_file_stat);
 
-    if(current_file_stat.uid != current_running->uid)
+    // if the user is not the owner of the file or root
+    if(current_file_stat.uid != current_running->uid && current_running->uid != 0)
     {
         if(!(current_file_stat.mode & mode)) {
             if(current_file_stat.gid != current_running->gid || !(current_file_stat.mode & (mode << 3)))

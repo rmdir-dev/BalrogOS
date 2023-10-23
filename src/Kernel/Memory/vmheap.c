@@ -30,7 +30,7 @@ void init_vmheap()
     first_free = vmheap_start;
 
     // allocate first 1 MiB of the virtual heap
-    for(size_t i = 0; i < 1; i++) {
+    for(size_t i = 0; i < 256; i++) {
         vmm_set_page(0, vmheap_start + vmheap_size, pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
         vmheap_size += 0x1000;
     }
@@ -52,7 +52,7 @@ void* vmalloc(size_t size)
 {
     block_info* start_block = first_free;
     block_info* current_block = first_free;
-    size += sizeof(block_info) * 2; // add 40 bytes to the size to protect against heap corruption
+    size += sizeof(block_info) * 3; // add 60 bytes to the size to protect against heap corruption
 
 //    if(first_free == vmheap_current_top) {
 //        kernel_debug_output(KDB_LVL_VERBOSE, "first free = vmheap current top = 0%p", first_free);
@@ -101,10 +101,10 @@ void* vmalloc(size_t size)
             current_block = current_block->next_free;
         } else
         {
-            kernel_debug_output(KDB_LVL_CRITICAL, "invalid block 0%p top = 0%p", current_block, vmheap_current_top);
+            kernel_debug_output(KDB_LVL_INFO, "invalid block 0%p top = 0%p", current_block, vmheap_current_top);
             if(vmheap_size + 0x1000 == 0x5000)
             {
-                kernel_debug_output(KDB_LVL_CRITICAL, "vmalloc size = %d/%d KiB added : %d | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), size, alloc_count);
+                kernel_debug_output(KDB_LVL_INFO, "vmalloc size = %d/%d KiB added : %d | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), size, alloc_count);
 //                while(1) {}
             }
             // if the current virtual heap top is equal to KERNEL_VIRTUAL_TOP

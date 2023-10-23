@@ -183,7 +183,7 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
     {
         block_info* first = (block_info*)(*first_free);
 
-        kernel_debug_output(KDB_LVL_VERBOSE, "1 first free = 0%p | first = 0%p", first_free, first);
+        kernel_debug_output(KDB_LVL_VERBOSE, "1 first free = 0%p | first = 0%p", *first_free, first);
         while(first && first->next_free && first->next_free < block)
         {
             first = first->next_free;

@@ -652,7 +652,7 @@ static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
 
     if(file_inode->open == 0)
     {
-        kernel_debug_output(KDB_LVL_CRITICAL, "FILE NOT IN CACHE %s\n", filename);
+        kernel_debug_output(KDB_LVL_INFO, "FILE NOT IN CACHE %s\n", filename);
         uint8_t* buffer = fs_cache_get_new_buffer(file_inode->inode.size);
         _ext2_read_file(dev, buffer, &file_inode->inode);
         ext2_add_file_to_cache(filename, file_inode, buffer);

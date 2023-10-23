@@ -12,7 +12,7 @@ void* first_free = 0;
 void* malloc(size_t size)
 {
     block_info* current_block = first_free;
-    size += sizeof(block_info) * 3; // add 40 bytes to the size to protect against heap corruption
+    size += sizeof(block_info) * 3; // add 60 bytes to the size to protect against heap corruption
 
     if(first_free == 0)
     {

@@ -1,16 +1,18 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <balrog/memory/heap.h>
 #include <balrog/memory/proc_mem.h>
 
-void* const heap_start = 0x000055c0603d3000;
+void* const heap_start = (void*) 0x000055c0603d3000;
 void* heap_top = heap_start + 0x1000;
 void* first_free = 0;
 
 void* malloc(size_t size)
 {
     block_info* current_block = first_free;
+    size += sizeof(block_info) * 3; // add 40 bytes to the size to protect against heap corruption
 
     if(first_free == 0)
     {
@@ -34,6 +36,7 @@ void* malloc(size_t size)
             {
                 // if the previous block is free of not
                 uint8_t present = 1;
+                uint8_t full = 0;
                 
                 // the current block is by default the block to be allocated.
                 // we use a uint8_t to be able to shift the pointer byte by byte
@@ -43,7 +46,7 @@ void* malloc(size_t size)
                 if(current_block->_size <= size + sizeof(block_info))
                 {
                     // if no the new first free block will be the next one. if first block != 0
-                    if(first_block)
+                    if(first_block && current_block == first_free)
                     {
                         first_free = (uintptr_t*) current_block->next_free;
                     } else
@@ -56,7 +59,8 @@ void* malloc(size_t size)
                     size = current_block->_size;
 
                     // the previous block is not free.
-                    present = 0;    
+                    present = 0;
+                    full = 1;
                 } else
                 {
                     /*  if the block can contain the new block then
@@ -77,6 +81,7 @@ void* malloc(size_t size)
                 new_block->_present = present;
                 new_block->_non_arena = 0;
                 new_block->_size = size;
+                new_block->_full = full;
                 new_block->_is_mmapped = 1;
 
                 // set current block to the next block.
@@ -99,8 +104,30 @@ void* malloc(size_t size)
         {
             if(current_block < PROCESS_HEAP_END)
             {
-                // SYS BRK
-            } else 
+                printf("heap full brk\n");
+                brk(heap_top + 0x1000);
+
+                block_info* first_block = (void*) heap_top;
+                first_block->previous_chunk = prev_block;
+                first_block->_is_mmapped = 0;
+                first_block->_non_arena = 0;
+                first_block->_present = 1;
+                first_block->_size = 0x1000 - sizeof(block_info);
+                first_block->next_free = heap_top + 0x1000;
+
+                if(prev_block->next_free != heap_top)
+                {
+                    prev_block->next_free = first_block;
+                }
+
+                current_block = first_block;
+                if(first_free == heap_top || first_free > heap_top)
+                {
+                    first_free = first_block;
+                }
+
+                heap_top += 0x1000;
+            } else
             {
                 // Heap is full
                 return 0;
@@ -180,6 +207,7 @@ void free(void* ptr)
     // set first free to block.
     if(first_free > block)
     {
+        block->next_free = first_free;
         first_free = block;
     } else 
     {
@@ -195,4 +223,5 @@ void free(void* ptr)
             first->next_free = block;
         }
     }
+    block->_full = 0;
 }

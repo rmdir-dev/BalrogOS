@@ -22,14 +22,14 @@ void* alloc(size_t size, block_info* current_block, block_info* prev_block, bloc
         uint8_t* block = (void*)current_block;
 
         // check if the current block will be able to contain a new free block
-        if(current_block->_size < size + sizeof(block_info))
+        if(current_block->_size <= size + sizeof(block_info))
         {
             kernel_debug_output(KDB_LVL_VERBOSE, "block is not large enough : %d < %d", current_block->_size, size + sizeof(block_info));
 //            return 0;
             // if no the new first free block will be the next one. if first block != 0
             if(first_block && current_block == *first_free)
             {
-                kernel_debug_output(KDB_LVL_VERBOSE, "first free block is 0%p -> %p", first_free, current_block->next_free);
+                kernel_debug_output(KDB_LVL_VERBOSE, "first free block is 0%p -> %p", *first_free, current_block->next_free);
                 *first_free = (uintptr_t)current_block->next_free;
             } else
             {
@@ -109,9 +109,10 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
     if(block->_present)
     {
         uint32_t size = block->_size + sizeof(block_info);
-        if(block->_full) {
-            size = block->_size;
-        }
+//        if(block->_full) {
+//            size = block->_size;
+//        }
+        kernel_debug_output(KDB_LVL_VERBOSE, "free 2 block = 0%p, prev chunk 0%p", block, block->previous_chunk);
         block->previous_chunk->_size += size;
         block = block->previous_chunk;
     }
@@ -125,7 +126,7 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
             // if the next block is not mapped
             if(!next_block->_is_mmapped)
             {
-                // if block is smaller than 4096 bytes && contiguous
+                // if block is smaller than block_max_size bytes && contiguous
                 // then coalesce the two blocks
                 if(block->_size + sizeof(block_info) < block_max_size && contiguous)
                 {
@@ -136,9 +137,10 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
                     new_free_block->_non_arena = block->_non_arena;
                     new_free_block->_is_mmapped = block->_is_mmapped;
                     new_free_block->_present = block->_present;
-                    if(!new_free_block->_full) {
-                        new_free_block->_size += next_block->_size + sizeof(block_info);
-                    }
+//                    if(!new_free_block->_full) {
+//                        new_free_block->_size += next_block->_size + sizeof(block_info);
+//                    }
+                    new_free_block->_size += next_block->_size + sizeof(block_info);
 
                     new_free_block->next_free = next_block->next_free;
 
@@ -153,12 +155,12 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
             }
             // set contiguous to 0 and shift to the next block
             contiguous = 0;
-            size_t blk_size = next_block->_size;
-            if(!next_block->_full)
-            {
-                blk_size += sizeof(block_info);
-            }
+            size_t blk_size = next_block->_size + sizeof(block_info);
+//            if(block->_full) {
+//                blk_size = block->_size;
+//            }
             next_block = (void*)(((uint8_t*)next_block) + blk_size);
+            kernel_debug_output(KDB_LVL_VERBOSE, "free 2 block = 0%p, next_block 0%p", block, next_block);
         } else
         {
             // the next free block is the virtual kernel heap top.
@@ -190,7 +192,7 @@ void free(block_info* block, block_info* next_block, block_info* current_top, ui
 
         if(first != block)
         {
-            kernel_debug_output(KDB_LVL_VERBOSE, "3 next block = 0%p, first 0%p", block, *first_free);
+            kernel_debug_output(KDB_LVL_VERBOSE, "3 next block = 0%p, first 0%p", block, first);
             first->next_free = (void*)block;
 //            if(first) {
 //            } else {

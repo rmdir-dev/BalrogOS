@@ -37,6 +37,7 @@ void pmm_free(void* addr)
     // at addr yet.
     if(next_addr < addr)
     {
+//        kernel_debug_output(KDB_LVL_CRITICAL, "pmm_free : %p is not allocated", addr)
         return;
     }
     addr = (void*)P2V(addr);

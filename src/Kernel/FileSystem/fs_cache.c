@@ -117,6 +117,7 @@ static int _fs_cache_free_buffer(uint32_t index)
 
 int fs_cache_close_file(uint32_t index)
 {
+    return -1;
     if(--file_table[index].reference == 0)
     {
         _fs_cache_free_buffer(index);

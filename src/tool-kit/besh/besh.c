@@ -118,24 +118,29 @@ int sh_exec_cmd(char** args, uint8_t add_to_history)
     return 0;
 }
 
+void manage_cd_prev_dir(char* tmp_cwd) {
+    int len = strlen(tmp_cwd);
+    int i = len - 1;
+    for(; i >= 0; i--) {
+        if(tmp_cwd[i] == '/') {
+            // if is root directory.
+            if(i == 0) {
+                tmp_cwd[i + 1] = 0;
+                break;
+            }
+            tmp_cwd[i] = 0;
+            break;
+        }
+    }
+}
+
 void change_directory(char* dir) {
     // TODO move this into the kernel sys_chdir
     char* tmp_cwd = malloc(100);
     memcpy(tmp_cwd, cwd, 100);
 
     if(strcmp(dir, "..") == 0) {
-        int len = strlen(tmp_cwd);
-        int i = len - 1;
-        for(; i >= 0; i--) {
-            if(tmp_cwd[i] == '/') {
-                if(i == 0) {
-                    tmp_cwd[i + 1] = 0;
-                    break;
-                }
-                tmp_cwd[i] = 0;
-                break;
-            }
-        }
+        manage_cd_prev_dir(tmp_cwd);
     } else if(strcmp(dir, "/") == 0) {
         memcpy(tmp_cwd, "/", 2);
         tmp_cwd[1] = 0;
@@ -145,6 +150,7 @@ void change_directory(char* dir) {
         tmp_cwd[len] = 0;
     } else {
         int dir_len = strlen(dir);
+        // remove trailing slash
         if(dir[dir_len - 1] == '/') {
             dir[dir_len - 1] = 0;
         }
@@ -152,17 +158,70 @@ void change_directory(char* dir) {
         int len = strlen(tmp_cwd);
         char* start_copy = &tmp_cwd[len];
 
-        if(tmp_cwd[len - 1] != '/') {
-            tmp_cwd[len] = '/';
-            start_copy = &tmp_cwd[++len];
-        }
-
+        // if chdir starts with a slash
         if(dir[0] == '/') {
             start_copy = &tmp_cwd[0];
             len = 0;
+        } else {
+            if(dir[0] == '.' && dir[1] == '/') {
+                dir += 2;
+            }
+
+            while(dir[0] == '.' && dir[1] == '.') {
+                if(dir[2] != '/' && dir[2] != 0) {
+                    printf("cd : invalid path\n");
+                    return;
+                }
+
+                manage_cd_prev_dir(tmp_cwd);
+                if(dir[2] == '/') {
+                    dir += 3;
+                } else if(dir[2] == 0) {
+                    dir += 2;
+                }
+            }
+            // reset the length if there was a ../
+            len = strlen(tmp_cwd);
+
+            // if not root directory and cwd does not end with a slash
+            if(tmp_cwd[len - 1] != '/') {
+                tmp_cwd[len] = '/';
+                start_copy = &tmp_cwd[++len];
+            }
         }
-        memcpy(start_copy, dir, strlen(dir));
-        tmp_cwd[len + strlen(dir)] = 0;
+
+        // check if dir contains other .. and remove them
+        char* tmp_dir = strdup(dir);
+        char* tmp_dir_start = tmp_dir;
+        char* tmp_dir_end = tmp_dir;
+        while(tmp_dir_end != NULL) {
+            tmp_dir_end = strstr(tmp_dir_start, "../");
+            if(tmp_dir_end != NULL) {
+                free(tmp_dir);
+                printf("cd : invalid path\n");
+                return;
+            }
+        }
+
+        // check if dir contains other . and remove them
+        tmp_dir_start = tmp_dir;
+        tmp_dir_end = tmp_dir;
+        while(tmp_dir_end != NULL) {
+            tmp_dir_end = strstr(tmp_dir_start, "./");
+            if(tmp_dir_end != NULL) {
+                free(tmp_dir);
+                printf("cd : invalid path\n");
+                return;
+            }
+        }
+
+        free(tmp_dir);
+        dir_len = strlen(dir);
+
+        if(dir_len != 0) {
+            memcpy(start_copy, dir, dir_len);
+            tmp_cwd[len + strlen(dir)] = 0;
+        }
     }
 
     int fd = open(tmp_cwd, 0);
@@ -419,6 +478,7 @@ void process_config() {
             if(strcmp(key, "CURSOR") == 0)
             {
                 cursor_char = strdup(value);
+                cursor_char[1] = 0; // only one char
                 show_cursor = 1;
             }
 

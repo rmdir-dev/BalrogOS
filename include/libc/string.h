@@ -109,6 +109,15 @@ uintptr_t strspn(char * __restrict str, const char delim);
  */
 uintptr_t strcspn(char * __restrict str, const char delim);
 
+/**
+ * @brief
+ *
+ * @param str
+ * @param delim
+ * @return char*
+ */
+char* strstr(char* fullString, char* substring);
+
 #ifdef __cplusplus
 }
 #endif

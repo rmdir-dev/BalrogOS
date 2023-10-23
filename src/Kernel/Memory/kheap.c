@@ -38,6 +38,7 @@ void* kmalloc(size_t size)
     block_info* current_block = kfirst_free;
     block_info* prev_block = current_block;
     uint8_t first_block = 1;
+    size += sizeof(block_info) * 2; // add 40 bytes to the size to protect against heap corruption
 
     kernel_debug_output(KDB_LVL_VERBOSE, "kheap current block = 0%p", current_block);
     while(1)

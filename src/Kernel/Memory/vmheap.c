@@ -78,7 +78,7 @@ void* vmalloc(size_t size)
         /*  if the next block is smaller than the current top
             then try to allocate the new block
         */
-        if(current_block < (block_info*) vmheap_current_top && current_block >= KERNEL_VIRTUAL_START)
+        if(current_block < (block_info*) vmheap_current_top && current_block >= (block_info*) KERNEL_VIRTUAL_START)
         {
             void* ret = heap_alloc(size, current_block, prev_block, vmheap_current_top, (uintptr_t*)&first_free, first_block);
             kernel_debug_output(KDB_LVL_VERBOSE, "RET block = 0%p, first free = 0%p", ret, first_free);

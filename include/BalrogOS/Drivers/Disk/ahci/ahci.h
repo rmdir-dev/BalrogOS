@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "ahci_structures.h"
+#include "BalrogOS/Drivers/Disk/ata/ata_device.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 
 /*
@@ -40,6 +41,11 @@ Documentation :
 
 #define AHCI_64_BIT_CAP         (1 << 31)
 
+#define AHCI_ABAR_PAGES         2           // 0x100 + 32 * 0x80 bytes of registers
+#define AHCI_TIMEOUT            1000000     // polling loop bail out
+#define AHCI_DEV_LBA_MODE       (1 << 6)    // FIS device register, LBA mode
+#define AHCI_DMA_SECTORS        (PAGE_SIZE / ATA_SECTOR_SIZE)   // sectors carried by one command
+
 /**
  * @brief set the boot device.
  * 
@@ -52,3 +58,23 @@ int ahci_get_boot_device(fs_device_t* device);
  * 
  */
 void init_ahci();
+
+/**
+ * @brief read sectors from an AHCI drive.
+ * 
+ * @param device 
+ * @param buffer where the sectors are copied
+ * @param lba first sector to read
+ * @param len number of sectors
+ */
+void ahci_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
+
+/**
+ * @brief write sectors to an AHCI drive.
+ * 
+ * @param device 
+ * @param buffer the sectors to write
+ * @param lba first sector to write
+ * @param len number of sectors
+ */
+void ahci_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);

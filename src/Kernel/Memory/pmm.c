@@ -124,11 +124,14 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
             }
         }
 
-        if(i != *SMAPsize - 1 || SMAPinfo[i].Type == 1) {
-            for (void *p = start; (p + PAGE_SIZE) < end; p += PAGE_SIZE) {
-                vmm_set_page(0, (void *) P2V(p), p, PAGE_PRESENT | PAGE_WRITE);
+        if(i != *SMAPsize - 1 || SMAPinfo[i].Type == 1)
+        {
+            for(void* p = start; (p + PAGE_SIZE) < end; p += PAGE_SIZE)
+            {
+                vmm_set_page(0, (void*)P2V(p), p, PAGE_PRESENT | PAGE_WRITE);
 
-                if (SMAPinfo[i].Type == USABLE_MEMORY && p > (void *) 0x100000) {
+                if(SMAPinfo[i].Type == USABLE_MEMORY && p > (void*)0x100000)
+                {
                     pmm_free(p);
                 }
             }

@@ -242,6 +242,12 @@ iso:
 run_debug:
 	qemu-system-x86_64 -s -S build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
 
+mount:
+	sudo mount -o loop files/filesys.dd files/root/
+
+umount:
+	sudo umount files/filesys.dd
+
 ########################################################
 #	GENERAL COMPILATION RULES
 ########################################################

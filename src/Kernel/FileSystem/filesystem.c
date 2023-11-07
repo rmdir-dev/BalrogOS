@@ -17,10 +17,13 @@ fs_device_t dev;
 
 static const size_t boot_lookout_len = 2;
 
+extern int ata_get_boot_device(fs_device_t* device);
+extern int ahci_get_boot_device(fs_device_t* device);
+
 static int (*fs_boot_lookout[])(fs_device_t*) = 
 {
-    [0] ata_get_boot_device,
-    [1] ahci_get_boot_device,
+    [0] &ata_get_boot_device,
+    [1] &ahci_get_boot_device,
 };
 
 int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
@@ -90,7 +93,7 @@ void init_file_system()
     kmutex_init(&dev.lock);
     kmutex_lock(&dev.lock);
     
-    if(__root_device_lookout() != 0)
+    if(__root_device_lookout(&dev) != 0)
     {
         kmutex_unlock(&dev.lock);
         KERNEL_LOG_FAIL("file system : No suitable drive found!");

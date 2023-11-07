@@ -15,3 +15,5 @@ VBox/*
 files/filesys_old.dd
 .idea/*
 cmake-build-*/
+
+.cache/

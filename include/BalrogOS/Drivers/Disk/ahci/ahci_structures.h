@@ -1,7 +1,12 @@
 #pragma once
 
 #include "BalrogOS/Drivers/Bus/pci.h"
+#include "BalrogOS/Memory/memory.h"
 #include "ahci_command.h"
+
+#define AHCI_CMD_SLOTS          32                                      // command slots per port
+#define AHCI_CMD_TABLE_PER_PAGE (PAGE_SIZE / sizeof(ahci_cmd_table_t))  // command tables held by one page
+#define AHCI_CMD_TABLE_PAGES    ((AHCI_CMD_SLOTS + AHCI_CMD_TABLE_PER_PAGE - 1) / AHCI_CMD_TABLE_PER_PAGE)
 
 #define HBA_PxIS_CPDS		(1 << 31)	// Cold Port Detect Status
 #define HBA_PxIS_TFES		(1 << 30)	// Task File Error Status
@@ -73,7 +78,7 @@ typedef volatile struct _hba_mem_t
 
 typedef struct __ahci_device_t 
 {
-    void* abar;                 // AHCI Base Memory Register
+    hba_mem_t* abar;            // AHCI Base Memory Register
     pci_device_t* pci;          // Linked PCI device
     uint32_t key;               // hash map key
 
@@ -81,9 +86,29 @@ typedef struct __ahci_device_t
 	hba_port_t* port;
 	uint32_t port_no;
 
-	ahci_cmd_table_t* cmd_table;
+	/*  the command tables don't fit in a single page, they are spread over
+	    AHCI_CMD_TABLE_PAGES pages. use __ahci_get_cmd_table() to reach one.
+	*/
+	void* cmd_table_page[AHCI_CMD_TABLE_PAGES];
 	ahci_cmd_list_t* cmd_list;
-	fis_device_reg_t* fis;
+	void* fis;
+
+	/*  physical address of the page the controller reads from and writes
+	    to. the buffers coming from the file system are neither aligned nor
+	    physically contiguous, so every transfer bounces through it.
+	*/
+	void* dma_buffer;
 
 	uint8_t initialized;
 } __attribute__((packed)) ahci_device_t;
+
+typedef struct __ahci_cmd_t
+{
+    uint8_t command;        // ATA command
+    uint8_t device;         // FIS device register
+    uint8_t write;          // 1 : host to device
+    uint16_t count;         // number of sectors
+    uint64_t lba;           // first sector
+    uintptr_t buffer;       // physical address of the DMA buffer
+    uint32_t size;          // size of the transfer in bytes
+} ahci_cmd_t;

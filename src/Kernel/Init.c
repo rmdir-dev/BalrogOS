@@ -33,7 +33,8 @@
 */
 void idle_loop()
 {
-    while(1){}
+    while(1)
+    {}
 }
 
 /* 
@@ -134,7 +135,7 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_INFO("start process : waiting...");
     char test_arg1[11] = "/sbin/auth";
     char test_arg2[9] = "/boot/";
-    uintptr_t argv[5] = { &test_arg1, &test_arg2, 0, 0, 0 };
+    uintptr_t argv[5] = { &test_arg1, 0, 0, 0, 0 };
     exec_process(argv[0], &argv, 0);
     push_process("morgoth", idle_loop, 0);
 

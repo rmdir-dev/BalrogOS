@@ -21,9 +21,6 @@ size_t vmheap_current_size = 0;
 size_t alloc_count = 0;
 size_t free_count = 0;
 
-extern void* alloc(size_t size, block_info* current_block, block_info* prev_block, block_info* current_top, uintptr_t* first_free, uint8_t first_block);
-extern void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free, uint64_t block_max_size);
-
 void init_vmheap()
 {
     vmheap_start = (void*)KERNEL_VIRTUAL_START;
@@ -83,7 +80,7 @@ void* vmalloc(size_t size)
         */
         if(current_block < (block_info*) vmheap_current_top && current_block >= KERNEL_VIRTUAL_START)
         {
-            void* ret = alloc(size, current_block, prev_block, vmheap_current_top, (uintptr_t*)&first_free, first_block);
+            void* ret = heap_alloc(size, current_block, prev_block, vmheap_current_top, (uintptr_t*)&first_free, first_block);
             kernel_debug_output(KDB_LVL_VERBOSE, "RET block = 0%p, first free = 0%p", ret, first_free);
             if(ret != 0)
             {
@@ -162,8 +159,16 @@ void vmfree(void* ptr)
     block_info* next_block =  ptr + block->_size;
     size_t size = block->_size;
 
+    if(!block->_is_mmapped)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "double vmfree() 0%p", block);
+        while(1)
+        {
+        }
+    }
+
     kernel_debug_output(KDB_LVL_VERBOSE, "vm free c %d start 0%p -> 0%p", free_count, block, first_free);
-    free(block, next_block, vmheap_current_top, (uintptr_t*)&first_free, vmheap_size);
+    heap_free(block, next_block, vmheap_current_top, (uintptr_t*)&first_free, vmheap_size);
     vmheap_current_size -= size;
     ++free_count;
     alloc_count--;

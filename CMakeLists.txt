@@ -28,6 +28,7 @@ set(KERNEL_SRC		src/Kernel)
 set(KLIB_SRC		src/klib)
 set(C_LIB_SRC		src/Libc)
 set(C_POSIX_SRC		src/POSIX)
+set(SHARED_SRC		src/Shared)
 set(TOOLKIT_SRC		src/tool-kit)
 
 include_directories(
@@ -60,6 +61,9 @@ add_compile_options(
 ########################################################
 #	SOURCE FILES
 ########################################################
+# shared between the kernel and the libc
+file(GLOB_RECURSE SHARED_SRCS	CONFIGURE_DEPENDS ${SHARED_SRC}/*.c)
+
 # Kernel
 file(GLOB_RECURSE C_SRCS		CONFIGURE_DEPENDS ${KERNEL_SRC}/*.c ${KLIB_SRC}/*.c)
 
@@ -78,8 +82,8 @@ file(GLOB_RECURSE ALL_HEADERS	CONFIGURE_DEPENDS include/*.h)
 ########################################################
 #	INDEXING TARGETS
 ########################################################
-add_library(kernel		OBJECT EXCLUDE_FROM_ALL ${C_SRCS} ${ALL_HEADERS})
-add_library(libc		OBJECT EXCLUDE_FROM_ALL ${LIBC_SRCS})
+add_library(kernel		OBJECT EXCLUDE_FROM_ALL ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
+add_library(libc		OBJECT EXCLUDE_FROM_ALL ${LIBC_SRCS} ${SHARED_SRCS})
 add_library(libpthread	OBJECT EXCLUDE_FROM_ALL ${PTHREADC_SRCS})
 add_library(tools		OBJECT EXCLUDE_FROM_ALL ${TOOLS_SRCS})
 

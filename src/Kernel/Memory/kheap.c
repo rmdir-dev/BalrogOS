@@ -9,9 +9,6 @@ void* kfirst_free = 0;
 size_t kheap_max_size = 0;
 size_t kheap_size = 0;
 
-extern void* alloc(size_t size, block_info* current_block, block_info* prev_block, block_info* current_top, uintptr_t* first_free, uint8_t first_block);
-extern void free(block_info* block, block_info* next_block, block_info* current_top, uintptr_t* first_free, uint64_t block_max_size);
-
 void init_kheap()
 {
     /* Declared in linker script */
@@ -45,7 +42,7 @@ void* kmalloc(size_t size)
     {
         if(current_block < (block_info*)kheap_end)
         {
-            void* ret = alloc(size, current_block, prev_block, kheap_end, (uintptr_t*)&kfirst_free, first_block);
+            void* ret = heap_alloc(size, current_block, prev_block, kheap_end, (uintptr_t*)&kfirst_free, first_block);
             kernel_debug_output(KDB_LVL_VERBOSE, "found block = 0%p, first free = 0%p", ret, kfirst_free);
             if(ret != 0)
             {
@@ -71,7 +68,15 @@ void kfree(void* ptr)
     block_info* next_block =  ptr + block->_size;
     size_t size = block->_size;
 
-    free(block, next_block, kheap_end, (uintptr_t*)&kfirst_free, kheap_end - kheap_start);
+    if(!block->_is_mmapped)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "double kfree() 0%p", block);
+        while(1)
+        {
+        }
+    }
+
+    heap_free(block, next_block, kheap_end, (uintptr_t*)&kfirst_free, kheap_end - kheap_start);
     kheap_size -= size;
     kernel_debug_output(KDB_LVL_VERBOSE, "kfree size = %d/%d KiB freed : %d from 0%p", BYTE_TO_KiB(kheap_size), BYTE_TO_KiB(kheap_max_size), size, ptr);
 }

@@ -18,6 +18,7 @@ KERNEL_SRC = src/Kernel
 KLIB_SRC = src/klib
 C_LIB_SRC = src/Libc/
 C_POSIX_SRC = src/POSIX
+SHARED_SRC = src/Shared
 LS_SRC = src/tool-kit/ls/
 SH_SRC = src/tool-kit/sh/
 BESH_SRC = src/tool-kit/besh/
@@ -40,14 +41,19 @@ INCLUDE_DIR = -I./include\
 ########################################################
 #	SOURCE FILES
 ########################################################
+# shared between the kernel and the libc
+SHARED_SRCS += $(shell find $(SHARED_SRC) -name *.c)
+
 # Kernel
 C_SRCS += $(shell find $(KERNEL_SRC) -name *.c)
 ASM_SRCS += $(shell find $(KERNEL_SRC) -name *.asm)
 GNU_ASM_SRCS += $(shell find $(KERNEL_SRC) -name *.S)
 C_SRCS += $(shell find $(KLIB_SRC) -name *.c)
+C_SRCS += $(SHARED_SRCS)
 
 # libc 
 LIBC_SRCS += $(shell find $(C_LIB_SRC) -name *.c)
+LIBC_SRCS += $(SHARED_SRCS)
 
 # pthread
 PTHREADC_SRCS += $(shell find $(C_POSIX_SRC) -name *.c)

@@ -23,7 +23,7 @@ typedef struct _entry_read_dir_entries
     ext2_dir_entry* next_entry;
 } entry_read_dir_entries;
 
-static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, uint8_t* from_root)
+static char** __ext2_get_path(char* src, const char delimiter, size_t* out_size, uint8_t* from_root)
 {
     *from_root = 0;
     if(src[0] == '/')
@@ -80,7 +80,7 @@ static char** _ext2_get_path(char* src, const char delimiter, size_t* out_size, 
     return ret;
 }
 
-static inline uint32_t _ext2_find_free_bitmap(fs_device_t* dev, size_t bitmap_size, size_t start_idx, uint32_t sec_per_block, size_t map_idx_start)
+static inline uint32_t __ext2_find_free_bitmap(fs_device_t* dev, size_t bitmap_size, size_t start_idx, uint32_t sec_per_block, size_t map_idx_start)
 {
     size_t allocated = 0;
 
@@ -112,7 +112,7 @@ static inline uint32_t _ext2_find_free_bitmap(fs_device_t* dev, size_t bitmap_si
     return -1;
 }
 
-static int _ext2_update_sb_and_blk_desc(fs_device_t* dev, ext2_fs_data* fs_data)
+static int __ext2_update_sb_and_blk_desc(fs_device_t* dev, ext2_fs_data* fs_data)
 {
     dev->write(dev, (void*)&fs_data->sb, 2, 2);
     if(fs_data->block_size == 1024)
@@ -129,7 +129,7 @@ static int _ext2_update_sb_and_blk_desc(fs_device_t* dev, ext2_fs_data* fs_data)
     BLOCKS
 */
 
-static int _ext2_free_alloc_block(fs_device_t* dev, uint32_t block_id)
+static int __ext2_free_alloc_block(fs_device_t* dev, uint32_t block_id)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
@@ -146,37 +146,37 @@ static int _ext2_free_alloc_block(fs_device_t* dev, uint32_t block_id)
     return 0;
 }
 
-static uint32_t _ext2_find_higher_half_free_blocks(fs_device_t* dev)
+static uint32_t __ext2_find_higher_half_free_blocks(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
     /* TODO update superblock */
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
-    uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, 
+    uint32_t block_id = __ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, 
             fs_data->sec_per_block, block_bitmap_size / 2);
     if(block_id)
     {
         fs_data->sb.unalloc_blocks--;
         fs_data->blk_grp_desc.num_of_unalloc_block--;
-        _ext2_update_sb_and_blk_desc(dev, fs_data);
+        __ext2_update_sb_and_blk_desc(dev, fs_data);
     }
     return block_id;
 }
 
-static uint32_t _ext2_find_free_blocks(fs_device_t* dev)
+static uint32_t __ext2_find_free_blocks(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
     /* TODO update superblock */
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
-    uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, fs_data->sec_per_block, 0);
+    uint32_t block_id = __ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, fs_data->sec_per_block, 0);
     if(block_id)
     {
         fs_data->sb.unalloc_blocks--;
         fs_data->blk_grp_desc.num_of_unalloc_block--;
-        _ext2_update_sb_and_blk_desc(dev, fs_data);
+        __ext2_update_sb_and_blk_desc(dev, fs_data);
     }
     return block_id;
 }
@@ -185,23 +185,23 @@ static uint32_t _ext2_find_free_blocks(fs_device_t* dev)
     INODES
 */
 
-static uint32_t _ext2_find_free_inode(fs_device_t* dev)
+static uint32_t __ext2_find_free_inode(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
-    uint32_t block_id = _ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_inode_usage_bitmap, fs_data->sec_per_block, 0);
+    uint32_t block_id = __ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_inode_usage_bitmap, fs_data->sec_per_block, 0);
     if(block_id)
     {
         fs_data->sb.unalloc_inodes--;
         fs_data->blk_grp_desc.num_of_unalloc_inode--;
-        _ext2_update_sb_and_blk_desc(dev, fs_data);
+        __ext2_update_sb_and_blk_desc(dev, fs_data);
     }
     return block_id;
 }
 
-static int _ext2_update_inode_table(fs_device_t* dev, uint32_t inode_idx, ext2_inode* inode)
+static int __ext2_update_inode_table(fs_device_t* dev, uint32_t inode_idx, ext2_inode* inode)
 {
     uint32_t tbl_str_blc_addr = (inode_idx - 1) / 32;
     ext2_fs_data* fs_data = dev->fs->fs_data;
@@ -226,9 +226,9 @@ ext2_inode ext2_get_inode(fs_device_t* dev, uint32_t inode_idx)
     return ret;
 }
 
-static uint32_t _ext2_create_new_inode(fs_device_t* dev, uint32_t file_size, uint16_t mode)
+static uint32_t __ext2_create_new_inode(fs_device_t* dev, uint32_t file_size, uint16_t mode)
 {
-    uint32_t new_id_inode = _ext2_find_free_inode(dev);
+    uint32_t new_id_inode = __ext2_find_free_inode(dev);
     
     ext2_inode new_inode = ext2_get_inode(dev, new_id_inode);
     new_inode.mode = mode;
@@ -246,7 +246,7 @@ static uint32_t _ext2_create_new_inode(fs_device_t* dev, uint32_t file_size, uin
     new_inode.generation = 0;
     new_inode.frag_addr;
 
-    new_inode.dbp[0] = _ext2_find_free_blocks(dev);
+    new_inode.dbp[0] = __ext2_find_free_blocks(dev);
     for(size_t i = 1; i < 12; i++)
     {
         new_inode.dbp[i] = 0;
@@ -255,12 +255,12 @@ static uint32_t _ext2_create_new_inode(fs_device_t* dev, uint32_t file_size, uin
     new_inode.dibp = 0;
     new_inode.tibp = 0;
 
-    _ext2_update_inode_table(dev, new_id_inode, &new_inode);
+    __ext2_update_inode_table(dev, new_id_inode, &new_inode);
 
     return new_id_inode;
 }
 
-static uint32_t _ext2_get_entry_inode_idx(fs_device_t* dev, ext2_dir_entry* dir, const char* filename)
+static uint32_t __ext2_get_entry_inode_idx(fs_device_t* dev, ext2_dir_entry* dir, const char* filename)
 {
     // if file name is too large return 0
     if(strlen(filename) > 255)
@@ -293,13 +293,13 @@ static uint32_t _ext2_get_entry_inode_idx(fs_device_t* dev, ext2_dir_entry* dir,
     FILES
 */
 
-static int _ext2_read(uint8_t* data, uint8_t* buffer, uint64_t offset, uint64_t len)
+static int __ext2_read(uint8_t* data, uint8_t* buffer, uint64_t offset, uint64_t len)
 {
     memcpy(buffer, &data[offset], len);
     return 0;
 }
 
-static uint8_t _ext2_read_file(fs_device_t* dev, uint8_t* buffer, ext2_inode* inode)
+static uint8_t __ext2_read_file(fs_device_t* dev, uint8_t* buffer, ext2_inode* inode)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
     for(size_t i = 0; i < 12; i++)
@@ -328,7 +328,7 @@ static uint8_t _ext2_read_file(fs_device_t* dev, uint8_t* buffer, ext2_inode* in
     return 0;
 }
 
-static int _ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset, uint64_t len, ext2_inode* inode, uint32_t inode_id)
+static int __ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset, uint64_t len, ext2_inode* inode, uint32_t inode_id)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
@@ -336,7 +336,7 @@ static int _ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset,
     uint32_t buf[4096 / 4];
     if(len > (12 * 4096) && inode->sibp == 0)
     {
-        inode->sibp = _ext2_find_higher_half_free_blocks(dev);
+        inode->sibp = __ext2_find_higher_half_free_blocks(dev);
     }
 
     if(inode->sibp != 0)
@@ -350,13 +350,13 @@ static int _ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset,
     {
         if(i < 12 && inode->dbp[i] == 0)
         {
-            inode->dbp[i] = _ext2_find_free_blocks(dev);
+            inode->dbp[i] = __ext2_find_free_blocks(dev);
             inode->size += EXT2_BLOCK_SIZE;
         } else if(i >= 12)
         {
             if(buf[i - 12] == 0)
             {
-                buf[i - 12] = _ext2_find_free_blocks(dev);
+                buf[i - 12] = __ext2_find_free_blocks(dev);
                 inode->size += EXT2_BLOCK_SIZE;
             }
         }
@@ -376,7 +376,7 @@ static int _ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset,
             dev->write(dev, (void*)&buf, inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
             inode->nbr_sectors += 8;
         }
-        _ext2_update_inode_table(dev, inode_id, inode);
+        __ext2_update_inode_table(dev, inode_id, inode);
     }
 
     for(i = 0; i < 12; i++)
@@ -403,7 +403,7 @@ static int _ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset,
     DIRECTORIES
 */
 
-static int _ext2_update_dir_entry(fs_device_t* dev, ext2_inode* dir_inode, ext2_dir_entry* dir)
+static int __ext2_update_dir_entry(fs_device_t* dev, ext2_inode* dir_inode, ext2_dir_entry* dir)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
@@ -418,7 +418,7 @@ static int _ext2_update_dir_entry(fs_device_t* dev, ext2_inode* dir_inode, ext2_
     return 0;
 }
 
-static int _ext2_read_dir_entry(void* dir_ptr, entry_read_dir_entries* read_entries, const char* filename)
+static int __ext2_read_dir_entry(void* dir_ptr, entry_read_dir_entries* read_entries, const char* filename)
 {
     char name_buffer[255];
 
@@ -440,7 +440,7 @@ static int _ext2_read_dir_entry(void* dir_ptr, entry_read_dir_entries* read_entr
     return -1;
 }
 
-static int _ext2_initialize_dir(fs_device_t* dev, ext2_dir_entry* dir, ext2_inode* dir_inode, uint32_t dir_inode_id, 
+static int __ext2_initialize_dir(fs_device_t* dev, ext2_dir_entry* dir, ext2_inode* dir_inode, uint32_t dir_inode_id, 
     ext2_inode* prev_dir_inode, uint32_t prev_dir_inode_id)
 {
     void* dir_ptr = dir;
@@ -449,7 +449,7 @@ static int _ext2_initialize_dir(fs_device_t* dev, ext2_dir_entry* dir, ext2_inod
     ext2_dir_entry* next_entry;
 
     // check if the dir is already initialize;
-    if(!_ext2_read_dir_entry(dir_ptr, &entries, "."))
+    if(!__ext2_read_dir_entry(dir_ptr, &entries, "."))
     {
         return -1;
     }
@@ -463,7 +463,7 @@ static int _ext2_initialize_dir(fs_device_t* dev, ext2_dir_entry* dir, ext2_inod
     entry->type = EXT2_TYPE_DIRECTORY;
     entry->entry_size = 12;
     dir_inode->hard_link_count = 2;
-    _ext2_update_inode_table(dev, dir_inode_id, dir_inode);
+    __ext2_update_inode_table(dev, dir_inode_id, dir_inode);
 
     entry = dir_ptr + entry->entry_size;
     entry->inode = prev_dir_inode_id;
@@ -475,18 +475,18 @@ static int _ext2_initialize_dir(fs_device_t* dev, ext2_dir_entry* dir, ext2_inod
     entry->type = EXT2_TYPE_DIRECTORY;
     entry->entry_size = 4096 - 12;
     prev_dir_inode->hard_link_count++;
-    _ext2_update_inode_table(dev, prev_dir_inode_id, prev_dir_inode);
+    __ext2_update_inode_table(dev, prev_dir_inode_id, prev_dir_inode);
 
-    _ext2_update_dir_entry(dev, dir_inode, dir);
+    __ext2_update_dir_entry(dev, dir_inode, dir);
 
     ext2_fs_data* fs_data = dev->fs->fs_data;
     fs_data->blk_grp_desc.num_of_dir++;
-    _ext2_update_sb_and_blk_desc(dev, fs_data);
+    __ext2_update_sb_and_blk_desc(dev, fs_data);
 
     return 0;
 }
 
-static uint32_t _ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* dir, const char* filename, 
+static uint32_t __ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* dir, const char* filename, 
     ext2_inode* dir_inode, uint64_t size, enum ext2_dir_entry_type type)
 {
     if(strlen(filename) > 255)
@@ -497,7 +497,7 @@ static uint32_t _ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* dir
     void* dir_ptr = dir;
     entry_read_dir_entries entries;
 
-    if(!_ext2_read_dir_entry(dir_ptr, &entries, filename))
+    if(!__ext2_read_dir_entry(dir_ptr, &entries, filename))
     {
         return 0;
     }
@@ -521,24 +521,24 @@ static uint32_t _ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* dir
         switch (type)
         {
         case EXT2_TYPE_DIRECTORY:
-            new_entry->inode = _ext2_create_new_inode(dev, size, EXT2_MODE_DIR | EXT2_DEFAULT_DIR_ACCESS);
+            new_entry->inode = __ext2_create_new_inode(dev, size, EXT2_MODE_DIR | EXT2_DEFAULT_DIR_ACCESS);
             break;
         case EXT2_TYPE_REGULAR_FILE:
-            new_entry->inode = _ext2_create_new_inode(dev, size, EXT2_MODE_REG_FILE | EXT2_DEFAULT_FILE_ACCESS);
+            new_entry->inode = __ext2_create_new_inode(dev, size, EXT2_MODE_REG_FILE | EXT2_DEFAULT_FILE_ACCESS);
             break;
         
         default:
             break;
         }
 
-        _ext2_update_dir_entry(dev, dir_inode, dir);
+        __ext2_update_dir_entry(dev, dir_inode, dir);
         return new_entry->inode;
     }
 
     return 0;
 }
 
-static uint32_t _ext2_find_file(fs_device_t* dev, char** path, size_t* index, uint8_t new)
+static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, uint8_t new)
 {
     if(*index == 0)
     {
@@ -550,7 +550,7 @@ static uint32_t _ext2_find_file(fs_device_t* dev, char** path, size_t* index, ui
     uint32_t allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
     char* buffer = kmalloc(allocsize);
 
-    _ext2_read_file(dev, buffer, &root_itable->inode);
+    __ext2_read_file(dev, buffer, &root_itable->inode);
 
     entry_read_dir_entries entries;
     uint32_t inode_id = 0;
@@ -560,7 +560,7 @@ static uint32_t _ext2_find_file(fs_device_t* dev, char** path, size_t* index, ui
     while(*path)
     {
         found = 0;
-        if(!_ext2_read_dir_entry(buffer, &entries, *path))
+        if(!__ext2_read_dir_entry(buffer, &entries, *path))
         {
             found = 1;
             root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
@@ -572,7 +572,7 @@ static uint32_t _ext2_find_file(fs_device_t* dev, char** path, size_t* index, ui
             kfree(buffer);
             allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
             buffer = kmalloc(allocsize);
-            _ext2_read_file(dev, buffer, &root_itable->inode);
+            __ext2_read_file(dev, buffer, &root_itable->inode);
             size++;
         }
         path++;
@@ -603,7 +603,7 @@ static uint32_t _ext2_find_file(fs_device_t* dev, char** path, size_t* index, ui
     return inode_id;
 }
 
-static uint8_t _ext2_list_dir(uint8_t* dir)
+static uint8_t __ext2_list_dir(uint8_t* dir)
 {
     char name_buffer[255];
     void* dir_ptr = dir;
@@ -639,8 +639,8 @@ static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
 {
     size_t index;
     uint8_t from_root;
-    char** path = _ext2_get_path(filename, '/', &index, &from_root);
-    uint32_t file_inode_nbr = _ext2_find_file(dev, path, &index, 0);
+    char** path = __ext2_get_path(filename, '/', &index, &from_root);
+    uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 0);
     
     if(file_inode_nbr == 0)
     {
@@ -654,7 +654,7 @@ static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
     {
         kernel_debug_output(KDB_LVL_INFO, "FILE NOT IN CACHE %s\n", filename);
         uint8_t* buffer = fs_cache_get_new_buffer(file_inode->inode.size);
-        _ext2_read_file(dev, buffer, &file_inode->inode);
+        __ext2_read_file(dev, buffer, &file_inode->inode);
         ext2_add_file_to_cache(filename, file_inode, buffer);
         file_inode->open = 1;
     }
@@ -695,8 +695,8 @@ static int ext2_touch(fs_device_t* dev, char* filename)
 
     size_t index;
     uint8_t from_root;
-    char** path = _ext2_get_path(filename, '/', &index, &from_root);
-    uint32_t file_inode_nbr = _ext2_find_file(dev, path, &index, 1);
+    char** path = __ext2_get_path(filename, '/', &index, &from_root);
+    uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 1);
 
     if(file_inode_nbr == 0)
     {
@@ -706,8 +706,8 @@ static int ext2_touch(fs_device_t* dev, char* filename)
     ext2_idata* root_itable = ext2_cache_search_inode(dev, file_inode_nbr);
     
     char* buffer = fs_cache_get_new_buffer(root_itable->inode.size);
-    _ext2_read_file(dev, buffer, &root_itable->inode);
-    _ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
+    __ext2_read_file(dev, buffer, &root_itable->inode);
+    __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
 
     // TODO FREE buffer
     vmfree(path);
@@ -725,7 +725,7 @@ static int ext2_read(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
         return -1;
     }
 
-    _ext2_read(file->data, buffer, (uintptr_t)fd->offset, len);
+    __ext2_read(file->data, buffer, (uintptr_t)fd->offset, len);
     
     return 0;
 }
@@ -744,11 +744,11 @@ static int ext2_list(fs_device_t* dev, char* dirname, uint8_t* buffer)
 {
     size_t index;
     uint8_t from_root;
-    char** path = _ext2_get_path(dirname, '/', &index, &from_root);
-    uint32_t inode = _ext2_find_file(dev, path, &index, 0);
+    char** path = __ext2_get_path(dirname, '/', &index, &from_root);
+    uint32_t inode = __ext2_find_file(dev, path, &index, 0);
     ext2_idata* root_itable = ext2_cache_search_inode(dev, inode);
-    _ext2_read_file(dev, buffer, &root_itable->inode);
-    _ext2_list_dir(buffer);
+    __ext2_read_file(dev, buffer, &root_itable->inode);
+    __ext2_list_dir(buffer);
 
     vmfree(path);
     return 0;
@@ -763,8 +763,8 @@ static int ext2_mkdir(fs_device_t* dev, char* dirname)
 
     size_t index;
     uint8_t from_root;
-    char** path = _ext2_get_path(dirname, '/', &index, &from_root);
-    uint32_t prev_inode = _ext2_find_file(dev, path, &index, 1);
+    char** path = __ext2_get_path(dirname, '/', &index, &from_root);
+    uint32_t prev_inode = __ext2_find_file(dev, path, &index, 1);
     
     if(prev_inode == 0)
     {
@@ -774,12 +774,12 @@ static int ext2_mkdir(fs_device_t* dev, char* dirname)
     char* buffer = vmalloc(4096 * 1024);
     
     ext2_idata* root_itable = ext2_cache_search_inode(dev, prev_inode);
-    _ext2_read_file(dev, buffer, &root_itable->inode);
-    uint32_t inode = _ext2_create_new_dir_entry(dev, (void*)buffer, path[index], (void*)&root_itable, 4096, EXT2_TYPE_DIRECTORY);
+    __ext2_read_file(dev, buffer, &root_itable->inode);
+    uint32_t inode = __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], (void*)&root_itable, 4096, EXT2_TYPE_DIRECTORY);
 
     ext2_idata* file_inode = ext2_cache_search_inode(dev, inode);
-    _ext2_read_file(dev, buffer, &file_inode->inode);
-    _ext2_initialize_dir(dev, (void*)buffer, &file_inode->inode, inode, &root_itable->inode, prev_inode);
+    __ext2_read_file(dev, buffer, &file_inode->inode);
+    __ext2_initialize_dir(dev, (void*)buffer, &file_inode->inode, inode, &root_itable->inode, prev_inode);
 
     vmfree(buffer);
     vmfree(path);

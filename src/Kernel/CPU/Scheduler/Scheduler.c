@@ -15,7 +15,7 @@ process* current_running = NULL;
 
 extern tss_entry tss;
 
-static void _exec()
+static void __exec()
 {
     current_running->exec = 1;
     tss.rsp0 = current_running->kernel_stack_top;
@@ -40,7 +40,7 @@ static void _exec()
     asm volatile("iretq");
 }
 
-static void _round_robin()
+static void __round_robin()
 {
     asm volatile("push %rax");
     asm volatile("push %rbx");
@@ -64,7 +64,7 @@ static void _round_robin()
 
     if(!current_running->exec)
     {
-        _exec();
+        __exec();
         return;
     }
 
@@ -99,11 +99,11 @@ void schedule(size_t tick, uint16_t ms)
 
     if(current_running != NULL)
     {
-        _round_robin();
+        __round_robin();
     } else
     {
         current_running = rdy_proc_list.head;
-        _exec();
+        __exec();
     }
 }
 

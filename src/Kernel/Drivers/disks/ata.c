@@ -8,7 +8,7 @@
 
 ata_drive drives[4];
 
-static inline void _ata_fill_buffer(uint16_t io_bus, uint16_t* buf)
+static inline void __ata_fill_buffer(uint16_t io_bus, uint16_t* buf)
 {
     for(size_t i = 0; i < 256; i++)
     {
@@ -16,7 +16,7 @@ static inline void _ata_fill_buffer(uint16_t io_bus, uint16_t* buf)
     }
 }
 
-static int _ata_wait_400ns(uint16_t bus)
+static int __ata_wait_400ns(uint16_t bus)
 {
     in_byte(ATA_REG_R_STATUS(bus));
     in_byte(ATA_REG_R_STATUS(bus));
@@ -25,11 +25,11 @@ static int _ata_wait_400ns(uint16_t bus)
     return in_byte(ATA_REG_R_STATUS(bus));
 }
 
-static uint8_t _ata_send_command(ata_cmd* command)
+static uint8_t __ata_send_command(ata_cmd* command)
 {
     // select the device
     out_byte(ATA_REG_W_DEV(command->bus), command->device | (command->lba_sep[3] &0xf));
-    _ata_wait_400ns(command->bus);
+    __ata_wait_400ns(command->bus);
 
     out_byte(ATA_REG_W_S_COUNT(command->bus), command->count);
     out_byte(ATA_REG_W_LBA_L(command->bus), command->lba_sep[0]);
@@ -46,7 +46,7 @@ static uint8_t _ata_send_command(ata_cmd* command)
         return 0;
     }
 
-    command->status = _ata_wait_400ns(command->bus);
+    command->status = __ata_wait_400ns(command->bus);
 
     while((command->status = in_byte(ATA_REG_R_STATUS(command->bus))) & ATA_STATUS_BSY)
     {}
@@ -68,7 +68,7 @@ static uint8_t _ata_send_command(ata_cmd* command)
     return command->status;
 }
 
-static void _ata_init_drive(ata_drive* drive)
+static void __ata_init_drive(ata_drive* drive)
 {
     uint16_t io_bus = drive->io_bus;
 
@@ -111,21 +111,21 @@ static void _ata_init_drive(ata_drive* drive)
 
     // send the command if the device is asleep
     // the first command will wake it up.
-    if(!_ata_send_command(&command))
+    if(!__ata_send_command(&command))
     {
         //KERNEL_LOG_FAIL("fail to exectue command");
         return;
     }
 
     // fill the buffer with the content asked by the previous command.
-    _ata_fill_buffer(io_bus, (void*) &drive->id);
+    __ata_fill_buffer(io_bus, (void*) &drive->id);
 
     KERNEL_LOG_OK("drive 0%x %s load successfully.", io_bus, drive->master == 0x10 ? "slave" : "master");
 
     drive->exist = 1;
 }
 
-static inline int _ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_t lba)
+static inline int __ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_t lba)
 {
     // number of tries.
     int retries = 5;
@@ -141,7 +141,7 @@ static inline int _ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_t
         };
 
         // send the command
-        int status = _ata_send_command(&command);
+        int status = __ata_send_command(&command);
 
         // if the command failed to read then retry 
         if(status & (ATA_STATUS_DF | ATA_STATUS_ERR) || !(status & ATA_STATUS_DRQ))
@@ -150,7 +150,7 @@ static inline int _ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_t
         }
         
         // fill the buffer
-        _ata_fill_buffer(device->io_bus, buffer);
+        __ata_fill_buffer(device->io_bus, buffer);
         return 0;
     }
     return -1;
@@ -161,12 +161,12 @@ void ata_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
     ata_drive* drive = &drives[device->unique_id];
     for(size_t i = 0; i < len; i++)
     {
-        _ata_read_sector(drive, (uint16_t*)buffer, lba + i);
+        __ata_read_sector(drive, (uint16_t*)buffer, lba + i);
         buffer += 512;
     }
 }
 
-static inline void _ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
+static inline void __ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
 {
 
 }
@@ -183,7 +183,7 @@ int ata_get_boot_device(fs_device_t* device)
     for(size_t i = 0; i < 4; i++)
     {
         KERNEL_LOG_INFO("searching boot device. %d", i);
-        if(!_ata_read_sector(&drives[i], buffer, 0))
+        if(!__ata_read_sector(&drives[i], buffer, 0))
         {
             if(buffer[255] == 0xaa55)
             {
@@ -208,23 +208,23 @@ void init_ata()
     drives[0].ctr_bus = ATA_DEV_CTR_PRIMARY;
     drives[0].exist = 0;
     drives[0].master = ATA_MASTER;
-    _ata_init_drive(&drives[0]);
+    __ata_init_drive(&drives[0]);
 
     drives[1].io_bus = ATA_DEV_IO_PREMARY;
     drives[1].ctr_bus = ATA_DEV_CTR_PRIMARY;
     drives[1].exist = 0;
     drives[1].master = ATA_SLAVE;
-    _ata_init_drive(&drives[1]);
+    __ata_init_drive(&drives[1]);
 
     drives[2].io_bus = ATA_DEV_IO_SECONDARY;
     drives[2].ctr_bus = ATA_DEV_CTR_SECONDARY;
     drives[2].exist = 0;
     drives[2].master = ATA_MASTER;
-    _ata_init_drive(&drives[2]);
+    __ata_init_drive(&drives[2]);
 
     drives[3].io_bus = ATA_DEV_IO_SECONDARY;
     drives[3].ctr_bus = ATA_DEV_CTR_SECONDARY;
     drives[3].exist = 0;
     drives[3].master = ATA_SLAVE;
-    _ata_init_drive(&drives[3]);
+    __ata_init_drive(&drives[3]);
 }

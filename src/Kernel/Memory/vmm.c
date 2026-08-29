@@ -133,7 +133,7 @@ void vmm_free_page(page_table* PML4T, void* virt_addr)
     }
 }
 
-static int _vmm_clean(page_table* table, uint8_t level)
+static int __vmm_clean(page_table* table, uint8_t level)
 {
     page_table* tab = (void*)P2V(STRIP_FLAGS(table));
     
@@ -148,7 +148,7 @@ static int _vmm_clean(page_table* table, uint8_t level)
             // then clean the level below before cleaning it.
             if(level > 1)
             {
-                _vmm_clean((void*)tab[i], level - 1);
+                __vmm_clean((void*)tab[i], level - 1);
             }
 
             uintptr_t vaddr = P2V(STRIP_FLAGS(tab[i]));
@@ -176,5 +176,5 @@ int vmm_clean_page_table(page_table* PML4T)
         return -1;
     }
     
-    return _vmm_clean(PML4T, 4);
+    return __vmm_clean(PML4T, 4);
 }

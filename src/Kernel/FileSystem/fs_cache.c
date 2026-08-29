@@ -101,7 +101,7 @@ uint8_t* fs_cache_get_new_buffer(uint64_t size)
     return 0;
 }
 
-static int _fs_cache_free_buffer(uint32_t index)
+static int __fs_cache_free_buffer(uint32_t index)
 {
     uint64_t buf_size = (file_table[index].size / FS_BUFFER_SIZE);
     uint64_t buf_idx = (((uintptr_t)file_table[index].data) & ~FS_CACHE_OFFSET);
@@ -125,7 +125,7 @@ int fs_cache_close_file(uint32_t index)
     return -1;
     if(--file_table[index].reference == 0)
     {
-        _fs_cache_free_buffer(index);
+        __fs_cache_free_buffer(index);
         file_table[index].size = 0;
         return 0;
     }

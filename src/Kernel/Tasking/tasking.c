@@ -371,7 +371,7 @@ void copy_forked_process_memory(process* proc, uintptr_t copy_addrs)
     proc->forked_memory = 0;
 }
 
-static int _copy_add_args_to_stack(process* proc, char** argv)
+static int __copy_add_args_to_stack(process* proc, char** argv)
 {
     void* phys = pmm_calloc();
 
@@ -488,7 +488,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     fs_close(&fd);
 
-    if(_copy_add_args_to_stack(proc, argv) != 0)
+    if(__copy_add_args_to_stack(proc, argv) != 0)
     {
         return -1;
     }

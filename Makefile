@@ -113,9 +113,39 @@ ALL_PWD_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PWD_SRCS))
 ALL_TLIB_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(TLIB_SRCS))
 
 ########################################################
+#	TOOLBOX
+########################################################
+#	The kernel is built with its own x86_64-elf cross toolchain so the
+#	host compiler and its headers never leak into it. Everything lands
+#	in $(TOOLBOX_DIR), which is not versioned.
+#
+#	  make install_toolbox  build binutils, gcc and nasm into ./toolbox
+#	  make check_toolbox    tell which binaries are missing
+#	  make clean_toolbox    throw the whole toolbox away
+#
+#	qemu and mkisofs stay host tools, they are only needed by make run
+#	and make iso, not to build the os.
+TOOLBOX_DIR = $(CURDIR)/toolbox
+TOOLBOX_BIN = $(TOOLBOX_DIR)/bin
+TOOLBOX_SRC = $(TOOLBOX_DIR)/src
+TOOLBOX_TARGET = x86_64-elf
+TOOLBOX_JOBS = $(shell nproc)
+
+BINUTILS_VERSION = 2.47
+GCC_VERSION = 15.3.0
+NASM_VERSION = 2.16.03
+
+TOOLBOX_CC = $(TOOLBOX_BIN)/$(TOOLBOX_TARGET)-gcc
+TOOLBOX_LD = $(TOOLBOX_BIN)/$(TOOLBOX_TARGET)-ld
+TOOLBOX_OBJDUMP = $(TOOLBOX_BIN)/$(TOOLBOX_TARGET)-objdump
+TOOLBOX_NASM = $(TOOLBOX_BIN)/nasm
+
+########################################################
 #	COMPILER
 ########################################################
-CC= ccache gcc
+CC = ccache $(TOOLBOX_CC)
+NASM = $(TOOLBOX_NASM)
+OBJDUMP = $(TOOLBOX_OBJDUMP)
 
 ########################################################
 #	COMPILER OPTIONS
@@ -131,12 +161,12 @@ GCC14_FLAGS = -Wno-error=incompatible-pointer-types\
 	-Wno-error=int-conversion\
 	-Wno-error=implicit-function-declaration
 
-CFLAGS = $(DEFINES) $(INCLUDE_DIR) $(GCC14_FLAGS) -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int -Wno-address-of-packed-member
+CFLAGS = $(DEFINES) $(INCLUDE_DIR) $(GCC14_FLAGS) -std=gnu17 -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int -Wno-address-of-packed-member
 
 ########################################################
 #	LINKER
 ########################################################
-LD= ld
+LD = $(TOOLBOX_LD)
 
 ########################################################
 #	LINKER OPTIONS
@@ -153,20 +183,88 @@ TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS
 			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) \
 			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o) $(SLEEP_SRCS:.c=.o)
 
+install_toolbox: $(TOOLBOX_LD) $(TOOLBOX_CC) $(TOOLBOX_NASM)
+	@$(MAKE) --no-print-directory check_toolbox
+
+$(TOOLBOX_LD):
+	mkdir -p $(TOOLBOX_SRC)
+	cd $(TOOLBOX_SRC) && curl -LO https://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILS_VERSION).tar.xz
+	cd $(TOOLBOX_SRC) && tar xf binutils-$(BINUTILS_VERSION).tar.xz
+	mkdir -p $(TOOLBOX_SRC)/build-binutils
+	cd $(TOOLBOX_SRC)/build-binutils && ../binutils-$(BINUTILS_VERSION)/configure \
+		--target=$(TOOLBOX_TARGET) --prefix=$(TOOLBOX_DIR) \
+		--with-sysroot --disable-nls --disable-werror
+	$(MAKE) -C $(TOOLBOX_SRC)/build-binutils -j$(TOOLBOX_JOBS)
+	$(MAKE) -C $(TOOLBOX_SRC)/build-binutils install
+
+#	gcc needs the cross binutils to already be in the path, and only the
+#	compiler itself plus libgcc are built, there is no libc to target.
+$(TOOLBOX_CC): $(TOOLBOX_LD)
+	mkdir -p $(TOOLBOX_SRC)
+	cd $(TOOLBOX_SRC) && curl -LO https://ftp.gnu.org/gnu/gcc/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.xz
+	cd $(TOOLBOX_SRC) && tar xf gcc-$(GCC_VERSION).tar.xz
+	cd $(TOOLBOX_SRC)/gcc-$(GCC_VERSION) && ./contrib/download_prerequisites
+	mkdir -p $(TOOLBOX_SRC)/build-gcc
+	cd $(TOOLBOX_SRC)/build-gcc && PATH=$(TOOLBOX_BIN):$$PATH ../gcc-$(GCC_VERSION)/configure \
+		--target=$(TOOLBOX_TARGET) --prefix=$(TOOLBOX_DIR) \
+		--disable-nls --enable-languages=c --without-headers
+	PATH=$(TOOLBOX_BIN):$$PATH $(MAKE) -C $(TOOLBOX_SRC)/build-gcc all-gcc -j$(TOOLBOX_JOBS)
+	PATH=$(TOOLBOX_BIN):$$PATH $(MAKE) -C $(TOOLBOX_SRC)/build-gcc all-target-libgcc -j$(TOOLBOX_JOBS)
+	$(MAKE) -C $(TOOLBOX_SRC)/build-gcc install-gcc
+	$(MAKE) -C $(TOOLBOX_SRC)/build-gcc install-target-libgcc
+
+$(TOOLBOX_NASM):
+	mkdir -p $(TOOLBOX_SRC)
+	cd $(TOOLBOX_SRC) && curl -LO https://www.nasm.us/pub/nasm/releasebuilds/$(NASM_VERSION)/nasm-$(NASM_VERSION).tar.xz
+	cd $(TOOLBOX_SRC) && tar xf nasm-$(NASM_VERSION).tar.xz
+	cd $(TOOLBOX_SRC)/nasm-$(NASM_VERSION) && ./configure --prefix=$(TOOLBOX_DIR)
+	$(MAKE) -C $(TOOLBOX_SRC)/nasm-$(NASM_VERSION) -j$(TOOLBOX_JOBS)
+	$(MAKE) -C $(TOOLBOX_SRC)/nasm-$(NASM_VERSION) install
+
+check_toolbox:
+	@missing=0; \
+	for tool in $(TOOLBOX_CC) $(TOOLBOX_LD) $(TOOLBOX_OBJDUMP) $(TOOLBOX_NASM); do \
+		if [ -x $$tool ]; then \
+			echo "[  OK  ] $$tool"; \
+		else \
+			echo "[FAILED] $$tool"; \
+			missing=1; \
+		fi; \
+	done; \
+	for tool in qemu-system-x86_64 mkisofs; do \
+		if command -v $$tool > /dev/null; then \
+			echo "[  OK  ] $$tool (host)"; \
+		else \
+			echo "[ INFO ] $$tool (host) is missing, only needed by make run and make iso"; \
+		fi; \
+	done; \
+	if [ $$missing -ne 0 ]; then \
+		echo "toolbox is incomplete, run make install_toolbox"; \
+		exit 1; \
+	fi; \
+	echo "toolbox is complete."
+
+#	the sources are only needed while building, the binaries stay.
+clean_toolbox_src:
+	$(REMOVE) $(TOOLBOX_SRC)
+
+clean_toolbox:
+	$(REMOVE) $(TOOLBOX_DIR)
+
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
-	nasm -fbin src/Bootloader/start.asm -o $(OS_BUILD_DIR)/Bootloader
+	$(NASM) -fbin src/Bootloader/start.asm -o $(OS_BUILD_DIR)/Bootloader
 
 kernel: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
-	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
-	ld -o $(OS_BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
+	$(NASM) -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
+	$(LD) -o $(OS_BUILD_DIR)/kernel.bin -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000 --oformat binary
 
 h_readble_kernel_asm: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
-	nasm -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
-	ld -S -o $(OS_BUILD_DIR)/kernel.asm -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000
-	objdump -S $(OS_BUILD_DIR)/kernel.asm > $(OS_BUILD_DIR)/kernel.asm.txt
+	$(NASM) -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
+	$(LD) -S -o $(OS_BUILD_DIR)/kernel.asm -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000
+	$(OBJDUMP) -S $(OS_BUILD_DIR)/kernel.asm > $(OS_BUILD_DIR)/kernel.asm.txt
 	rm $(OS_BUILD_DIR)/kernel.asm
 
 os:
@@ -184,20 +282,20 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	mkdir -p $(BIN_BUILD_DIR)
 	mkdir -p $(SBIN_BUILD_DIR)
 	mkdir -p $(ROOT_BUILD_DIR)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/besh $(ALL_BESH_OBJECT64) $(PSXC_OBJECTS64) $(LIBC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(SBIN_BUILD_DIR)/auth $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/clear $(ALL_CLEAR_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sl $(ALL_SL_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/whoami $(ALL_WHOAMI_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/donut $(ALL_DONUT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sleep $(ALL_SLEEP_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	ld -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(ROOT_BUILD_DIR)/setdebug $(ALL_SETDEBUG_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/ls $(ALL_LS_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sh $(ALL_SH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/besh $(ALL_BESH_OBJECT64) $(PSXC_OBJECTS64) $(LIBC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(SBIN_BUILD_DIR)/auth $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/clear $(ALL_CLEAR_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sl $(ALL_SL_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/whoami $(ALL_WHOAMI_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/donut $(ALL_DONUT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sleep $(ALL_SLEEP_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(ROOT_BUILD_DIR)/setdebug $(ALL_SETDEBUG_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	#$(PSXC_OBJECTS64)
 	sudo mount -o loop files/filesys.dd files/root/
 	sudo mkdir -p files/root/bin | true
@@ -248,12 +346,6 @@ iso:
 run_debug:
 	qemu-system-x86_64 -s -S build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
 
-mount:
-	sudo mount -o loop files/filesys.dd files/root/
-
-umount:
-	sudo umount files/filesys.dd
-
 ########################################################
 #	GENERAL COMPILATION RULES
 ########################################################
@@ -263,11 +355,11 @@ umount:
 
 %.asm.o : %.asm
 	mkdir -p $(TEMP_DIR)/obj64/$(dir $<)
-	nasm -f elf64 $< -o $(TEMP_DIR)/obj64/$(<:.asm=.asm.o)
+	$(NASM) -f elf64 $< -o $(TEMP_DIR)/obj64/$(<:.asm=.asm.o)
 
 %.S.o : %.S
 	mkdir -p $(TEMP_DIR)/obj64/$(dir $<)
-	gcc -c $< -o $(TEMP_DIR)/obj64/$(<:.S=.S.o)
+	$(CC) -c $< -o $(TEMP_DIR)/obj64/$(<:.S=.S.o)
 
 ########################################################
 #	CLEAN

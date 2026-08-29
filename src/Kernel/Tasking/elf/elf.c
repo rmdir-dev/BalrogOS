@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <string.h>
 
-static inline void _elf_load_prog(elf_program* prog, uint8_t* data, page_table* PML4T, uint32_t flags)
+static inline void __elf_load_prog(elf_program* prog, uint8_t* data, page_table* PML4T, uint32_t flags)
 {
     uint64_t fsize = prog->p_memsz;
     uint8_t* phys = 0;
@@ -65,7 +65,7 @@ int elf_load_binary(elf_header* header, uint8_t* data, page_table* PML4T, uint32
     {
         if(prog[i].p_type == ELF_PT_LOAD)
         {
-            _elf_load_prog(&prog[i], data, PML4T, flags);
+            __elf_load_prog(&prog[i], data, PML4T, flags);
         }
     }
     return 0;

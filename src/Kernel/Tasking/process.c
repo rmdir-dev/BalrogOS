@@ -46,7 +46,7 @@ void proc_insert_to_ready_queue(process* proc)
 
 extern void schedule(size_t tick, uint16_t ms);
 
-static int _proc_transfert_to_wait(process* proc)
+static int __proc_transfert_to_wait(process* proc)
 {
     if(proc->state == PROCESS_STATE_READY || proc->state == PROCESS_STATE_RUNNING)
     {
@@ -107,7 +107,7 @@ void proc_wake_process(int* wating, uint8_t size)
  *
  * @param proc
  */
-static void _proc_kill(process* proc)
+static void __proc_kill(process* proc)
 {
     proc->state = PROCESS_STATE_DEAD;
 
@@ -143,9 +143,9 @@ void proc_kill_process(int pid)
     process* proc = proc_get_process(pid);
 
     // !! if proc was freed then proc->state will be 0 !!
-    if(proc && _proc_transfert_to_wait(proc) == 0)
+    if(proc && __proc_transfert_to_wait(proc) == 0)
     {
-        _proc_kill(proc);
+        __proc_kill(proc);
     }
 }
 
@@ -158,10 +158,10 @@ void proc_kill(process* proc, uint8_t force_schedule)
         || proc->state & PROCESS_STATE_SLEEPING
         || proc->state == PROCESS_STATE_DEAD
         || proc->state == PROCESS_STATE_ZOMBIE
-        || _proc_transfert_to_wait(proc) == 0)
+        || __proc_transfert_to_wait(proc) == 0)
     )
     {
-        _proc_kill(proc);
+        __proc_kill(proc);
         if(force_schedule)
         {
             schedule(0, 0);
@@ -182,7 +182,7 @@ void proc_transfert_to_waiting(int pid)
     process* proc = proc_get_process(pid);
 
     // ! proc should never be null !
-     if(proc && _proc_transfert_to_wait(proc) == 0)
+     if(proc && __proc_transfert_to_wait(proc) == 0)
     {
         proc->state ^= PROCESS_STATE_READY | PROCESS_STATE_RUNNING;
         proc->state |= PROCESS_STATE_WAITING;
@@ -194,7 +194,7 @@ void proc_to_sleep(int pid, uint8_t set_state)
     kernel_debug_output(KDB_LVL_VERBOSE, "proc_to_sleep %d", pid);
     process* proc = proc_get_process(pid);
 
-    if(proc && _proc_transfert_to_wait(proc) == 0)
+    if(proc && __proc_transfert_to_wait(proc) == 0)
     {
         proc->state &= ~(PROCESS_STATE_READY) & ~(PROCESS_STATE_RUNNING);
         proc->state |= set_state;

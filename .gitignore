@@ -17,3 +17,4 @@ files/filesys_old.dd
 cmake-build-*/
 
 .cache/
+toolbox/

@@ -125,7 +125,13 @@ OPTIMIZATION =
 ########################################################
 #	COMPILER FLAGS
 ########################################################
-CFLAGS = $(DEFINES) $(INCLUDE_DIR) -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int -Wno-address-of-packed-member
+# gcc 14 turned these three warnings into errors. the kernel relies on the
+# old behaviour in a lot of places, so they are put back to warnings.
+GCC14_FLAGS = -Wno-error=incompatible-pointer-types\
+	-Wno-error=int-conversion\
+	-Wno-error=implicit-function-declaration
+
+CFLAGS = $(DEFINES) $(INCLUDE_DIR) $(GCC14_FLAGS) -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int -Wno-address-of-packed-member
 
 ########################################################
 #	LINKER
@@ -230,11 +236,11 @@ umount:
 	sudo umount files/root | true
 
 run:
-	qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
-	# qemu-system-x86_64 -monitor stdio -m 128 -no-reboot -no-shutdown \
-	# 	-drive id=disk,file=build/os/os-image,if=none \
-	# 	-device ahci,id=ahci \
-	# 	-device ide-hd,drive=disk,bus=ahci.0
+	#qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
+	qemu-system-x86_64 -monitor stdio -m 128 -no-reboot -no-shutdown \
+		-drive id=disk,file=build/os/os-image,if=none \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=disk,bus=ahci.0
 
 iso:
 	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b Booloader files/

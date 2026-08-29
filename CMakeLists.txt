@@ -56,6 +56,12 @@ add_compile_options(
 	-Werror=return-type
 	-Werror=implicit-int
 	-Wno-address-of-packed-member
+
+	# gcc 14 turned these three warnings into errors. the kernel relies on
+	# the old behaviour in a lot of places, so they are put back to warnings.
+	-Wno-error=incompatible-pointer-types
+	-Wno-error=int-conversion
+	-Wno-error=implicit-function-declaration
 )
 
 ########################################################

@@ -2,16 +2,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// ull -> unsigned long ! 1u => 32bits ^^ so 4GiB not the right size.
+#define HEAP_MAX_BLOCK_SIZE ((1ull << 60) - 1)
+
 typedef struct block_info_t
 {
     struct block_info_t* previous_chunk; // previous block
     struct
     {
-        uint32_t _size : 28;        // block size
-        uint32_t _non_arena : 1;    // for threading
-        uint32_t _is_mmapped : 1;   // if the block is allocated
-        uint32_t _present : 1;      // previous block is free
-        uint32_t _full : 1;      // previous block is free
+        uint64_t _size : 60;        // block size
+        uint64_t _non_arena : 1;    // for threading
+        uint64_t _is_mmapped : 1;   // if the block is allocated
+        uint64_t _present : 1;      // previous block is free
+        uint64_t _full : 1;      // the block was not split, _size is larger than asked
     } __attribute__((packed));
     struct block_info_t* next_free; // next block free
 }__attribute__((packed)) block_info;

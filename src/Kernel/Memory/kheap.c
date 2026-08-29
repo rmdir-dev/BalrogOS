@@ -35,7 +35,7 @@ void* kmalloc(size_t size)
     block_info* current_block = kfirst_free;
     block_info* prev_block = current_block;
     uint8_t first_block = 1;
-    size += sizeof(block_info) * 3; // add 60 bytes to the size to protect against heap corruption
+    size += sizeof(block_info) * 3; // add 72 bytes to the size to protect against heap corruption
 
     kernel_debug_output(KDB_LVL_VERBOSE, "kheap current block = 0%p", current_block);
     while(1)
@@ -46,7 +46,7 @@ void* kmalloc(size_t size)
             kernel_debug_output(KDB_LVL_VERBOSE, "found block = 0%p, first free = 0%p", ret, kfirst_free);
             if(ret != 0)
             {
-                kheap_size += size;
+                kheap_size += ((block_info*) (ret - sizeof(block_info)))->_size;
                 kernel_debug_output(KDB_LVL_VERBOSE, "kalloc size = %d/%d KiB added : %d", kheap_size, BYTE_TO_KiB(kheap_max_size), size);
                 return ret;
             }

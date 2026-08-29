@@ -106,10 +106,79 @@ void sys_read(interrupt_regs* stack_frame)
     }
 }
 
+int sys_creat(interrupt_regs* stack_frame)
+{
+    if(current_running)
+    {
+        char name[256] = {};
+        uint8_t len = strlen((char*) stack_frame->rdi);
+        memcpy(name, (char*) stack_frame->rdi, len);
+        name[len] = 0;
+        return fs_touch(name);
+    }
+    return -1;
+}
+
+int sys_mkdir(interrupt_regs* stack_frame)
+{
+    if(current_running)
+    {
+        char name[256] = {};
+        uint8_t len = strlen((char*) stack_frame->rdi);
+        memcpy(name, (char*) stack_frame->rdi, len);
+        name[len] = 0;
+        return fs_mkdir(name);
+    }
+    return -1;
+}
+
+int sys_unlink(interrupt_regs* stack_frame)
+{
+    if(current_running)
+    {
+        char name[256] = {};
+        uint8_t len = strlen((char*) stack_frame->rdi);
+        memcpy(name, (char*) stack_frame->rdi, len);
+        name[len] = 0;
+        return fs_unlink(name);
+    }
+    return -1;
+}
+
+int sys_rmdir(interrupt_regs* stack_frame)
+{
+    if(current_running)
+    {
+        char name[256] = {};
+        uint8_t len = strlen((char*) stack_frame->rdi);
+        memcpy(name, (char*) stack_frame->rdi, len);
+        name[len] = 0;
+        return fs_rmdir(name);
+    }
+    return -1;
+}
+
 void sys_write(interrupt_regs* stack_frame)
 {
-    unsigned fd = stack_frame->rdi;
+    unsigned fd_id = stack_frame->rdi;
     const char* str = stack_frame->rsi;
     size_t count = stack_frame->rdx;
+
+    /*  0, 1 and 2 are the console, every descriptor above has been handed
+        out by sys_open() and goes through the file system.
+    */
+    if(fd_id > 2 && current_running)
+    {
+        fs_fd* fd = &current_running->fd_table[fd_id];
+
+        if(__check_file_permission(fd, 02) != 0)
+        {
+            return;
+        }
+
+        fs_write((void*) str, count, fd);
+        return;
+    }
+
     vga_write(str, count);
 }

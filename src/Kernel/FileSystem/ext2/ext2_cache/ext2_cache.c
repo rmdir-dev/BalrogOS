@@ -63,7 +63,18 @@ int ext2_cache_delete_inode(uint32_t inode_nbr)
 
 int ext2_add_file_to_cache(const char* filename, ext2_idata* inode, uint8_t* buffer)
 {
+    inode->filename = filename;
     fs_cache_add_file(filename, buffer, inode->inode_nbr, inode->inode.size, &inode->file_id);
+    return 0;
+}
+
+int ext2_invalidate_cache(ext2_idata* inode)
+{
+    if (inode->open)
+    {
+        int invalidated = fs_cache_invalidate(inode->file_id);
+        inode->open = invalidated == 0 ? 0 : 1;
+    }
     return 0;
 }
 

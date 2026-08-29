@@ -21,14 +21,14 @@ uint32_t _fs_cache_add_file_array(const char* filename, uint32_t inbr, uint8_t* 
             return i;
         }
     }
-    return 100;
+    return FS_MAX_FILE;
 }
 
 int fs_cache_add_file(const char* filename, uint8_t* buffer, uint32_t inbr, uint64_t size, uint32_t* index)
 {
     *index = _fs_cache_add_file_array(filename, inbr, buffer, size);
 
-    if(*index > 100) 
+    if(*index > FS_MAX_FILE)
     {
         return -1;
     }
@@ -120,9 +120,27 @@ static int __fs_cache_free_buffer(uint32_t index)
     return 0;
 }
 
+int fs_cache_invalidate(uint32_t index)
+{
+    if(index >= FS_MAX_FILE || file_table[index].reference == 0)
+    {
+        return -1;
+    }
+
+    // if a file is still using this cache, then do not invalidate it
+    // This would lead to a use after free.
+    if (file_table[index].reference != 0)
+    {
+        return -1;
+    }
+
+    __fs_cache_free_buffer(index);
+    file_table[index].size = 0;
+    return 0;
+}
+
 int fs_cache_close_file(uint32_t index)
 {
-    return -1;
     if(--file_table[index].reference == 0)
     {
         __fs_cache_free_buffer(index);

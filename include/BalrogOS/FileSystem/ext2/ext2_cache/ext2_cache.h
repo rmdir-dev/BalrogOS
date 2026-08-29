@@ -45,6 +45,16 @@ int ext2_cache_delete_inode(uint32_t inode_nbr);
 int ext2_add_file_to_cache(const char* filename, ext2_idata* inode, uint8_t* buffer);
 
 /**
+ * @brief invalidate the cache
+ *
+ * @param filename
+ * @param inode
+ * @param buffer
+ * @return
+ */
+int ext2_invalidate_cache(ext2_idata* inode);
+
+/**
  * @brief 
  * 
  * @param inode 

@@ -57,6 +57,10 @@
 #define SYS_EXIT        60
 #define SYS_WAIT        61
 #define SYS_KILL        62
+#define SYS_MKDIR       83
+#define SYS_RMDIR       84
+#define SYS_CREAT       85
+#define SYS_UNLINK      87
 #define SYS_GETCWD      79
 #define SYS_CHDIR       80
 #define SYS_GETUID      102

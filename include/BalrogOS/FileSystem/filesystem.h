@@ -61,6 +61,8 @@ typedef struct _file_system_t
     int (*touch)(fs_device_t* dev, char* filename);
     int (*list)(fs_device_t* dev, char* dirname, uint8_t* buffer);
     int (*mkdir)(fs_device_t* dev, char* dirname);
+    int (*unlink)(fs_device_t* dev, char* filename);
+    int (*rmdir)(fs_device_t* dev, char* dirname);
     void* fs_data;
 } __attribute__((packed)) file_system_t;
 
@@ -93,6 +95,48 @@ int fs_open(char* name, fs_fd* fd);
  * @return int 
  */
 int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd);
+
+/**
+ * @brief 
+ * 
+ * @param buffer 
+ * @param len 
+ * @param fd 
+ * @return int 
+ */
+int fs_write(uint8_t* buffer, uint64_t len, fs_fd* fd);
+
+/**
+ * @brief create an empty file
+ * 
+ * @param filename 
+ * @return int 
+ */
+int fs_touch(char* filename);
+
+/**
+ * @brief create an empty directory
+ * 
+ * @param dirname 
+ * @return int 
+ */
+int fs_mkdir(char* dirname);
+
+/**
+ * @brief remove a file and free everything it holds
+ * 
+ * @param filename 
+ * @return int 
+ */
+int fs_unlink(char* filename);
+
+/**
+ * @brief remove an empty directory
+ * 
+ * @param dirname 
+ * @return int 
+ */
+int fs_rmdir(char* dirname);
 
 /**
  * @brief 

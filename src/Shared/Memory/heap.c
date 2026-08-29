@@ -51,7 +51,7 @@ void* heap_alloc(size_t size, block_info* current_block, block_info* prev_block,
             /*  if the block can contain the new block then
                 change the current block size.
             */
-            uint32_t new_block_size = size + sizeof(block_info);
+            size_t new_block_size = size + sizeof(block_info);
             current_block->_size -= new_block_size;
 
             //move the block pointer to the new block we want to allocate
@@ -95,7 +95,8 @@ void heap_free(block_info* block, block_info* next_block, block_info* current_to
     // then coalesce the two blocks
     if(block->_present)
     {
-        uint32_t size = block->_size + sizeof(block_info);
+        size_t size = block->_size + sizeof(block_info);
+
         block->previous_chunk->_size += size;
         block = block->previous_chunk;
 

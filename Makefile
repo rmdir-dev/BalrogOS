@@ -28,6 +28,10 @@ AUTH_SRC = src/tool-kit/auth/
 CLEAR_SRC = src/tool-kit/clear/
 SL_SRC = src/tool-kit/sl/
 PWD_SRC = src/tool-kit/pwd/
+TOUCH_SRC = src/tool-kit/touch/
+MKDIR_SRC = src/tool-kit/mkdir/
+RM_SRC = src/tool-kit/rm/
+RMDIR_SRC = src/tool-kit/rmdir/
 HELLO_SRC = src/tool-kit/hello/
 WHOAMI_SRC = src/tool-kit/whoami/
 DONUT_SRC = src/tool-kit/donut/
@@ -73,6 +77,10 @@ DONUT_SRCS = $(shell find $(DONUT_SRC) -name *.c)
 SETDEBUG_SRCS = $(shell find $(SETDEBUG_SRC) -name *.c)
 SLEEP_SRCS = $(shell find $(SLEEP_SRC) -name *.c)
 PWD_SRCS = $(shell find $(PWD_SRC) -name *.c)
+TOUCH_SRCS = $(shell find $(TOUCH_SRC) -name *.c)
+MKDIR_SRCS = $(shell find $(MKDIR_SRC) -name *.c)
+RM_SRCS = $(shell find $(RM_SRC) -name *.c)
+RMDIR_SRCS = $(shell find $(RMDIR_SRC) -name *.c)
 
 # tool shared library
 TLIB_SRCS = $(shell find $(TLIB_SRC) -name *.c)
@@ -108,6 +116,10 @@ ALL_DONUT_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(DONUT_SRCS))
 ALL_SETDEBUG_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SETDEBUG_SRCS))
 ALL_SLEEP_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SLEEP_SRCS))
 ALL_PWD_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PWD_SRCS))
+ALL_TOUCH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(TOUCH_SRCS))
+ALL_MKDIR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(MKDIR_SRCS))
+ALL_RM_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(RM_SRCS))
+ALL_RMDIR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(RMDIR_SRCS))
 
 # tool shared library
 ALL_TLIB_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(TLIB_SRCS))
@@ -206,7 +218,8 @@ LIBC_OBJECTS = $(LIBC_SRCS:.c=.o)
 LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) \
 			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) \
-			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o) $(SLEEP_SRCS:.c=.o)
+			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o) $(SLEEP_SRCS:.c=.o) \
+			$(TOUCH_SRCS:.c=.o) $(MKDIR_SRCS:.c=.o) $(RM_SRCS:.c=.o) $(RMDIR_SRCS:.c=.o)
 
 install_toolbox: $(TOOLBOX_LD) $(TOOLBOX_CC) $(TOOLBOX_NASM)
 	@$(MAKE) --no-print-directory check_toolbox
@@ -332,6 +345,10 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/clear $(ALL_CLEAR_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sl $(ALL_SL_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/touch $(ALL_TOUCH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/mkdir $(ALL_MKDIR_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/rm $(ALL_RM_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/rmdir $(ALL_RMDIR_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/whoami $(ALL_WHOAMI_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/donut $(ALL_DONUT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sleep $(ALL_SLEEP_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
@@ -376,7 +393,7 @@ umount:
 run:
 	#qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
 	qemu-system-x86_64 -monitor stdio -m 128 -no-reboot -no-shutdown \
-		-drive id=disk,file=build/os/os-image,if=none \
+		-drive id=disk,file=build/os/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
 		-device ide-hd,drive=disk,bus=ahci.0
 
@@ -393,7 +410,13 @@ debug:
 	@echo "[  OK  ] symbols are in $(OS_BUILD_DIR)/kernel.elf, now run make run_debug"
 
 run_debug:
-	qemu-system-x86_64 -s -S build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
+#	same machine as `run`, only frozen at reset waiting for gdb on :1234.
+#	the kernel only has an AHCI driver, a positional image lands on the
+#	default IDE controller and no disk is seen at all.
+	qemu-system-x86_64 -s -S -monitor stdio -m 128 -no-reboot -no-shutdown \
+		-drive id=disk,file=build/os/os-image,format=raw,if=none \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=disk,bus=ahci.0
 
 #	attach to the qemu left waiting by make run_debug.
 #	CLion does the same thing through a Remote Debug configuration.

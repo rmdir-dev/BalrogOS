@@ -60,6 +60,14 @@
 int fs_cache_add_file(const char* filename, uint8_t* buffer, uint32_t inbr, uint64_t size, uint32_t* index);
 
 /**
+ * @brief
+ *
+ * @param index
+ * @return
+ */
+int fs_cache_invalidate(uint32_t index);
+
+/**
  * @brief 
  * 
  * @param index 

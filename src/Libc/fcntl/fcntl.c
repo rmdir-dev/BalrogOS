@@ -36,6 +36,48 @@ int open(const char* pathname, int flags)
     return ret;
 }
 
+int creat(const char* pathname, int mode)
+{
+    asm volatile("mov %%rax, %%rdi": :"a"(pathname));
+    asm volatile("mov %%rax, %%rsi": :"a"(mode));
+    asm volatile("mov $85, %rax");
+    int ret = 0;
+    asm volatile("int $0x80": "=a"(ret));
+
+    return ret;
+}
+
+int mkdir(const char* pathname, int mode)
+{
+    asm volatile("mov %%rax, %%rdi": :"a"(pathname));
+    asm volatile("mov %%rax, %%rsi": :"a"(mode));
+    asm volatile("mov $83, %rax");
+    int ret = 0;
+    asm volatile("int $0x80": "=a"(ret));
+
+    return ret;
+}
+
+int unlink(const char* pathname)
+{
+    asm volatile("mov %%rax, %%rdi": :"a"(pathname));
+    asm volatile("mov $87, %rax");
+    int ret = 0;
+    asm volatile("int $0x80": "=a"(ret));
+
+    return ret;
+}
+
+int rmdir(const char* pathname)
+{
+    asm volatile("mov %%rax, %%rdi": :"a"(pathname));
+    asm volatile("mov $84, %rax");
+    int ret = 0;
+    asm volatile("int $0x80": "=a"(ret));
+
+    return ret;
+}
+
 int close(int fd)
 {
     asm volatile("mov %%rax, %%rdi": :"a"(fd));

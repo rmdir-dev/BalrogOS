@@ -89,6 +89,40 @@ size_t write(int fd, void* buf, size_t count);
 int close(int fd);
 
 /**
+ * @brief create an empty file
+ * 
+ * @param pathname 
+ * @param mode 
+ * @return int 
+ */
+int creat(const char* pathname, int mode);
+
+/**
+ * @brief create an empty directory
+ * 
+ * @param pathname 
+ * @param mode 
+ * @return int 
+ */
+int mkdir(const char* pathname, int mode);
+
+/**
+ * @brief remove a file
+ * 
+ * @param pathname 
+ * @return int 
+ */
+int unlink(const char* pathname);
+
+/**
+ * @brief remove an empty directory
+ * 
+ * @param pathname 
+ * @return int 
+ */
+int rmdir(const char* pathname);
+
+/**
  * @brief brk() sets the end of the data segment to the value specified by
     addr, when that value is reasonable, the system has enough
     memory.

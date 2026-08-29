@@ -157,6 +157,8 @@ typedef struct _ext2_idata
     uint8_t open;
     // file id in the open file table
     uint32_t file_id;
+    // filename
+    const char* filename;
 } __attribute__((packed)) ext2_idata;
 
 enum ext2_dir_entry_type

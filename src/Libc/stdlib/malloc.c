@@ -5,14 +5,21 @@
 #include <balrog/memory/heap.h>
 #include <balrog/memory/proc_mem.h>
 
+#define MALLOC_MAX_BLOCK_SIZE (PROCESS_HEAP_END - PROCESS_HEAP_START)
+
 void* const heap_start = (void*) PROCESS_HEAP_START;
 void* heap_top = (void*) PROCESS_HEAP_START + 0x1000;
 void* first_free = 0;
 
 void* malloc(size_t size)
 {
+    if (size > MALLOC_MAX_BLOCK_SIZE - sizeof(block_info) * 3)
+    {
+        return NULL;
+    }
+
     block_info* current_block = first_free;
-    size += sizeof(block_info) * 3; // add 60 bytes to the size to protect against heap corruption
+    size += sizeof(block_info) * 3; // add 72 bytes to the size to protect against heap corruption
 
     if(first_free == 0)
     {
@@ -54,35 +61,56 @@ void* malloc(size_t size)
                 return 0;
             }
 
+            uint8_t empty_list = (prev_block >= (block_info*)heap_top) || (prev_block <  (block_info*)heap_start);
+            block_info* tail = prev_block;
+            uint8_t extend = !empty_list && ((uint8_t*)tail + sizeof(block_info) + tail->_size == (uint8_t*)heap_top);
+
+            size_t needed = extend ? (size + sizeof(block_info) - tail->_size) : (size + sizeof(block_info) * 2);
+            size_t pages  = (needed / 0x1000) + 1;
+
             // get a new page
-            printf("heap full brk\n");
-            brk(heap_top + 0x1000);
+            int brk_res = brk(heap_top + (pages * 0x1000));
 
-            // set the first block address to heap_top
-            block_info* first_block = (void*) heap_top;
-
-            // set the new first block data.
-            first_block->previous_chunk = prev_block;
-            first_block->_is_mmapped = 0;
-            first_block->_non_arena = 0;
-            first_block->_present = 1;
-            first_block->_size = 0x1000 - sizeof(block_info);
-            first_block->next_free = heap_top + 0x1000;
-
-            if(prev_block->next_free != heap_top)
+            if (brk_res < 0)
             {
-                prev_block->next_free = first_block;
+                return 0;
             }
 
-            current_block = first_block;
-
-            if(first_free == heap_top || first_free > heap_top)
+            if (extend)
             {
-                first_free = first_block;
+                tail->_size += pages * 0x1000;
+                tail->next_free = heap_top + (pages * 0x1000);
+                current_block = tail;
+            } else
+            {
+                // set the first block address to heap_top
+                block_info* first_block = (void*) heap_top;
+
+                // set the new first block data.
+                // The block previous block/chunk is now allocated by default so not = prev_block anymore
+                first_block->previous_chunk = 0;
+                first_block->_is_mmapped = 0;
+                first_block->_non_arena = 0;
+                // Switch the logic, now the block bellow is always allocated.
+                first_block->_present = 0;
+                first_block->_size = (pages * 0x1000) - sizeof(block_info);
+                first_block->next_free = heap_top + (pages * 0x1000);
+
+                if(!empty_list && prev_block->next_free != heap_top)
+                {
+                    prev_block->next_free = first_block;
+                }
+
+                current_block = first_block;
+
+                if(empty_list || first_free >= heap_top)
+                {
+                    first_free = first_block;
+                }
             }
 
             // set the new heap top.
-            heap_top += 0x1000;
+            heap_top += pages * 0x1000;
         }
         // we're not on the first block anymore.
         first_block = 0;

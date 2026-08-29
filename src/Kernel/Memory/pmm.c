@@ -68,6 +68,12 @@ void* pmm_alloc()
         if(next_addr >= top_32_addr - 0x1000 && next_addr < (void*) 0x100000000)
         {
             next_addr = (void*) 0x100000000;
+
+            // Check if there is any usable memory above 4GiB
+            if(next_addr >= pmm_top_addr)
+            {
+                return 0x0;
+            }
         }
 
         p = (void*)next_addr;
@@ -83,6 +89,12 @@ void* pmm_alloc()
 void* pmm_calloc()
 {
     void* p = pmm_alloc();
+
+    if (!p)
+    {
+        // P2V(0) os the kernel code and stack, never memset!
+        return 0x0;
+    }
 
     kernel_debug_output(KDB_LVL_VERBOSE, "pmm alloc %p", p);
     // set the bits inside the page to 0.

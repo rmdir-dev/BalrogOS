@@ -55,6 +55,46 @@ int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd)
     return ret;
 }
 
+int fs_write(uint8_t* buffer, uint64_t len, fs_fd* fd)
+{
+    kmutex_lock(&dev.lock);
+    int ret = dev.fs->write(&dev, buffer, len, fd);
+    kmutex_unlock(&dev.lock);
+    return ret;
+}
+
+int fs_touch(char* filename)
+{
+    kmutex_lock(&dev.lock);
+    int ret = dev.fs->touch(&dev, filename);
+    kmutex_unlock(&dev.lock);
+    return ret;
+}
+
+int fs_mkdir(char* dirname)
+{
+    kmutex_lock(&dev.lock);
+    int ret = dev.fs->mkdir(&dev, dirname);
+    kmutex_unlock(&dev.lock);
+    return ret;
+}
+
+int fs_unlink(char* filename)
+{
+    kmutex_lock(&dev.lock);
+    int ret = dev.fs->unlink(&dev, filename);
+    kmutex_unlock(&dev.lock);
+    return ret;
+}
+
+int fs_rmdir(char* dirname)
+{
+    kmutex_lock(&dev.lock);
+    int ret = dev.fs->rmdir(&dev, dirname);
+    kmutex_unlock(&dev.lock);
+    return ret;
+}
+
 int fs_close(fs_fd* fd)
 {
     kmutex_lock(&dev.lock);

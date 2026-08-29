@@ -16,6 +16,10 @@ extern int sys_execve(interrupt_regs* stack_frame);
 extern void sys_exit(interrupt_regs* stack_frame);
 extern int sys_wait(interrupt_regs* stack_frame);
 extern int sys_kill(interrupt_regs* stack_frame);
+extern int sys_creat(interrupt_regs* stack_frame);
+extern int sys_mkdir(interrupt_regs* stack_frame);
+extern int sys_unlink(interrupt_regs* stack_frame);
+extern int sys_rmdir(interrupt_regs* stack_frame);
 extern void* sys_getcwd(interrupt_regs* stack_frame);
 extern int sys_chdir(interrupt_regs* stack_frame);
 extern int sys_getuid(interrupt_regs* stack_frame);
@@ -40,6 +44,10 @@ static int (*syscall[255])(interrupt_regs*) =
     [SYS_EXIT] &sys_exit,
     [SYS_WAIT] &sys_wait,
     [SYS_KILL] &sys_kill,
+    [SYS_CREAT] &sys_creat,
+    [SYS_MKDIR] &sys_mkdir,
+    [SYS_UNLINK] &sys_unlink,
+    [SYS_RMDIR] &sys_rmdir,
     [SYS_GETCWD] &sys_getcwd,
     [SYS_CHDIR] &sys_chdir,
     [SYS_GETUID] &sys_getuid,

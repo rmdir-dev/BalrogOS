@@ -6,6 +6,7 @@
 #include "BalrogOS/Memory/memory.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Memory/pmm.h"
+#include "BalrogOS/Tasking/tasking.h"
 #include "klib/IO/kprint.h"
 #include "ext2_config.h"
 #include "klib/ktime.h"
@@ -16,6 +17,8 @@
 /*
     UTILITIES
 */
+
+extern process* current_running;
 
 typedef struct _entry_read_dir_entries
 {
@@ -109,7 +112,8 @@ static inline uint32_t __ext2_find_free_bitmap(fs_device_t* dev, size_t bitmap_s
             }
         }
     }
-    return -1;
+    /* every caller tests the result as a block id, 0 is the free one */
+    return 0;
 }
 
 static int __ext2_update_sb_and_blk_desc(fs_device_t* dev, ext2_fs_data* fs_data)
@@ -140,9 +144,45 @@ static int __ext2_free_alloc_block(fs_device_t* dev, uint32_t block_id)
     119/512 = 0 = map sector idx
     952 % 8 = bit 
     */
-    dev->read(dev, (void*)&block_bitmap, ((block_id / 8) / 512), 1);
-    block_bitmap[block_id / 8] &= (0xff ^ (0 << (block_id % 8)));
-    dev->write(dev, (void*)&block_bitmap, ((block_id / 8) / 512), 1);
+    /*  the sector is taken from the start of the block usage bitmap, and the
+        byte is the one inside that sector. the id is 1 based like the one
+        __ext2_find_free_bitmap() hands out.
+    */
+    uint32_t map_sector = ((block_id - 1) / 8) / 512;
+    uint32_t map_byte = ((block_id - 1) / 8) % 512;
+    uint32_t map_lba = (fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap * fs_data->sec_per_block) + map_sector;
+
+    dev->read(dev, (void*)&block_bitmap, map_lba, 1);
+    block_bitmap[map_byte] &= (0xff ^ (1 << ((block_id - 1) % 8)));
+    dev->write(dev, (void*)&block_bitmap, map_lba, 1);
+
+    fs_data->sb.unalloc_blocks++;
+    fs_data->blk_grp_desc.num_of_unalloc_block++;
+    __ext2_update_sb_and_blk_desc(dev, fs_data);
+
+    return 0;
+}
+
+/*  the inode bitmap works exactly like the block one, it just lives at
+    another place and counts against the inode counters.
+*/
+static int __ext2_free_alloc_inode(fs_device_t* dev, uint32_t inode_id)
+{
+    ext2_fs_data* fs_data = dev->fs->fs_data;
+    uint8_t inode_bitmap[512];
+
+    uint32_t map_sector = ((inode_id - 1) / 8) / 512;
+    uint32_t map_byte = ((inode_id - 1) / 8) % 512;
+    uint32_t map_lba = (fs_data->blk_grp_desc.block_addr_of_inode_usage_bitmap * fs_data->sec_per_block) + map_sector;
+
+    dev->read(dev, (void*)&inode_bitmap, map_lba, 1);
+    inode_bitmap[map_byte] &= (0xff ^ (1 << ((inode_id - 1) % 8)));
+    dev->write(dev, (void*)&inode_bitmap, map_lba, 1);
+
+    fs_data->sb.unalloc_inodes++;
+    fs_data->blk_grp_desc.num_of_unalloc_inode++;
+    __ext2_update_sb_and_blk_desc(dev, fs_data);
+
     return 0;
 }
 
@@ -150,7 +190,6 @@ static uint32_t __ext2_find_higher_half_free_blocks(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
-    /* TODO update superblock */
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
     uint32_t block_id = __ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, 
@@ -168,7 +207,6 @@ static uint32_t __ext2_find_free_blocks(fs_device_t* dev)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
-    /* TODO update superblock */
     size_t block_bitmap_size = fs_data->sb.blocks / 8;
 
     uint32_t block_id = __ext2_find_free_bitmap(dev, block_bitmap_size, fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap, fs_data->sec_per_block, 0);
@@ -299,6 +337,12 @@ static int __ext2_read(uint8_t* data, uint8_t* buffer, uint64_t offset, uint64_t
     return 0;
 }
 
+static int __ext2_write(uint8_t* data, uint8_t* buffer, uint64_t offset, uint64_t len)
+{
+    memcpy(&data[offset], buffer, len);
+    return 0;
+}
+
 static uint8_t __ext2_read_file(fs_device_t* dev, uint8_t* buffer, ext2_inode* inode)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
@@ -332,9 +376,24 @@ static int __ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
 
-    /* TODO LATER must support at least 1 single indirect block pointer */
-    uint32_t buf[4096 / 4];
-    if(len > (12 * 4096) && inode->sibp == 0)
+    /*  buf holds the single indirect block. it is only read from the disk
+        when the inode already has one, so it has to start empty. else the
+        block numbers below are whatever was left on the stack.
+    */
+    uint32_t buf[EXT2_SIBP_ENTRIES];
+    memset(&buf, 0, sizeof(buf));
+
+    /*  the file needs one block per EXT2_BLOCK_SIZE bytes. the first 12 are
+        the direct ones, the rest is held by the single indirect block.
+    */
+    size_t needed = (len + (EXT2_BLOCK_SIZE - 1)) / EXT2_BLOCK_SIZE;
+
+    if(needed > EXT2_MAX_BLOCKS)
+    {
+        needed = EXT2_MAX_BLOCKS;
+    }
+
+    if(needed > 12 && inode->sibp == 0)
     {
         inode->sibp = __ext2_find_higher_half_free_blocks(dev);
     }
@@ -344,56 +403,54 @@ static int __ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset
         dev->read(dev, (void*)&buf, inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
     }
 
-    size_t i = 0;
-
-    while(inode->size < len)
+    for(size_t i = 0; i < needed; i++)
     {
-        if(i < 12 && inode->dbp[i] == 0)
+        if(i < 12)
         {
-            inode->dbp[i] = __ext2_find_free_blocks(dev);
-            inode->size += EXT2_BLOCK_SIZE;
-        } else if(i >= 12)
+            if(inode->dbp[i] == 0)
+            {
+                inode->dbp[i] = __ext2_find_free_blocks(dev);
+            }
+        } else if(inode->sibp != 0)
         {
             if(buf[i - 12] == 0)
             {
                 buf[i - 12] = __ext2_find_free_blocks(dev);
-                inode->size += EXT2_BLOCK_SIZE;
             }
         }
-
-        if(++i == 1036)
-        {
-            break;
-        }
     }
 
-    if(i != 0)
+    /* a file never shrinks here, it is only ever written over or grown */
+    if(inode->size < len)
     {
-        inode->nbr_sectors = (inode->size / 512) + 8;
-        if(i >= 12)
-        {
-            /* update the single indirect block pointer */
-            dev->write(dev, (void*)&buf, inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
-            inode->nbr_sectors += 8;
-        }
-        __ext2_update_inode_table(dev, inode_id, inode);
+        inode->size = len;
     }
 
-    for(i = 0; i < 12; i++)
+    inode->nbr_sectors = (inode->size / 512) + 8;
+
+    if(inode->sibp != 0)
     {
-        if(inode->dbp[i] != 0)
-        {
-            dev->write(dev, buffer, inode->dbp[i] * fs_data->sec_per_block, fs_data->sec_per_block);
-            buffer += 512 * fs_data->sec_per_block;
-        }
+        /* update the single indirect block pointer */
+        dev->write(dev, (void*)&buf, inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
+        inode->nbr_sectors += 8;
     }
 
-    i = 0;
-    while(buf[i])
+    __ext2_update_inode_table(dev, inode_id, inode);
+
+    /*  only the blocks len covers are written back, the ones past it would
+        be filled with whatever follows the buffer the caller handed over.
+    */
+    for(size_t i = 0; i < needed; i++)
     {
-        dev->write(dev, buffer, buf[i] * fs_data->sec_per_block, fs_data->sec_per_block);
+        uint32_t block_id = (i < 12) ? inode->dbp[i] : buf[i - 12];
+
+        if(block_id == 0)
+        {
+            continue;
+        }
+
+        dev->write(dev, buffer, block_id * fs_data->sec_per_block, fs_data->sec_per_block);
         buffer += 512 * fs_data->sec_per_block;
-        i++;
     }
 
     return 0;
@@ -406,12 +463,36 @@ static int __ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset
 static int __ext2_update_dir_entry(fs_device_t* dev, ext2_inode* dir_inode, ext2_dir_entry* dir)
 {
     ext2_fs_data* fs_data = dev->fs->fs_data;
+    void* dir_ptr = dir;
 
     for(size_t i = 0; i < 12; i++)
     {
         if(dir_inode->dbp[i] != 0)
         {
-            dev->write(dev, (void*)dir, dir_inode->dbp[i]  * fs_data->sec_per_block, 8);
+            dev->write(dev, dir_ptr, dir_inode->dbp[i]  * fs_data->sec_per_block, fs_data->sec_per_block);
+            /*  the directory is one contiguous buffer, it is walked block by
+                block the same way __ext2_read_file() filled it. without this
+                every block of the directory gets a copy of the first one.
+            */
+            dir_ptr += 512 * fs_data->sec_per_block;
+        }
+    }
+
+    /*  a directory larger than 12 blocks keeps the rest of them in its
+        single indirect block, __ext2_read_file() reads them the same way.
+    */
+    if(dir_inode->sibp != 0)
+    {
+        uint32_t buf[EXT2_SIBP_ENTRIES];
+        dev->read(dev, (void*)&buf, dir_inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
+
+        for(size_t i = 0; i < EXT2_SIBP_ENTRIES; i++)
+        {
+            if(buf[i] != 0)
+            {
+                dev->write(dev, dir_ptr, buf[i] * fs_data->sec_per_block, fs_data->sec_per_block);
+                dir_ptr += 512 * fs_data->sec_per_block;
+            }
         }
     }
 
@@ -428,9 +509,9 @@ static int __ext2_read_dir_entry(void* dir_ptr, entry_read_dir_entries* read_ent
         read_entries->next_entry = dir_ptr + read_entries->entry->entry_size;
         strcpy(&name_buffer, &read_entries->entry->name);
         name_buffer[read_entries->entry->name_length] = 0;
-        if(read_entries->entry->type != 0 && strcmp(&name_buffer[0], filename) == 0)
+        int scmp = strcmp(&name_buffer[0], filename);
+        if(read_entries->entry->type != 0 && scmp == 0)
         {
-            int scmp = strcmp(&name_buffer[0], filename);
             return 0;
         }
 
@@ -491,6 +572,7 @@ static uint32_t __ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* di
 {
     if(strlen(filename) > 255)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "ext2 : '%s' is longer than 255", filename);
         return 0;
     }
     
@@ -499,13 +581,22 @@ static uint32_t __ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* di
 
     if(!__ext2_read_dir_entry(dir_ptr, &entries, filename))
     {
+        kernel_debug_output(KDB_LVL_ERROR, "ext2 : '%s' already exists", filename);
         return 0;
     }
 
     uint16_t test_length = EXT2_DIR_ENTRY_SIZE(entries.entry->name_length);
     uint16_t free_size = entries.entry->entry_size - test_length;
     uint16_t new_entry_size = EXT2_DIR_ENTRY_SIZE(strlen(filename));
-    
+
+    kernel_debug_output(KDB_LVL_INFO, "ext2 : last entry inode %d size %d name_len %d, free %d, need %d",
+            entries.entry->inode,
+            entries.entry->entry_size,
+            entries.entry->name_length,
+            free_size,
+            new_entry_size
+        );
+
     if(free_size > new_entry_size)
     {
         // update old entry
@@ -535,17 +626,183 @@ static uint32_t __ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* di
         return new_entry->inode;
     }
 
+    kernel_debug_output(KDB_LVL_ERROR, "ext2 : no room for '%s' : %d free, %d needed", filename, free_size, new_entry_size);
     return 0;
 }
 
-static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, uint8_t new)
+/*  a path that does not start with a '/' is relative to the working
+    directory of the running process. the stored path is walked from the root
+    to get the inode it stands for, and anything that can't be walked falls
+    back to the root directory.
+*/
+static uint32_t __ext2_get_start_inode(fs_device_t* dev, uint8_t from_root)
 {
-    if(*index == 0)
+    if(from_root || current_running == 0 || current_running->cwd == 0)
     {
-        return 2;
+        return EXT2_ROOT_INODE;
     }
 
-    ext2_idata* root_itable = ext2_cache_search_inode(dev, 2);
+    char* cwd = strdup(current_running->cwd);
+    size_t cwd_index;
+    uint8_t cwd_from_root;
+    char** cwd_path = __ext2_get_path(cwd, '/', &cwd_index, &cwd_from_root);
+    uint32_t inode_id = EXT2_ROOT_INODE;
+
+    if(cwd_path == 0)
+    {
+        vmfree(cwd);
+        return EXT2_ROOT_INODE;
+    }
+
+    ext2_idata* itable = ext2_cache_search_inode(dev, EXT2_ROOT_INODE);
+    char** part = cwd_path;
+
+    while(*part)
+    {
+        // 4096 not 512! blocks are 4096 bytes so 8 * 512 sectors.
+        uint32_t allocsize = itable->inode.size + (4096 - (itable->inode.size % 4096));
+        char* buffer = kmalloc(allocsize);
+        entry_read_dir_entries entries;
+
+        __ext2_read_file(dev, buffer, &itable->inode);
+
+        if(__ext2_read_dir_entry(buffer, &entries, *part))
+        {
+            kfree(buffer);
+            inode_id = EXT2_ROOT_INODE;
+            break;
+        }
+
+        inode_id = entries.entry->inode;
+        kfree(buffer);
+
+        itable = ext2_cache_search_inode(dev, inode_id);
+
+        if(!EXT2_IS_DIRECTORY(itable->inode.mode))
+        {
+            inode_id = EXT2_ROOT_INODE;
+            break;
+        }
+
+        part++;
+    }
+
+    vmfree(cwd_path);
+    vmfree(cwd);
+
+    return inode_id;
+}
+
+/*  give every block the file holds back to the bitmap, the single indirect
+    block included since it is a block of its own.
+*/
+static int __ext2_free_file_blocks(fs_device_t* dev, ext2_inode* inode)
+{
+    ext2_fs_data* fs_data = dev->fs->fs_data;
+
+    for(size_t i = 0; i < 12; i++)
+    {
+        if(inode->dbp[i] != 0)
+        {
+            __ext2_free_alloc_block(dev, inode->dbp[i]);
+            inode->dbp[i] = 0;
+        }
+    }
+
+    if(inode->sibp != 0)
+    {
+        uint32_t buf[EXT2_SIBP_ENTRIES];
+        dev->read(dev, (void*)&buf, inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
+
+        for(size_t i = 0; i < EXT2_SIBP_ENTRIES; i++)
+        {
+            if(buf[i] != 0)
+            {
+                __ext2_free_alloc_block(dev, buf[i]);
+            }
+        }
+
+        __ext2_free_alloc_block(dev, inode->sibp);
+        inode->sibp = 0;
+    }
+
+    return 0;
+}
+
+/*  an entry is removed by handing its room over to the one before it. the
+    very first entry of the block has nothing before it, so it is only
+    emptied out and keeps its size.
+*/
+static uint32_t __ext2_remove_dir_entry(void* dir_ptr, const char* filename)
+{
+    char name_buffer[255];
+    ext2_dir_entry* previous = 0;
+    ext2_dir_entry* entry;
+
+    do
+    {
+        entry = dir_ptr;
+        strcpy(&name_buffer, &entry->name);
+        name_buffer[entry->name_length] = 0;
+
+        if(entry->type != 0 && strcmp(&name_buffer[0], filename) == 0)
+        {
+            uint32_t inode_id = entry->inode;
+
+            if(previous != 0)
+            {
+                previous->entry_size += entry->entry_size;
+            } else
+            {
+                entry->inode = 0;
+                entry->name_length = 0;
+                entry->type = EXT2_TYPE_UNKNOWN_TYPE;
+            }
+
+            return inode_id;
+        }
+
+        previous = entry;
+        dir_ptr += entry->entry_size;
+    } while(((ext2_dir_entry*)dir_ptr)->inode);
+
+    return 0;
+}
+
+/*  a directory can only go away once it holds nothing but "." and "..".
+*/
+static uint8_t __ext2_dir_is_empty(void* dir_ptr)
+{
+    char name_buffer[255];
+    ext2_dir_entry* entry;
+
+    do
+    {
+        entry = dir_ptr;
+        strcpy(&name_buffer, &entry->name);
+        name_buffer[entry->name_length] = 0;
+
+        if(entry->type != 0 && strcmp(&name_buffer[0], ".") != 0 && strcmp(&name_buffer[0], "..") != 0)
+        {
+            return 0;
+        }
+
+        dir_ptr += entry->entry_size;
+    } while(((ext2_dir_entry*)dir_ptr)->inode);
+
+    return 1;
+}
+
+static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, uint8_t new, uint8_t from_root)
+{
+    uint32_t start_inode = __ext2_get_start_inode(dev, from_root);
+
+    if(*index == 0)
+    {
+        return start_inode;
+    }
+
+    ext2_idata* root_itable = ext2_cache_search_inode(dev, start_inode);
     // 4096 not 512! blocks are 4096 bytes so 8 * 512 sectors.
     uint32_t allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
     char* buffer = kmalloc(allocsize);
@@ -584,9 +841,8 @@ static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, u
     {
         if(size == 0)
         {
-            // TODO return the cwd
             *index = 0;
-            return 2;
+            return start_inode;
         }
         // file already exist
         if(size == *index)
@@ -640,7 +896,7 @@ static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
     size_t index;
     uint8_t from_root;
     char** path = __ext2_get_path(filename, '/', &index, &from_root);
-    uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 0);
+    uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 0, from_root);
     
     if(file_inode_nbr == 0)
     {
@@ -648,7 +904,6 @@ static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
     }
 
     ext2_idata* file_inode = ext2_cache_search_inode(dev, file_inode_nbr);
-
 
     if(file_inode->open == 0)
     {
@@ -696,7 +951,7 @@ static int ext2_touch(fs_device_t* dev, char* filename)
     size_t index;
     uint8_t from_root;
     char** path = __ext2_get_path(filename, '/', &index, &from_root);
-    uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 1);
+    uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 1, from_root);
 
     if(file_inode_nbr == 0)
     {
@@ -705,14 +960,25 @@ static int ext2_touch(fs_device_t* dev, char* filename)
 
     ext2_idata* root_itable = ext2_cache_search_inode(dev, file_inode_nbr);
     
-    char* buffer = fs_cache_get_new_buffer(root_itable->inode.size);
-    __ext2_read_file(dev, buffer, &root_itable->inode);
-    __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
+    /*  the directory is only needed while the entry is added, so it is taken
+        from the kernel heap the way __ext2_find_file() does it. the file
+        system cache has no way to give a buffer back.
+    */
+    uint32_t allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
+    char* buffer = kmalloc(allocsize);
 
-    // TODO FREE buffer
+    __ext2_read_file(dev, buffer, &root_itable->inode);
+    uint32_t inode = __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
+
+    kfree(buffer);
     vmfree(path);
 
-    return 0;
+    if (root_itable->open != 0)
+    {
+        ext2_invalidate_cache(root_itable);
+    }
+
+    return inode ? 0 : -1;
 }
 
 static int ext2_read(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
@@ -732,20 +998,150 @@ static int ext2_read(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
 
 static int ext2_write(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd)
 {
-    // TODO
+    fs_file* file = fs_cache_get_file(fd->ftable_idx);
+    ext2_idata* inode =  ext2_cache_search_inode(dev, file->inode_nbr);
+
+    if(inode->open == 0)
+    {
+        return -1;
+    }
+
+    /*  the cached copy of the file only covers inode.size bytes, the pages
+        past it are not mapped. growing a file needs the file system cache
+        to hand out a larger buffer first.
+    */
+    if(((uintptr_t)fd->offset + len) > file->size)
+    {
+        return -1;
+    }
+
+    /* update the cached copy, then push the whole file back to the disk */
+    __ext2_write(file->data, buffer, (uintptr_t)fd->offset, len);
+    __ext2_update_file(dev, file->data, 0, file->size, &inode->inode, inode->inode_nbr);
+
     return 0;
+}
+
+/*  remove a name from its directory and free everything the inode it points
+    to was holding. dir_type tells a file apart from a directory, an empty
+    directory also has to be taken out of the parent link count.
+*/
+static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_type type)
+{
+    size_t index;
+    uint8_t from_root;
+    char** path = __ext2_get_path(filename, '/', &index, &from_root);
+    uint32_t dir_inode_nbr = __ext2_find_file(dev, path, &index, 1, from_root);
+
+    if(dir_inode_nbr == 0 || path == 0)
+    {
+        vmfree(path);
+        return -1;
+    }
+
+    ext2_idata* dir_itable = ext2_cache_search_inode(dev, dir_inode_nbr);
+
+    // 4096 not 512! blocks are 4096 bytes so 8 * 512 sectors.
+    uint32_t allocsize = dir_itable->inode.size + (4096 - (dir_itable->inode.size % 4096));
+    char* buffer = kmalloc(allocsize);
+
+    __ext2_read_file(dev, buffer, &dir_itable->inode);
+
+    entry_read_dir_entries entries;
+
+    if(__ext2_read_dir_entry(buffer, &entries, path[index]))
+    {
+        kfree(buffer);
+        vmfree(path);
+        return -1;
+    }
+
+    if(entries.entry->type != type)
+    {
+        kfree(buffer);
+        vmfree(path);
+        return -1;
+    }
+
+    uint32_t inode_nbr = entries.entry->inode;
+    ext2_idata* itable = ext2_cache_search_inode(dev, inode_nbr);
+
+    if(type == EXT2_TYPE_DIRECTORY)
+    {
+        uint32_t dir_allocsize = itable->inode.size + (4096 - (itable->inode.size % 4096));
+        char* dir_buffer = kmalloc(dir_allocsize);
+
+        __ext2_read_file(dev, dir_buffer, &itable->inode);
+
+        if(!__ext2_dir_is_empty(dir_buffer))
+        {
+            kfree(dir_buffer);
+            kfree(buffer);
+            vmfree(path);
+            return -1;
+        }
+
+        kfree(dir_buffer);
+    }
+
+    if(__ext2_remove_dir_entry(buffer, path[index]) == 0)
+    {
+        kfree(buffer);
+        vmfree(path);
+        return -1;
+    }
+
+    __ext2_free_file_blocks(dev, &itable->inode);
+
+    itable->inode.hard_link_count = 0;
+    itable->inode.delete_time = ktime(NULL);
+    itable->inode.size = 0;
+    itable->inode.nbr_sectors = 0;
+    __ext2_update_inode_table(dev, inode_nbr, &itable->inode);
+    __ext2_free_alloc_inode(dev, inode_nbr);
+    ext2_cache_delete_inode(inode_nbr);
+
+    /*  ".." inside the directory counted as a link on its parent, and the
+        block group keeps a directory count of its own.
+    */
+    if(type == EXT2_TYPE_DIRECTORY)
+    {
+        ext2_fs_data* fs_data = dev->fs->fs_data;
+
+        dir_itable->inode.hard_link_count--;
+        __ext2_update_inode_table(dev, dir_inode_nbr, &dir_itable->inode);
+        fs_data->blk_grp_desc.num_of_dir--;
+        __ext2_update_sb_and_blk_desc(dev, fs_data);
+    }
+
+    __ext2_update_dir_entry(dev, &dir_itable->inode, (void*)buffer);
+
+    kfree(buffer);
+    vmfree(path);
+
+    return 0;
+}
+
+static int ext2_unlink(fs_device_t* dev, char* filename)
+{
+    return __ext2_remove(dev, filename, EXT2_TYPE_REGULAR_FILE);
 }
 
 /*
     DIRECTORIES
 */
 
+static int ext2_rmdir(fs_device_t* dev, char* dirname)
+{
+    return __ext2_remove(dev, dirname, EXT2_TYPE_DIRECTORY);
+}
+
 static int ext2_list(fs_device_t* dev, char* dirname, uint8_t* buffer)
 {
     size_t index;
     uint8_t from_root;
     char** path = __ext2_get_path(dirname, '/', &index, &from_root);
-    uint32_t inode = __ext2_find_file(dev, path, &index, 0);
+    uint32_t inode = __ext2_find_file(dev, path, &index, 0, from_root);
     ext2_idata* root_itable = ext2_cache_search_inode(dev, inode);
     __ext2_read_file(dev, buffer, &root_itable->inode);
     __ext2_list_dir(buffer);
@@ -764,25 +1160,44 @@ static int ext2_mkdir(fs_device_t* dev, char* dirname)
     size_t index;
     uint8_t from_root;
     char** path = __ext2_get_path(dirname, '/', &index, &from_root);
-    uint32_t prev_inode = __ext2_find_file(dev, path, &index, 1);
+    uint32_t prev_inode = __ext2_find_file(dev, path, &index, 1, from_root);
     
     if(prev_inode == 0)
     {
         return -1;
     }
-
-    char* buffer = vmalloc(4096 * 1024);
     
     ext2_idata* root_itable = ext2_cache_search_inode(dev, prev_inode);
+    uint32_t allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
+    char* buffer = vmalloc(allocsize);
     __ext2_read_file(dev, buffer, &root_itable->inode);
-    uint32_t inode = __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], (void*)&root_itable, 4096, EXT2_TYPE_DIRECTORY);
+    uint32_t inode = __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, 4096, EXT2_TYPE_DIRECTORY);
+
+    if(inode == 0)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "ext2_mkdir() : could not create '%s'", path[index]);
+        vmfree(buffer);
+        vmfree(path);
+        return -1;
+    }
 
     ext2_idata* file_inode = ext2_cache_search_inode(dev, inode);
     __ext2_read_file(dev, buffer, &file_inode->inode);
-    __ext2_initialize_dir(dev, (void*)buffer, &file_inode->inode, inode, &root_itable->inode, prev_inode);
+    int init = __ext2_initialize_dir(dev, (void*)buffer, &file_inode->inode, inode, &root_itable->inode, prev_inode);
+
+    if (init != 0)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "ext2_mkdir() : '%s' created but not initialized", path[index]);
+    }
 
     vmfree(buffer);
     vmfree(path);
+
+    if (root_itable->open != 0)
+    {
+        ext2_invalidate_cache(root_itable);
+    }
+
     return 0;
 }
 
@@ -841,6 +1256,8 @@ int ext2_probe(fs_device_t* dev)
     dev->fs->touch = ext2_touch;
     dev->fs->list = ext2_list;
     dev->fs->mkdir = ext2_mkdir;
+    dev->fs->unlink = ext2_unlink;
+    dev->fs->rmdir = ext2_rmdir;
     dev->fs->fs_data = fs_data;
 
     return 0;

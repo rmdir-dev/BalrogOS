@@ -10,7 +10,9 @@ Total kernel heap = 128GiB
 */
 
 #define KERNEL_VIRTUAL_START    0xffffffc000000000
-#define KERNEL_VIRTUAL_TOP      0xffffffdfffffffff
+#define KERNEL_VIRTUAL_TOP      0xffffffe000000000
+
+#define VMHEAP_MAX_BLOCK_SIZE (KERNEL_VIRTUAL_TOP - KERNEL_VIRTUAL_START)
 
 void* vmheap_start;
 void* vmheap_current_top;
@@ -28,7 +30,14 @@ void init_vmheap()
 
     // allocate first 1 MiB of the virtual heap
     for(size_t i = 0; i < 256; i++) {
-        vmm_set_page(0, vmheap_start + vmheap_size, pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
+        void* alloc = pmm_calloc();
+        if (!alloc)
+        {
+            // if alloc == 0 then alloc = kernel physical address
+            kernel_debug_output(KDB_LVL_CRITICAL, "init_vmheap() : fail to allocate page at boot !", alloc_count);
+            return;
+        }
+        vmm_set_page(0, vmheap_start + vmheap_size, alloc, PAGE_PRESENT | PAGE_WRITE);
         vmheap_size += 0x1000;
     }
 
@@ -47,26 +56,16 @@ void init_vmheap()
 
 void* vmalloc(size_t size)
 {
+    if (size > VMHEAP_MAX_BLOCK_SIZE - sizeof(block_info) * 3)
+    {
+        kernel_debug_output(KDB_LVL_CRITICAL, "vmalloc() : %d is above the heap ceiling", size);
+        return 0;
+    }
+
     block_info* start_block = first_free;
     block_info* current_block = first_free;
-    size += sizeof(block_info) * 3; // add 60 bytes to the size to protect against heap corruption
+    size += sizeof(block_info) * 3; // add 72 bytes to the size to protect against heap corruption
 
-//    if(first_free == vmheap_current_top) {
-//        kernel_debug_output(KDB_LVL_VERBOSE, "first free = vmheap current top = 0%p", first_free);
-//        block_info* blk = vmheap_start;
-//        if(blk->_is_mmapped) {
-//            blk = blk->next_free;
-//        }
-////        while(blk->previous_chunk && blk->previous_chunk >= KERNEL_VIRTUAL_START && blk->_present == 0) {
-////            kernel_debug_output_no_ln(KDB_LVL_INFO, "blk = 0%p", blk);
-////            blk = blk->previous_chunk;
-////        }
-//        first_free = blk;
-//        current_block = blk;
-//        kernel_debug_output(KDB_LVL_VERBOSE, "new first free 0%p -> 0%p", current_block, first_free);
-//    }
-
-//    block_info* free = first_free;
     kernel_debug_output(KDB_LVL_VERBOSE, "vm heap c %d start 0%p -> 0%p", alloc_count, start_block, first_free);
     kernel_debug_output_no_ln(KDB_LVL_VERBOSE, "vmalloc first free block = 0%p | size : %d ", current_block, size);
 
@@ -84,7 +83,7 @@ void* vmalloc(size_t size)
             kernel_debug_output(KDB_LVL_VERBOSE, "RET block = 0%p, first free = 0%p", ret, first_free);
             if(ret != 0)
             {
-                vmheap_current_size += size;
+                vmheap_current_size += ((block_info*)(ret - sizeof(block_info)))->_size;
 
                 kernel_debug_output(KDB_LVL_VERBOSE, "vmheap first free after alloc block = 0%p", first_free);
                 alloc_count++;
@@ -98,53 +97,74 @@ void* vmalloc(size_t size)
             current_block = current_block->next_free;
         } else
         {
-            kernel_debug_output(KDB_LVL_INFO, "invalid block 0%p top = 0%p", current_block, vmheap_current_top);
-            if(vmheap_size + 0x1000 == 0x5000)
+            uint8_t empty_list = (prev_block >= (block_info*)vmheap_current_top) || (prev_block <  (block_info*)KERNEL_VIRTUAL_START);
+            block_info* tail = prev_block;
+            uint8_t extend = !empty_list && ((uint8_t*)tail + sizeof(block_info) + tail->_size == (uint8_t*)vmheap_current_top);
+
+            size_t needed = extend ? (size + sizeof(block_info) - tail->_size) : (size + sizeof(block_info) * 2);
+            size_t pages  = (needed / 0x1000) + 1;
+
+            if(vmheap_current_top + (pages * 0x1000) > (void*)KERNEL_VIRTUAL_TOP)
             {
-                kernel_debug_output(KDB_LVL_INFO, "vmalloc size = %d/%d KiB added : %d | %d", vmheap_current_size, BYTE_TO_KiB(vmheap_size), size, alloc_count);
-//                while(1) {}
-            }
-            // if the current virtual heap top is equal to KERNEL_VIRTUAL_TOP
-            // then we don't have any space left in memory.
-            // We also don't allow to allocate a block larger than 4072 bytes atm.
-            if(vmheap_current_top == (void*)KERNEL_VIRTUAL_TOP)
-            {
-                //Kernel heap full
                 kernel_debug_output(KDB_LVL_CRITICAL, "vmalloc() failed, no more space left in virtual heap");
                 return 0;
             }
 
-            // get a new page
-            void* alloc = pmm_calloc();
-            // set the new page to the vmheap_current_top address
-            vmm_set_page(0, vmheap_current_top, alloc, PAGE_PRESENT | PAGE_WRITE);
-            vmheap_size += 0x1000;
-            kernel_debug_output(KDB_LVL_VERBOSE, "new vmheap size = %d", vmheap_size);
-
-            // set the first block address to vmheap_current_top
-            block_info* first_block = vmheap_current_top;
-
-            // set the new first block data.
-            first_block->previous_chunk = prev_block;
-            first_block->_is_mmapped = 0;
-            first_block->_non_arena = 0;
-            first_block->_present = 1;
-            first_block->_size = 0x1000 - sizeof(block_info);
-            first_block->next_free = vmheap_current_top + 0x1000;
-            if(prev_block->next_free != vmheap_current_top) {
-                kernel_debug_output(KDB_LVL_ERROR, "prev block next free = 0%p | vmheap current top = 0%p", prev_block->next_free, vmheap_current_top);
-                prev_block->next_free = first_block;
-//                while (1) {}
-            }
-            kernel_debug_output(KDB_LVL_VERBOSE, "current block next free = 0%p", prev_block->next_free);
-            current_block = first_block;
-
-            if(first_free == vmheap_current_top || first_free > vmheap_current_top) {
-                first_free = first_block;
+            for(size_t i = 0; i < pages; i++)
+            {
+                void* alloc = pmm_calloc();
+                if(!alloc)
+                {
+                    kernel_debug_output(KDB_LVL_CRITICAL, "vmalloc() failed, no physical page left");
+                    for(size_t j = 0; j < i; j++)
+                    {
+                        void* mapped = vmm_get_page(0, vmheap_current_top + (j * 0x1000));
+                        vmm_free_page(0, vmheap_current_top + (j * 0x1000));
+                        pmm_free(mapped);
+                    }
+                    return 0;
+                }
+                vmm_set_page(0, vmheap_current_top + (i * 0x1000), alloc, PAGE_PRESENT | PAGE_WRITE);
             }
 
-            // set the new virtual heap top.
-            vmheap_current_top += 0x1000;
+            if(extend)                                                /* A */
+            {
+                /*  already in the free list, already the right previous_chunk.
+                    only its size and the sentinel it points at change.
+                */
+                tail->_size += pages * 0x1000;
+                tail->next_free = vmheap_current_top + (pages * 0x1000);
+                current_block = tail;
+            } else
+            {
+                // set the first block address to vmheap_current_top
+                block_info* first_block = vmheap_current_top;
+
+                // set the new first block data.
+                // The block previous block/chunk is now allocated by default so not = prev_block anymore
+                first_block->previous_chunk = 0;
+                first_block->_is_mmapped = 0;
+                first_block->_non_arena = 0;
+                // Switch the logic, now the block bellow is always allocated so not = 1 anymore
+                first_block->_present = 0;
+                first_block->_size = (pages * 0x1000) - sizeof(block_info);
+                first_block->next_free = vmheap_current_top + (pages * 0x1000);
+
+                if(!empty_list && prev_block->next_free != vmheap_current_top)
+                {
+                    prev_block->next_free = first_block;
+                }
+
+                if(empty_list || first_free >= vmheap_current_top)
+                {
+                    first_free = first_block;
+                }
+
+                current_block = first_block;
+            }
+
+            vmheap_size += pages * 0x1000;
+            vmheap_current_top += pages * 0x1000;
         }
         // we're not on the first block anymore.
         first_block = 0;
@@ -168,7 +188,8 @@ void vmfree(void* ptr)
     }
 
     kernel_debug_output(KDB_LVL_VERBOSE, "vm free c %d start 0%p -> 0%p", free_count, block, first_free);
-    heap_free(block, next_block, vmheap_current_top, (uintptr_t*)&first_free, vmheap_size);
+    size_t max_block = vmheap_size < VMHEAP_MAX_BLOCK_SIZE ? vmheap_size : VMHEAP_MAX_BLOCK_SIZE;
+    heap_free(block, next_block, vmheap_current_top, (uintptr_t*)&first_free, max_block);
     vmheap_current_size -= size;
     ++free_count;
     alloc_count--;

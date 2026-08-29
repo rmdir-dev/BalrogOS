@@ -312,9 +312,11 @@ os:
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=512 count=1 conv=notrunc
 	dd if=build/os/os-image.bin of=files/filesys.dd bs=1 skip=512 seek=4014080 conv=notrunc
 	cp files/filesys.dd build/os/os-image
-#	mkdir VBox/ || true
-#	rm VBox/os-image.vdi || true
-#	VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
+#	the vdi is rebuilt from scratch every time, VirtualBox will not pick
+#	up a raw image that changed under an image it already converted.
+	mkdir -p VBox/
+	rm -f VBox/os-image.vdi
+	VBoxManage convertfromraw --format VDI build/os/os-image VBox/os-image.vdi
 
 tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	mkdir -p $(BIN_BUILD_DIR)

@@ -1,3 +1,9 @@
+; recently upgrade with :
+; - https://wiki.osdev.org/Disk_access_using_the_BIOS_(INT_13h) : Reading sectors with a CHS address, LBA in Extended Mode.
+; - https://www.ctyme.com/intr/rb-0621.htm : Int 13/AH=08h - DISK - GET DRIVE PARAMETERS.
+; - https://www.ctyme.com/intr/rb-0607.htm : Int 13/AH=02h - DISK - READ SECTOR(S) INTO MEMORY.
+; - https://www.ctyme.com/intr/rb-0708.htm : Int 13/AH=42h - IBM/MS INT 13 Extensions - EXTENDED READ.
+
 ; INPUT
 ; dl = drive ID
 ; dh = number of sector to read
@@ -9,109 +15,82 @@
 ; eg: address is 0x000f9521
 _DiskLoad:
     pusha               ; push everything register to the stack
-    push bx             ; save es bx
-    push dx             ; push dx to the stack
-                        ; dx contain the number of sectors to read
-    mov ah, 0x08        ; get disk info
-    int 0x13            ;
-                        ; return 
-                        ; Set AH to 8, DL to the BIOS drive number, and execute INT 0x13.
-                        ; The value returned in DH is the "Number of Heads" -1.
-                        ; AND the value returned in CL with 0x3f to get the "Sectors per Track".
-                        ; 0x3f sec per track
-                        ; 0x10 head
+    push es             ; int 0x13 is allowed to come back with es:di
+                        ; changed, so the destination segment is saved too
 
-    xor bx, bx
-    mov bl, dh          ; number of head into bx
-    mov ax, 0x3f
-    and cx, ax
-    ; Temp = LBA / (Sectors per Track)
-    ; temp = 140 V
-    ; temp = 124 if b == 0x10
-    xor dx, dx
-    mov ax, di
-    div cx          ; cx / ax (LBA/ SEC_PER_TRACK)
-    
-    push ax ; TEMP
-    ; Sector = (LBA % (Sectors per Track)) + 1
-    ; sec = 28
-    xor dx, dx
-    mov ax, di
-    div cx
-    
-    inc dx
-    pop ax  ; TEMP
-    
-    push dx ; SECTOR
-    push ax ; TEMP
-    ; Head = Temp % (Number of Heads)
-    ; head = 12 V
-    xor dx, dx
-    inc bx
+    mov [DAP_SEGMENT], es   ; the packet carries the destination itself
+    mov [DAP_OFFSET], bx
+    mov [DAP_LBA], di   ; the packet holds the lba on 64 bits,
+                        ; the upper words are left to 0
+    mov cl, dh          ; cl = number of sectors still to read
 
-    div bx  ; 
-    
-    pop ax  ; temp
-    push dx ; HEAD
-    ; Cylinder = Temp / (Number of Heads)
-    ; cylinder = 7 V
-    xor dx, dx
-    div bx
-    mov ch, al ; CYLINDER
-    pop ax
-    mov di, ax ; HEAD
-    pop ax
-    mov cl, al ; SECTOR
-    pop dx     ; pop sector count and drive id
-    mov al, dh ; sector count
-    pop bx
-    push dx
-    push bx
-    mov bx, di
-    mov dh, bl
-    pop bx
-      
-    mov ah, 0x02        ; INT 0x13, AH = 2 -- read floppy/hard disk in CHS mode
-    ; al = 128 MAX  V
-    ; dl = 0x80
-    ; cl = 1   V   SECTOR   29
-    ; dh = 0   X   HEAD     12
-    ; ch = 20  X   CYLINDER 7
-    
+.readChunk:
+    ; the bios reads through the dma controller, and a single transfer
+    ; can't cross a 64KiB boundary. so we only ask for what fits until
+    ; the next one and come back for the rest.
+    mov ax, [DAP_SEGMENT]
+    shl ax, 4
+    add ax, [DAP_OFFSET]; ax = the address inside its own 64KiB block
+    neg ax              ; how many bytes are left before the boundary
+    shr ax, 9           ; the same, counted in sectors
+    jnz .clampToLeft
+    mov ax, 127         ; we sit on a boundary, the bios takes 127 at once
+
+.clampToLeft:
+    cmp al, cl
+    jbe .readSectors
+    mov al, cl          ; never ask for more than what is left to read
+
+.readSectors:
+    xor ah, ah
+    mov [DAP_COUNT], ax
+
+    push dx             ; dl holds the drive, int 0x13 must not lose it
+    mov ah, 0x42        ; INT 0x13, AH = 0x42 -- read the disk in LBA mode
+    mov si, DISK_ADDRESS_PACKET
     int 0x13            ; bios mass storage (disk, floppy) access interrupt
                         ; INPUT
-                        ; AH = 0x02 = read sectors from drive CSH
-                        ; AL = sectors count
-                        ; CH = cylinder
-                        ; cl = sector
-                        ; dh = head
-                        ; dl = drive
-                        ; es:bx = buffer address to write into.
+                        ; AH = 0x42 = extended read
+                        ; DL = drive
+                        ; DS:SI = disk address packet
                         ; RESULT
-                        ; CF = set on if the root sector does not exist.
+                        ; CF = set on if the read failed
                         ; ah = return code
-                        ; al = number of sector read
+    pop dx              ; pop leaves the flags alone
 
-    jc .diskError       ; if the interrupt failed to read the first sector
+    jc .diskError       ; if the interrupt failed to read the sectors
                         ; jc = jump if carry flag is set
-    pop dx              ; recover dx containing the number of sector to read
 
-    cmp dh, al          ; compare if the number of sector read is equal to the requested ones
-    jne .sectorReadError; if not jump to diskError
-    
+    mov ax, [DAP_COUNT] ; walk the destination and the lba forward by
+    sub cl, al          ; what has just been read
+    add [DAP_LBA], ax
+    adc word [DAP_LBA + 2], 0
+    shl ax, 5           ; a sector is 512 bytes, so 32 paragraphs
+    add [DAP_SEGMENT], ax   ; the offset never moves, only the segment does
+
+    cmp cl, 0           ; keep going until everything has been read
+    jne .readChunk
+
+    pop es              ; recover the destination segment
     popa                ; recover every register from the stack.
     ret
-
-.sectorReadError:
-    PrintStringNextLine DISK_SECTOR_ERROR_STRING
-    jmp $
 
 .diskError:
     PrintStringNextLine DISK_ERROR_STRING   ; declared in io.inc included into start.asm
     jmp $
 
-DISK_SECTOR_ERROR_STRING:
-    db "Sec disk",0
-
 DISK_ERROR_STRING:
     db "Read",0
+
+; the bios reads the description of the transfer from this packet.
+DISK_ADDRESS_PACKET:
+    db 0x10             ; size of the packet
+    db 0x00             ; reserved
+DAP_COUNT:
+    dw 0x0000           ; number of sectors to transfer
+DAP_OFFSET:
+    dw 0x0000           ; destination offset
+DAP_SEGMENT:
+    dw 0x0000           ; destination segment
+DAP_LBA:
+    dq 0x0000           ; first sector to read

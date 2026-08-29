@@ -517,7 +517,6 @@ void init_ahci()
         __ahci_probe_device(dev);
         node = node->next;
     }
-    // while(1){}
 }
 
 int ahci_get_boot_device(fs_device_t* device)

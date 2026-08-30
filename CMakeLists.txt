@@ -88,10 +88,10 @@ file(GLOB_RECURSE ALL_HEADERS	CONFIGURE_DEPENDS include/*.h)
 ########################################################
 #	INDEXING TARGETS
 ########################################################
-add_library(kernel		OBJECT EXCLUDE_FROM_ALL ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
-add_library(libc		OBJECT EXCLUDE_FROM_ALL ${LIBC_SRCS} ${SHARED_SRCS})
-add_library(libpthread	OBJECT EXCLUDE_FROM_ALL ${PTHREADC_SRCS})
-add_library(tools		OBJECT EXCLUDE_FROM_ALL ${TOOLS_SRCS})
+add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
+add_library(libc		OBJECT ${LIBC_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
+add_library(libpthread	OBJECT ${PTHREADC_SRCS})
+add_library(tools		OBJECT ${TOOLS_SRCS})
 
 ########################################################
 #	BUILD (delegates to the Makefile)

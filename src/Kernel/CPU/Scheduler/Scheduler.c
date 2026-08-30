@@ -19,6 +19,8 @@ static void __exec()
 {
     current_running->exec = 1;
     tss.rsp0 = current_running->kernel_stack_top;
+    // Context restoration !!
+    // DO NOT USE write_cr3 here it might break the restoration cycle.
     asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
     asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
     asm volatile("pop %rbp");

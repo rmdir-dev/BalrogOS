@@ -4,12 +4,12 @@
 #include "BalrogOS/Tasking/tasking.h"
 #include "BalrogOS/Tasking/process.h"
 #include "balrog/terminal/term.h"
+#include "BalrogOS/CPU/CR/control_register.h"
 
 extern process* current_running;
 
 static interrupt_regs* general_protection_fault(interrupt_regs* stack_frame)
 {
-//    kprint(TERM_CLEAR);
     kernel_debug_output_no_ln(KDB_LVL_CRITICAL, "General protection fault : ");
     uint64_t error = stack_frame->error_code;
     if(error & 0x1)
@@ -54,8 +54,7 @@ static interrupt_regs* vmm_page_fault_handler(interrupt_regs* regs)
 {
     // get the value of the CR2 register
     // as the address register contain the address that cause the page fault
-    uintptr_t address;
-    asm volatile("mov %%cr2, %0" : "=r"(address));
+    uintptr_t address = read_cr2();
 
     // protection fault in user mode on forked process
     if(current_running && (regs->error_code & 0x04 || regs->error_code & 0x01) && current_running->forked_memory) {

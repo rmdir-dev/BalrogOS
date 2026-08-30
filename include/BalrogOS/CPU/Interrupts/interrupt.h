@@ -11,6 +11,7 @@
 
 #define TOTAL_NBR_INTERRUPT 256
 
+// updated with : https://wiki.osdev.org/Exceptions
 #define   INT_DE    0x00 // Divide by zero exception
 #define   INT_DB    0x01 // Debug exception
 #define   INT_NMI   0x02 // Non-maskable Interrupt exception
@@ -26,11 +27,18 @@
 #define   INT_SS    0x0C // Stack exception
 #define   INT_GP    0x0D // General Protection Fault exception
 #define   INT_PF    0x0E // Page Fault exception
+// 0x0F = RESERVED
 #define   INT_MF    0x10 // Floating Point exception pending
 #define   INT_AC    0x11 // Alignment Check exception
 #define   INT_MC    0x12 // Machine Check exception
 #define   INT_XF    0x13 // SIMD Floating Point exception
+#define   INT_VE    0x14 // Virtualization Exception
+#define   INT_CP    0x15 // Control Protection Exception
+// 0x16-0x1B = RESERVED
+#define   INT_HV    0x1C // Hypervisor Injection Exception
+#define   INT_VC    0x1D // VMM Communication Exception
 #define   INT_SX    0x1E // Security exception
+// 0x1F = RESERVED
 
 /* MASTER PIC */
 #define INT_IRQ_0       0x20    // Programmable Interrupt Timer Interrupt
@@ -104,7 +112,7 @@ typedef struct interrupt_registers
     //////////////////////////////////////////////////////////
     //                  STACK FRANE END
     //////////////////////////////////////////////////////////
-} interrupt_regs;
+} __attribute__((packed)) interrupt_regs;
 
 typedef interrupt_regs *(*interrupt_handler)(interrupt_regs*);
 

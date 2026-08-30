@@ -1,14 +1,16 @@
 ; Interupts service routines.
 section .text
+
     extern isr_common
     extern schedule
     extern user_mode_print
+    
 isr0:
     cli
     push 0
     push 0
     jmp isr_common
-
+    
 isr1:
     cli
     push 0
@@ -131,7 +133,7 @@ isr20:
     
 isr21:
     cli
-    push 0
+    nop
     push 21
     jmp isr_common
     
@@ -179,13 +181,13 @@ isr28:
     
 isr29:
     cli
-    push 0
+    nop
     push 29
     jmp isr_common
     
 isr30:
     cli
-    push 0
+    nop
     push 30
     jmp isr_common
     
@@ -206,7 +208,7 @@ isr32:
     ; so it is better to avoid them
     ; call schedule
     ; iretq
-    
+
 isr33:
     cli
     push 0
@@ -1539,11 +1541,18 @@ isr254:
     push 254
     jmp isr_common
     
+isr255:
+    cli
+    push 0
+    push 255
+    jmp isr_common
+    
 
 ; ISR VECTOR
 section .data
     global isr_table
 isr_table:
+
      dq isr0
      dq isr1
      dq isr2
@@ -1799,3 +1808,4 @@ isr_table:
      dq isr252
      dq isr253
      dq isr254
+     dq isr255

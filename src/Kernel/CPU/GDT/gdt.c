@@ -8,6 +8,8 @@ gdt_ptr gdtp;
 
 tss_entry tss;
 
+static uint8_t df_stack[4096] __attribute__((aligned(16)));
+
 extern void flush_gdt(gdt_ptr* gdtp);
 extern void flush_tss();
 
@@ -61,6 +63,7 @@ int init_gdt()
 
     tss.io_mba = sizeof(tss_entry);
     asm volatile("mov %%rsp, %%rax": "=a"(tss.rsp0));
+    tss.ist1 = (uint64_t)(df_stack + sizeof(df_stack));
 
     /* NULL */
     gdt_set_gate(0, 0, 0, 0, 0);

@@ -58,7 +58,7 @@ int serial_init()
 
 char serial_read_char()
 {
-    while(rx_head == rx_tail);
+    while(rx_head == rx_tail)
     {}
 
     char c = rx_buf[rx_tail];
@@ -69,6 +69,11 @@ char serial_read_char()
 
 void serial_put_char(char c)
 {
+    if (c == '\n')
+    {
+        serial_put_char('\r');
+    }
+
     if (__lsr_wait(0x20) == 0)
     {
         return;

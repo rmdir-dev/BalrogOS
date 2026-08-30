@@ -72,8 +72,8 @@ int init_interrupt()
             set_idt_entry(i,        // ISR ID
                 isr_table[i],       // poiner to the corresponding ISR
                 0x8,                // kernel segment code offset sector
-                0,                  //
-                (IDT_PRESENT |      // INTERRUPT IS PRESENT = can be use
+                (i == INT_DF) ? 1 : 0, // IST 1 : need to be enabled for double fault stack to work.
+                (IDT_PRESENT | // INTERRUPT IS PRESENT = can be use
                 IDT_DPL_0 |         // INTERRUPT privilege level 0 = highest privilege to call this interrupt
                 IDT_INTERRUPT));    // INTERRUPT gate https://wiki.osdev.org/Interrupt_Descriptor_Table#I386_Interrupt_Gate
         }

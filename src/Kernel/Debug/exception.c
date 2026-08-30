@@ -37,7 +37,6 @@ static void __halt_forever()
 
 static interrupt_regs* __general_protection_fault_handler(interrupt_regs* stack_frame)
 {
-    kernel_debug_output(KDB_LVL_CRITICAL, "");
     kernel_debug_output(KDB_LVL_CRITICAL, "=== GENERAL PROTECTION FAULT ===");
 
     uint64_t error = stack_frame->error_code;
@@ -98,7 +97,6 @@ static interrupt_regs* __page_fault_handler(interrupt_regs* stack_frame)
         return stack_frame;
     }
 
-    kernel_debug_output(KDB_LVL_CRITICAL, "");
     kernel_debug_output(KDB_LVL_CRITICAL, "===        PAGE FAULT        ===");
 
     /**
@@ -169,7 +167,6 @@ static interrupt_regs* __page_fault_handler(interrupt_regs* stack_frame)
 
 static interrupt_regs* __invalid_opcode_handler(interrupt_regs* stack_frame)
 {
-    kernel_debug_output(KDB_LVL_CRITICAL, "");
     // Most of the time, either a jump into data through a corrupted stack or overwritten function pointer.
     kernel_debug_output(KDB_LVL_CRITICAL, "===      INVALID OPCODE      ===");
     __dump_context(stack_frame);
@@ -188,7 +185,6 @@ static interrupt_regs* __double_fault_handler(interrupt_regs* stack_frame)
      * again here and turn into a triple fault : a silent reboot.
      * the error code is always zero, and the state is never recoverable.
      */
-    kernel_debug_output(KDB_LVL_CRITICAL, "");
     kernel_debug_output(KDB_LVL_CRITICAL, "===       DOUBLE  FAULT      ===");
 
     __dump_context(stack_frame);

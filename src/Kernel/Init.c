@@ -75,6 +75,9 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_RESULT(vga_status,    "VGA driver : ",    "done", "not initialized");
     KERNEL_LOG_RESULT(serial_status, "Serial driver : ", "done", "not initialized");
 
+    /*    GDT and TSS    */
+    KERNEL_LOG_ASSERT(init_gdt(), "GDT and TSS : ", "done", "not initialized");
+
     /*   INTERRRUPTS      */
     KERNEL_LOG_ASSERT(init_interrupt(), "Interrupts : ", "done", "not initialized");
 
@@ -103,9 +106,6 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    Kernel Heap    */
     KERNEL_LOG_ASSERT(init_vmheap(), "Kernel virtual heap : ", "done", "not initialized");
-
-    /*    GDT and TSS    */
-    KERNEL_LOG_ASSERT(init_gdt(), "GDT and TSS : ", "done", "not initialized");
 
     /*    PCI BUS        */
     KERNEL_LOG_ASSERT(init_pci(), "PCI bus : ", "done", "not initialized");

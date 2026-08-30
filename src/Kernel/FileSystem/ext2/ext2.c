@@ -819,9 +819,16 @@ static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, u
         found = 0;
         if(!__ext2_read_dir_entry(buffer, &entries, *path))
         {
-            found = 1;
             root_itable = ext2_cache_search_inode(dev, entries.entry->inode);
             inode_id = entries.entry->inode;
+            char *next_path = *(path + 1);
+            if(!next_path)
+            {
+                found = 1;
+                break;
+            }
+
+            // If not a directory ->  cannot entre so exit.
             if(!EXT2_IS_DIRECTORY(root_itable->inode.mode))
             {
                 break;

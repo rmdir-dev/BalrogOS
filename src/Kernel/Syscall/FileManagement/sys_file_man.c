@@ -3,6 +3,7 @@
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "BalrogOS/Tasking/process.h"
+#include "BalrogOS/Syscall/syscall_guard.h"
 #include "BalrogOS/Memory/kheap.h"
 #include "BalrogOS/Debug/debug_output.h"
 #include "klib/IO/kprint.h"
@@ -12,6 +13,26 @@
 
 extern process* current_running;
 
+static int __copy_user_path(uintptr_t user, char* dst, size_t dst_size)
+{
+  if(!user_ptr_ok(user))
+  {
+      *current_running->error_no = EFAULT;
+      return -1;
+  }
+
+  size_t len = strlen((const char*)user);
+
+  if(len >= dst_size)
+  {
+      *current_running->error_no = ENAMETOOLONG;
+      return -1;
+  }
+
+  memcpy(dst, (const char*)user, len);
+  dst[len] = 0;
+  return 0;
+}
 
 int __check_file_permission(fs_fd* fd, uint16_t mode) {
     fs_file_stat current_file_stat;
@@ -38,10 +59,11 @@ int sys_open(interrupt_regs* stack_frame)
     {
         fs_fd* fd = &current_running->fd_table[3];
         char name[256] = {};
-        uint8_t len = strlen(stack_frame->rdi);
-        // TODO manage error if len > 255
-        memcpy(name, stack_frame->rdi, len);
-        name[len] = 0;
+
+        if (__copy_user_path(stack_frame->rdi, name, sizeof(name)) != 0)
+        {
+            return -1;
+        }
         if(fs_open(name, fd) != 0)
         {
             *current_running->error_no = ENOENT;
@@ -112,9 +134,10 @@ int sys_creat(interrupt_regs* stack_frame)
     if(current_running)
     {
         char name[256] = {};
-        uint8_t len = strlen((char*) stack_frame->rdi);
-        memcpy(name, (char*) stack_frame->rdi, len);
-        name[len] = 0;
+        if (__copy_user_path(stack_frame->rdi, name, sizeof(name)) != 0)
+        {
+            return -1;
+        }
         return fs_touch(name);
     }
     return -1;
@@ -125,9 +148,10 @@ int sys_mkdir(interrupt_regs* stack_frame)
     if(current_running)
     {
         char name[256] = {};
-        uint8_t len = strlen((char*) stack_frame->rdi);
-        memcpy(name, (char*) stack_frame->rdi, len);
-        name[len] = 0;
+        if (__copy_user_path(stack_frame->rdi, name, sizeof(name)) != 0)
+        {
+            return -1;
+        }
         return fs_mkdir(name);
     }
     return -1;
@@ -138,9 +162,10 @@ int sys_unlink(interrupt_regs* stack_frame)
     if(current_running)
     {
         char name[256] = {};
-        uint8_t len = strlen((char*) stack_frame->rdi);
-        memcpy(name, (char*) stack_frame->rdi, len);
-        name[len] = 0;
+        if (__copy_user_path(stack_frame->rdi, name, sizeof(name)) != 0)
+        {
+            return -1;
+        }
         return fs_unlink(name);
     }
     return -1;
@@ -151,9 +176,10 @@ int sys_rmdir(interrupt_regs* stack_frame)
     if(current_running)
     {
         char name[256] = {};
-        uint8_t len = strlen((char*) stack_frame->rdi);
-        memcpy(name, (char*) stack_frame->rdi, len);
-        name[len] = 0;
+        if (__copy_user_path(stack_frame->rdi, name, sizeof(name)) != 0)
+        {
+            return -1;
+        }
         return fs_rmdir(name);
     }
     return -1;

@@ -14,6 +14,8 @@
 #include "toolkit/tool_read_keyboard.h"
 #include "toolkit/list.h"
 
+#define ARG_MAX 32
+
 static int hist_len = 5;
 static int hist_key_count = 0;
 static list_t historic;
@@ -279,8 +281,18 @@ void sh_parse_cmd()
     }
     char* tmp_buf = strdup(buffer);
     char* cmd = strtok(tmp_buf, ' ');
+
+    if (!cmd)
+    {
+        free(tmp_buf);
+        return;
+    }
+
     size_t len = strlen(cmd);
-    char* buf = malloc(5 + len);
+    // + 5 => /bin/
+    // len => length
+    // + 2 => 0 at the end + 1 byte buffer.
+    char* buf = malloc(5 + len + 2);
     size_t start_write = 0;
     if(cmd[0] != '/')
     {
@@ -292,7 +304,7 @@ void sh_parse_cmd()
     arguments[argc_count] = &buf[0];
 
     cmd = strtok(NULL, ' ');
-    while(cmd)
+    while(cmd && argc_count < ARG_MAX - 1)
     {
         arguments[++argc_count] = cmd;
         cmd = strtok(NULL, ' ');

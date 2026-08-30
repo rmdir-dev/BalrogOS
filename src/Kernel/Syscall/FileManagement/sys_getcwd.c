@@ -1,5 +1,6 @@
 #include "BalrogOS/Syscall/syscall.h"
 #include "BalrogOS/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/Syscall/syscall_guard.h"
 #include "BalrogOS/Tasking/tasking.h"
 #include "klib/IO/kprint.h"
 #include "libc/string.h"
@@ -10,6 +11,11 @@ void* sys_getcwd(interrupt_regs* stack_frame)
 {
     char* buf = (char*) stack_frame->rdi;
     size_t size = (size_t) stack_frame->rsi;
+
+    if (!user_buf_ok((uintptr_t) buf, size))
+    {
+        return NULL;
+    }
 
     if(size < strlen(current_running->cwd))
     {

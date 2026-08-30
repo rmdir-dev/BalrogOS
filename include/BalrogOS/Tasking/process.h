@@ -12,7 +12,7 @@ typedef struct _process_list
  * @brief 
  * 
  */
-void init_process();
+int init_process();
 
 /**
  * @brief push a new process into the ready queue

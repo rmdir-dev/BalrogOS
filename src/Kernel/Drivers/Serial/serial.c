@@ -1,5 +1,8 @@
-#include "string.h"
+#include "BalrogOS/Drivers/Serial/serial.h"
 #include "BalrogOS/CPU/Ports/ports.h"
+#include "BalrogOS/CPU/Interrupts/interrupt.h"
+#include "BalrogOS/CPU/Interrupts/irq.h"
+#include "BalrogOS/Debug/debug_output.h"
 
 /*
 Serial port driver, 16550 UART on COM1
@@ -7,7 +10,9 @@ Documentation :
     Serial Ports : https://wiki.osdev.org/Serial_Ports
 */
 
-#define COM1 0x3f8
+static char rx_buf[SERIAL_BUF];
+static volatile uint32_t rx_head;
+static volatile uint32_t rx_tail;
 
 static int __lsr_wait(uint8_t mask)
 {
@@ -51,25 +56,15 @@ int serial_init()
     return ret;
 }
 
-static int __serial_receive_byte()
-{
-    return in_byte(COM1 + 5) & 1;
-}
-
 char serial_read_char()
 {
-    while(__serial_receive_byte() == 0)
+    while(rx_head == rx_tail);
     {}
 
-    return in_byte(COM1);
-}
+    char c = rx_buf[rx_tail];
+    rx_tail = (rx_tail + 1) % SERIAL_BUF;
 
-void serial_read_buffer(char* buffer, size_t size)
-{
-    for (size_t i = 0; i < size; i++)
-    {
-        buffer[i] = serial_read_char();
-    }
+    return c;
 }
 
 void serial_put_char(char c)
@@ -82,11 +77,36 @@ void serial_put_char(char c)
     out_byte(COM1, c);
 }
 
-void serial_write(const char *s)
+void serial_write(const char *str, size_t size)
 {
-    while (*s)
+    for (size_t i = 0; i < size; i++)
     {
-        serial_put_char(*s);
-        s++;
+        serial_put_char(str[i]);
     }
+}
+
+static interrupt_regs* __serial_int_handler(interrupt_regs *stack_frame)
+{
+    while (in_byte(COM1 + 5) & 0x01)
+    {
+        char c = in_byte(COM1);
+        uint32_t next = (rx_head + 1) % SERIAL_BUF;
+
+        if (next != rx_tail)
+        {
+            rx_buf[rx_head] = c;
+            rx_head = next;
+        }
+    }
+
+    irq_end(INT_IRQ_4);
+
+    return stack_frame;
+}
+
+void serial_irq_init()
+{
+    register_interrupt_handler(INT_IRQ_4, &__serial_int_handler);
+    irq_pic_toggle_mask_bit(INT_IRQ_4);
+    out_byte(COM1 + 1, IER_RX_AVAILABLE); // Enable interrupts
 }

@@ -142,7 +142,7 @@ void pci_set_command_register(pci_device_t* device, uint16_t cmd)
     pci_write_dword(device->bus, cmdstat, PCI_W_COMMAND);
 }
 
-void init_pci()
+int init_pci()
 {
     // Check if the PCI bus does exist.
     out_dword(PCI_CONFIG_ADDRESS, 0x80000000);
@@ -173,4 +173,6 @@ void init_pci()
             }
         }
     }
+
+    return 0;
 }

@@ -4,6 +4,7 @@
 #include "BalrogOS/FileSystem/filesystem.h"
 #include "BalrogOS/Tasking/process.h"
 #include "BalrogOS/Memory/kheap.h"
+#include "BalrogOS/Debug/debug_output.h"
 #include "klib/IO/kprint.h"
 #include <errno.h>
 #include <stdint.h>
@@ -181,4 +182,7 @@ void sys_write(interrupt_regs* stack_frame)
     }
 
     vga_write(str, count);
+    KERNEL_DEBUG_EXEC({
+        serial_write(str, count);
+    });
 }

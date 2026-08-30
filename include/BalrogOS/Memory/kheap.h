@@ -6,7 +6,7 @@
  * @brief initialize the virtual kernel heap
  * 
  */
-void init_vmheap();
+int init_vmheap();
 
 /**
  * @brief alloc a number of byte in the virtual heap.
@@ -27,7 +27,7 @@ void vmfree(void* ptr);
  * @brief initialize the logical kernel heap
  * 
  */
-void init_kheap();
+int init_kheap();
 
 /**
  * @brief allocate a block of memory in the logical heap

@@ -66,7 +66,7 @@ typedef struct _file_system_t
     void* fs_data;
 } __attribute__((packed)) file_system_t;
 
-void init_file_system();
+int init_file_system();
 
 /**
  * @brief 

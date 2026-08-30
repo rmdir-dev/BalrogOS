@@ -40,7 +40,7 @@ static void set_idt_entry(uint32_t id, void* vector, uint16_t selector, uint8_t 
     gates[id].offset_hight = (v >> 32) & 0xffffffff;
 }
 
-void init_interrupt()
+int init_interrupt()
 {
     if(!idt_ptr.address)
     {
@@ -83,6 +83,9 @@ void init_interrupt()
     }
 
     _load_idt(&idt_ptr);
+
+    // TODO: test
+    return 0;
 }
 
 interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler handler)

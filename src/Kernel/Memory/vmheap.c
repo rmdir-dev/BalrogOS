@@ -23,7 +23,7 @@ size_t vmheap_current_size = 0;
 size_t alloc_count = 0;
 size_t free_count = 0;
 
-void init_vmheap()
+int init_vmheap()
 {
     vmheap_start = (void*)KERNEL_VIRTUAL_START;
     first_free = vmheap_start;
@@ -35,7 +35,7 @@ void init_vmheap()
         {
             // if alloc == 0 then alloc = kernel physical address
             kernel_debug_output(KDB_LVL_CRITICAL, "init_vmheap() : fail to allocate page at boot !", alloc_count);
-            return;
+            return 1;
         }
         vmm_set_page(0, vmheap_start + vmheap_size, alloc, PAGE_PRESENT | PAGE_WRITE);
         vmheap_size += 0x1000;
@@ -52,6 +52,8 @@ void init_vmheap()
     block.next_free = vmheap_current_top;
     block_info* first_block = vmheap_start;
     *first_block = block;
+
+    return 0;
 }
 
 void* vmalloc(size_t size)

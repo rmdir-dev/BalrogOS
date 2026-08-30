@@ -10,9 +10,11 @@ Contain the physical address of the kernel PML4T
 */
 page_table* KernelPML4T;
 
-void init_vmm()
+int init_vmm()
 {
     KernelPML4T = (void*)0x1000;
+
+    return 0;
 }
 
 /**

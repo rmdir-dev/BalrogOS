@@ -13,9 +13,10 @@ files/defrag-e2c-0.73.1-1.1/*
 files/root/*
 VBox/*
 files/filesys_old.dd
+files/filesys.dd.bak
 .idea/*
 cmake-build-*/
 
 .cache/
 toolbox/
-todo/
+logs/

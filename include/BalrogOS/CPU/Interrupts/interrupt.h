@@ -119,7 +119,7 @@ typedef interrupt_regs *(*interrupt_handler)(interrupt_regs*);
 /**
 * @brief Initialize all 256 Interrupt Service Routine
 */
-void init_interrupt();
+int init_interrupt();
 
 /**
 * @brief add a new ISR handler.

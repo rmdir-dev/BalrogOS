@@ -124,7 +124,7 @@ static int __root_device_lookout()
     return -1;
 }
 
-void init_file_system()
+int init_file_system()
 {
     init_ata();
     init_ahci();
@@ -146,4 +146,6 @@ void init_file_system()
     ext2_cache_init();
     ext2_probe(&dev);
     kmutex_unlock(&dev.lock);
+
+    return 0;
 }

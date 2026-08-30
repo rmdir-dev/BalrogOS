@@ -67,4 +67,4 @@ typedef struct __gdt_ptr
  * 		and from user mode.
  * 
  */
-void init_gdt();
+int init_gdt();

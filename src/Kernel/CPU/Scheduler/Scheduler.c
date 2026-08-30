@@ -109,10 +109,12 @@ void schedule(size_t tick, uint16_t ms)
     }
 }
 
-void init_scheduler()
+int init_scheduler()
 {
     // TODO set the pit speed faster to 10 000 or more
     init_pit(&schedule);
+
+    return 0;
 }
 
 

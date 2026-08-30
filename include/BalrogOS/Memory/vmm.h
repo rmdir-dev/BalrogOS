@@ -14,7 +14,7 @@ typedef uintptr_t page_table;
  * @brief initialize virtual memory.
  * 
  */
-void init_vmm();
+int init_vmm();
 
 /**
  * @brief get the physical address of a given virtual address

@@ -9,10 +9,12 @@ rbt_tree sleeper_tree;
 process_list rdy_proc_list = { NULL, 0, NULL};
 extern process* current_running;
 
-void init_process()
+int init_process()
 {
     rbt_init(&process_tree);
     rbt_init(&sleeper_tree);
+
+    return 0;
 }
 
 void proc_insert_to_ready_queue(process* proc)

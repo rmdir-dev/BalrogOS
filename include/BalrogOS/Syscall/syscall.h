@@ -76,4 +76,4 @@
  * @brief Initialize system calls
  * 
  */
-void init_syscalls();
+int init_syscalls();

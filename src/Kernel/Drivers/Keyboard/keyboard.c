@@ -30,11 +30,13 @@ static interrupt_regs* keyboard_int_handler(interrupt_regs* stack_frame)
     return stack_frame;
 }
 
-void init_keyboard()
+int init_keyboard()
 {
     register_interrupt_handler(INT_IRQ_1, keyboard_int_handler);
 
     irq_pic_toggle_mask_bit(INT_IRQ_1);
+
+    return 0;
 }
 
 void keyboard_read(struct input_event* event)

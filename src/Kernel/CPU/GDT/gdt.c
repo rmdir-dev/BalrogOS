@@ -54,7 +54,7 @@ void install_tss(gdt_entry* gdt)
     *last_index = (base >> 32) & 0xffffffff;
 }
 
-void init_gdt()
+int init_gdt()
 {
     gdtp.limit = (sizeof(gdt_entry) * 7) - 1;
     gdtp.base = (uint64_t) &gdt[0];
@@ -78,4 +78,6 @@ void init_gdt()
     /* load and flush new gdt and tss to the CPU */
     flush_gdt(&gdtp);
     flush_tss();
+
+    return 0;
 }

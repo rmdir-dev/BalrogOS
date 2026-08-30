@@ -78,8 +78,10 @@ static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
     return stack_frame;
 }
 
-void init_syscalls()
+int init_syscalls()
 {
     register_interrupt_handler(INT_SYSCALL, syscall_handler);
     set_interrupt_flag(INT_SYSCALL, IDT_PRESENT | IDT_INTERRUPT | IDT_DPL_3);
+
+    return 0;
 }

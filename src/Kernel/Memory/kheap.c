@@ -9,7 +9,7 @@ void* kfirst_free = 0;
 size_t kheap_max_size = 0;
 size_t kheap_size = 0;
 
-void init_kheap()
+int init_kheap()
 {
     /* Declared in linker script */
     extern uintptr_t* kernel_end;
@@ -28,6 +28,8 @@ void init_kheap()
     kfirst_free = kheap_start;
 
     KERNEL_LOG_INFO("kernel logical heap size = %dKiB starts at : 0%p", BYTE_TO_KiB(first_block->_size), kheap_start);
+
+    return 0;
 }
 
 void* kmalloc(size_t size)

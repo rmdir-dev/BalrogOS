@@ -231,18 +231,28 @@ static size_t vga_check_text(const char* data, size_t start_index)
 	{
 		vga_clear();
 		start_index += 2;
+	} else if(data[start_index] == '[' && data[start_index + 1] == 'K')
+	{
+		for (size_t x = vga_column; x < VGA_WIDTH; x++)
+		{
+			vga_buffer[vga_row * VGA_WIDTH + x] = vga_entry(' ', vga_color);
+		}
+		start_index += 1;
 	}
 
 	return start_index;
 }
 
-void vga_init()
+int vga_init()
 {
     vga_row = 0;
 	vga_column = 0;
 	vga_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
 	vga_buffer = (uint16_t*) P2V(0xb8000);
 	vga_clear();
+
+	// TODO: test vga
+	return 0;
 }
 
 void vga_write(const char* data, size_t size)
@@ -257,13 +267,16 @@ void vga_write(const char* data, size_t size)
 		switch (data[i])
 		{
 		case '\n':
-		case '\r':
 			increase_vga_row();
 			vga_column = 0;
 			if(vga_row ==0)
 			{
 				vga_clear();
 			}
+			break;
+
+		case '\r':
+			vga_column = 0;
 			break;
 
 		case '\b':

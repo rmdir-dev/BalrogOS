@@ -61,77 +61,70 @@ void initialize_kernel(void* SMAP, void* size)
 #endif
 #endif
 
+    /*
+     * Serial & VGA cannot be logged as they're responsible for the outputs,
+     * thus we recover their status and log afterward.
+     */
     /*      SERIAL        */
-    serial_init();
+    int serial_status = serial_init();
 
     /*      SCREEN        */
-    vga_init();
+    int vga_status = vga_init();
+
     KERNEL_LOG_OK("Kernel loading :");
-    KERNEL_LOG_OK("VGA Driver : done");
+    KERNEL_LOG_RESULT(vga_status,    "VGA driver : ",    "done", "not initialized");
+    KERNEL_LOG_RESULT(serial_status, "Serial driver : ", "done", "not initialized");
 
     /*   INTERRRUPTS      */
-    KERNEL_LOG_INFO("Interrrupts : waiting...");
-    init_interrupt();
-    KERNEL_LOG_OK("Interrupt initialization : done");
+    KERNEL_LOG_ASSERT(init_interrupt(), "Interrupts : ", "done", "not initialized");
 
     /*    EXCEPTIONS      */
-    init_exception();
-    KERNEL_LOG_INFO("Exception status: enabled");
+    KERNEL_LOG_ASSERT(init_exception(), "Exceptions : ", "enabled", "not enabled");
 
-    /*   FPU             */
-    init_fpu();
-    KERNEL_LOG_OK("FPU initialization : done");
+    /*   FPU              */
+    KERNEL_LOG_ASSERT(init_fpu(), "FPU : ", "done", "not initialized");
 
     /*    SYSTEM CALL     */
-    init_syscalls();
-    KERNEL_LOG_OK("System calls initialization : done");
+    KERNEL_LOG_ASSERT(init_syscalls(), "System calls : ", "done", "not initialized");
 
     /*    MEMORY          */
     // TODO later don't pass these as argument but fetch them using #define SMAP_PHYS_ADDR
     SMAP_entry* SMAPinfo = P2V(SMAP);
 	uint16_t* SMAPsize = P2V(size);
-    
+
     /*    Kernel Heap     */
-    init_kheap(); // Kernel Logical
-    
+    KERNEL_LOG_ASSERT(init_kheap(), "Kernel logical heap : ", "done", "not initialized");
+
     /*    Virtual Memory  */
-    init_vmm();
-    KERNEL_LOG_OK("Virtual memory initialization : done");
+    KERNEL_LOG_ASSERT(init_vmm(), "Virtual memory : ", "done", "not initialized");
 
     /*    Physical Memory */
-    init_pmm(SMAPinfo, SMAPsize);
-    KERNEL_LOG_OK("Physical memory initialization : done");
+    KERNEL_LOG_ASSERT(init_pmm(SMAPinfo, SMAPsize), "Physical memory : ", "done", "not initialized");
 
     /*    Kernel Heap    */
-    init_vmheap();  // Kernel Virtual
-    KERNEL_LOG_OK("Kernel heap initialization : done");
+    KERNEL_LOG_ASSERT(init_vmheap(), "Kernel virtual heap : ", "done", "not initialized");
 
     /*    GDT and TSS    */
-    init_gdt();
-    KERNEL_LOG_OK("GDT and TSS : done");
+    KERNEL_LOG_ASSERT(init_gdt(), "GDT and TSS : ", "done", "not initialized");
 
     /*    PCI BUS        */
-    init_pci();
-    KERNEL_LOG_OK("PCI Bus : done");
+    KERNEL_LOG_ASSERT(init_pci(), "PCI bus : ", "done", "not initialized");
 
     /*    SCHEDULER      */
-    init_scheduler();
-    KERNEL_LOG_OK("CPU scheduler initialization : done");
+    KERNEL_LOG_ASSERT(init_scheduler(), "CPU scheduler : ", "done", "not initialized");
 
     /*    PROCESS        */
-    init_process();
+    KERNEL_LOG_ASSERT(init_process(), "Process table : ", "done", "not initialized");
 
     /*    KEYBOARD       */
-    init_keyboard();
-    KERNEL_LOG_OK("Keyboard initialization : done");
+    KERNEL_LOG_ASSERT(init_keyboard(), "Keyboard : ", "done", "not initialized");
 
     /*    FILE SYSTEM    */
-    init_file_system();
-    KERNEL_LOG_OK("File system initialization : done");
+    KERNEL_LOG_ASSERT(init_file_system(), "File system : ", "done", "not mounted");
 
     /*    USER MANAGER   */
-    init_user_manager();
-    KERNEL_LOG_OK("User manager initialization : done");
+    KERNEL_LOG_ASSERT(init_user_manager(), "User manager : ", "done", "not initialized");
+
     KERNEL_LOG_OK("Kernel initialization : done");
     KERNEL_LOG_OK("BalrogOS version : %s", __BALROG_VERSION__);
 

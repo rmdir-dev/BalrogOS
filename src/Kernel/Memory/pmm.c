@@ -103,7 +103,7 @@ void* pmm_calloc()
     return p;
 }
 
-void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
+int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
 {
     queue_init(&last_free_q);
     
@@ -152,4 +152,6 @@ void init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
     
     KERNEL_LOG_INFO("Total system memory : %dMiB", BYTE_TO_MiB(total_memory));
     KERNEL_LOG_INFO("Total usable system memory : %dMiB", BYTE_TO_MiB(total_usable_memory));
+
+    return 0;
 }

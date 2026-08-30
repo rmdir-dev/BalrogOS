@@ -83,7 +83,7 @@ typedef struct __pci_device_t
  * @brief initialize the PCI bus
  * 
  */
-void init_pci();
+int init_pci();
 
 /**
  * @brief 

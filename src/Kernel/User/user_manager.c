@@ -31,7 +31,7 @@ user_data* usm_get_user_data(uint32_t uid) {
 
 
 
-void init_user_manager() {
+int init_user_manager() {
     rbt_init(&user_tree);
 
     fs_fd fd;
@@ -85,4 +85,6 @@ void init_user_manager() {
     }
 
     vmfree(original_address);
+
+    return 0;
 }

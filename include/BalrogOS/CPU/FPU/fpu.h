@@ -5,6 +5,6 @@
 #ifndef BALROGOS_FPU_H
 #define BALROGOS_FPU_H
 
-void init_fpu();
+int init_fpu();
 
 #endif //BALROGOS_FPU_H

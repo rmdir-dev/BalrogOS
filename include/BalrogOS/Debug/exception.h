@@ -4,4 +4,4 @@
  * @brief Initialize all interrupt exception handling
  * 
  */
-void init_exception();
+int init_exception();

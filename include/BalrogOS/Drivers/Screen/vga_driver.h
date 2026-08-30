@@ -6,7 +6,7 @@
  * @brief Initialize the VGA driver.
  * 
  */
-void vga_init();
+int vga_init();
 
 /**
  * @brief Write a string to the screen

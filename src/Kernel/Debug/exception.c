@@ -198,10 +198,12 @@ static interrupt_regs* __double_fault_handler(interrupt_regs* stack_frame)
     return stack_frame;
 }
 
-void init_exception()
+int init_exception()
 {
     register_interrupt_handler(INT_GP, &__general_protection_fault_handler);
     register_interrupt_handler(INT_PF, &__page_fault_handler);
     register_interrupt_handler(INT_UD, &__invalid_opcode_handler);
     register_interrupt_handler(INT_DF, &__double_fault_handler);
+
+    return 0;
 }

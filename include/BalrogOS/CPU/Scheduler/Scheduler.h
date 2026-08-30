@@ -5,7 +5,7 @@
  * @brief initialize the scheduler.
  * 
  */
-void init_scheduler();
+int init_scheduler();
 
 /**
  * @brief add a new process to a scheduling queue

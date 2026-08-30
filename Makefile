@@ -391,11 +391,14 @@ umount:
 	sudo umount files/root | true
 
 run:
-	#qemu-system-x86_64 build/os/os-image -monitor stdio -m 128 -no-reboot -no-shutdown
+#	COM1 goes to a file : stdio is already taken by the monitor. the log is
+#	complete, greppable, and diffable between two runs, which the VGA text
+#	console is not once it starts scrolling.
 	qemu-system-x86_64 -monitor stdio -m 128 -no-reboot -no-shutdown \
 		-drive id=disk,file=build/os/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
-		-device ide-hd,drive=disk,bus=ahci.0
+		-device ide-hd,drive=disk,bus=ahci.0 \
+		-serial file:$(OS_BUILD_DIR)/kernel.log
 
 iso:
 	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b Booloader files/
@@ -416,10 +419,15 @@ run_debug:
 	qemu-system-x86_64 -s -S -monitor stdio -m 128 -no-reboot -no-shutdown \
 		-drive id=disk,file=build/os/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
-		-device ide-hd,drive=disk,bus=ahci.0
+		-device ide-hd,drive=disk,bus=ahci.0 \
+		-serial file:$(OS_BUILD_DIR)/kernel.log
 
 #	attach to the qemu left waiting by make run_debug.
 #	CLion does the same thing through a Remote Debug configuration.
+#	follow the serial log of a running kernel, or read the last one.
+log:
+	@tail -f $(OS_BUILD_DIR)/kernel.log
+
 gdb:
 	$(GDB) $(OS_BUILD_DIR)/kernel.elf \
 		-ex "target remote localhost:1234" \

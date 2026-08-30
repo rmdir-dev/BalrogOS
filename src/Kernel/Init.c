@@ -21,6 +21,7 @@
 #include "BalrogOS/Drivers/Bus/pci.h"
 #include "BalrogOS/User/user_manager.h"
 #include "BalrogOS/CPU/FPU/fpu.h"
+#include "BalrogOS/Drivers/Serial/serial.h"
 
 /* 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -59,6 +60,9 @@ void initialize_kernel(void* SMAP, void* size)
 #endif
 #endif
 #endif
+
+    /*      SERIAL        */
+    serial_init();
 
     /*      SCREEN        */
     vga_init();

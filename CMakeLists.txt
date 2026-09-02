@@ -24,17 +24,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 ########################################################
 #	DIRECTORIES
 ########################################################
-set(KERNEL_SRC		src/Kernel)
+set(KERNEL_SRC		src/kernel)
 set(KLIB_SRC		src/klib)
-set(C_LIB_SRC		src/Libc)
-set(C_POSIX_SRC		src/POSIX)
-set(SHARED_SRC		src/Shared)
-set(TOOLKIT_SRC		src/tool-kit)
+set(C_LIB_SRC		src/libc)
+set(C_POSIX_SRC		src/posix)
+set(SHARED_SRC		src/shared)
+set(TOOLKIT_SRC		src/tool_kit)
 
 include_directories(
 	${CMAKE_SOURCE_DIR}/include
 	${CMAKE_SOURCE_DIR}/include/libc
-	${CMAKE_SOURCE_DIR}/include/POSIX
+	${CMAKE_SOURCE_DIR}/include/posix
 )
 
 ########################################################

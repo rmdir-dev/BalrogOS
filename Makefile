@@ -14,33 +14,33 @@ BIN_BUILD_DIR = build/bin
 SBIN_BUILD_DIR = build/sbin
 ROOT_BUILD_DIR = build/root/sbin
 TEMP_DIR = build/temp
-KERNEL_SRC = src/Kernel
+KERNEL_SRC = src/kernel
 KLIB_SRC = src/klib
-C_LIB_SRC = src/Libc/
-C_POSIX_SRC = src/POSIX
-SHARED_SRC = src/Shared
-LS_SRC = src/tool-kit/ls/
-SH_SRC = src/tool-kit/sh/
-BESH_SRC = src/tool-kit/besh/
-ECHO_SRC = src/tool-kit/echo/
-CAT_SRC = src/tool-kit/cat/
-AUTH_SRC = src/tool-kit/auth/
-CLEAR_SRC = src/tool-kit/clear/
-SL_SRC = src/tool-kit/sl/
-PWD_SRC = src/tool-kit/pwd/
-TOUCH_SRC = src/tool-kit/touch/
-MKDIR_SRC = src/tool-kit/mkdir/
-RM_SRC = src/tool-kit/rm/
-RMDIR_SRC = src/tool-kit/rmdir/
-HELLO_SRC = src/tool-kit/hello/
-WHOAMI_SRC = src/tool-kit/whoami/
-DONUT_SRC = src/tool-kit/donut/
-SETDEBUG_SRC = src/tool-kit/setdebug/
-SLEEP_SRC = src/tool-kit/sleep/
-TLIB_SRC = src/tool-kit/tool-lib/
+C_LIB_SRC = src/libc/
+C_POSIX_SRC = src/posix
+SHARED_SRC = src/shared
+LS_SRC = src/tool_kit/ls/
+SH_SRC = src/tool_kit/sh/
+BESH_SRC = src/tool_kit/besh/
+ECHO_SRC = src/tool_kit/echo/
+CAT_SRC = src/tool_kit/cat/
+AUTH_SRC = src/tool_kit/auth/
+CLEAR_SRC = src/tool_kit/clear/
+SL_SRC = src/tool_kit/sl/
+PWD_SRC = src/tool_kit/pwd/
+TOUCH_SRC = src/tool_kit/touch/
+MKDIR_SRC = src/tool_kit/mkdir/
+RM_SRC = src/tool_kit/rm/
+RMDIR_SRC = src/tool_kit/rmdir/
+HELLO_SRC = src/tool_kit/hello/
+WHOAMI_SRC = src/tool_kit/whoami/
+DONUT_SRC = src/tool_kit/donut/
+SETDEBUG_SRC = src/tool_kit/setdebug/
+SLEEP_SRC = src/tool_kit/sleep/
+TLIB_SRC = src/tool_kit/tool_lib/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
-	-I./include/POSIX
+	-I./include/posix
 
 ########################################################
 #	SOURCE FILES
@@ -301,11 +301,11 @@ clean_toolbox:
 
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
-	$(NASM) -fbin src/Bootloader/start.asm -o $(OS_BUILD_DIR)/Bootloader
+	$(NASM) -fbin src/bootloader/start.asm -o $(OS_BUILD_DIR)/Bootloader
 
 kernel: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
-	$(NASM) -f elf64 $(NASM_DEBUG_FLAGS) src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
+	$(NASM) -f elf64 $(NASM_DEBUG_FLAGS) src/bootloader/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
 #	linked as an elf so the symbols survive, the raw image the
 #	bootloader loads is carved out of it right after.
 	$(LD) -o $(OS_BUILD_DIR)/kernel.elf -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000
@@ -313,7 +313,7 @@ kernel: $(K_OBJECTS)
 
 h_readble_kernel_asm: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
-	$(NASM) -f elf64 src/Bootloader/KernelEntry/kernel_entry.asm -o build/temp/kernel_entry.o
+	$(NASM) -f elf64 src/bootloader/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
 	$(LD) -S -o $(OS_BUILD_DIR)/kernel.asm -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000
 	$(OBJDUMP) -S $(OS_BUILD_DIR)/kernel.asm > $(OS_BUILD_DIR)/kernel.asm.txt
 	rm $(OS_BUILD_DIR)/kernel.asm

@@ -18,7 +18,8 @@ void get_user_info(user_info_t* info) {
 
     int fd = open("/etc/passwd", 0);
 
-    if(fd == -1) {
+    if(fd == -1)
+    {
         printf("Error: cannot get user details !\n\n");
         exit(-1);
         return;
@@ -34,10 +35,12 @@ void get_user_info(user_info_t* info) {
     char* line = strtok(file_data, '\n');
     int current_pos = 0;
 
-    while(line != NULL) {
+    while(line != NULL)
+    {
         int len = strlen(line);
         current_pos += len + 1;
-        if(line[0] == '#') {
+        if(line[0] == '#')
+        {
             line = strtok(NULL, '\n');
             continue;
         }
@@ -50,7 +53,8 @@ void get_user_info(user_info_t* info) {
         char* shell = strtok(NULL, ':');
 
         int id = atoi(uid_str);
-        if(id == uid) {
+        if(id == uid)
+        {
             info->username = malloc(strlen(user) + 1);
             memcpy(info->username, user, strlen(user) + 1);
             info->home_dir = malloc(strlen(home) + 1);

@@ -34,7 +34,8 @@ int main(int argc, char** argv)
         int start_index = 0;
         int total_len = strlen(argv[1]);
         int argv_len = strlen(argv[1]);
-        if(argv[1][0] != '/') {
+        if(argv[1][0] != '/')
+        {
             int cwd_len = strlen(cwd);
             memcpy(tmp, cwd, cwd_len);
             tmp[cwd_len] = '/';
@@ -48,7 +49,8 @@ int main(int argc, char** argv)
 
         if(fd == -1)
         {
-            switch (errno) {
+            switch(errno)
+            {
                 case ENOENT:
                     printf("ls: cannot access '%s': No such file or directory\n", argv[1]);
                     break;
@@ -67,7 +69,8 @@ int main(int argc, char** argv)
         buf[stat.size] = 0;
         _print_dir(buf);
         close(fd);
-    } else {
+    } else
+    {
         int fd = open(cwd, 0);
         fs_file_stat stat = {};
         fstat(fd, &stat);

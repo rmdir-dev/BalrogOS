@@ -13,7 +13,7 @@ int sys_kill(interrupt_regs* stack_frame)
 
     if(proc)
     {
-        switch (stack_frame->rsi)
+        switch(stack_frame->rsi)
         {
         case SIGKILL:
             proc_kill(proc, 0);
@@ -23,7 +23,8 @@ int sys_kill(interrupt_regs* stack_frame)
             break;
         }
         return 0;
-    } else {
+    } else
+    {
         *current_running->error_no = ESRCH;
     }
     return -1;

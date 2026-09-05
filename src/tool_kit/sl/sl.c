@@ -28,23 +28,33 @@ void clear() {
 
 int main(int argc, char** argv) {
     clear();
-    for(int a = 2 * 80; a > 0; --a) {
+    for(int a = 2 * 80; a > 0; --a)
+    {
         clear();
-        for (int j = 0; j < 25; ++j) {
-            for (int i = 0; i < 80; ++i) {
-                if(j < 12 || j > 16 || (i < a % 81 && a > 80) || (i >= a && a <= 80)) {
+        for(int j = 0; j < 25; ++j)
+        {
+            for(int i = 0; i < 80; ++i)
+            {
+                if(j < 12 || j > 16 || (i < a % 81 && a > 80) || (i >= a && a <= 80))
+                {
                     printf(" ");
-                } else {
-                    if(a > 80) {
+                } else
+                {
+                    if(a > 80)
+                    {
                         printf("%c", train[j - 12][(i - (a % 81)) % 78]);
-                    } else {
+                    } else
+                    {
                         int c = (i - (a % 81));
-                        if(c < 0) {
+                        if(c < 0)
+                        {
                             c += 80;
                         }
-                        if(c >= 78) {
+                        if(c >= 78)
+                        {
                             printf(" ");
-                        } else {
+                        } else
+                        {
                             printf("%c", train[j - 12][c % 78]);
                         }
                     }

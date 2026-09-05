@@ -13,7 +13,8 @@ unsigned long fact(unsigned long n){
     if(n == 0)
         return 1;
 
-    for (long i = n-1; i > 0; i--) {
+    for(long i = n-1; i > 0; i--)
+    {
         n*=i;
     }
 
@@ -38,7 +39,8 @@ double sin(double x){
     double sum=0;
     x = fmod(x, 2*M_PI);
 
-    for(long i=0; i<10; i++){
+    for(long i=0; i<10; i++)
+    {
         sum+=(pow(-1,i)/(double) fact(2*i+1))*pow(x,2*i+1);
     }
     return sum;
@@ -48,7 +50,8 @@ double cos(double x){
     double sum=0;
     x = fmod(x, 2*M_PI);
 
-    for(int i=0; i<10; i++){
+    for(int i=0; i<10; i++)
+    {
 
         sum+=(pow(-1,i)/fact(2*i))*pow(x,2*i);
     }

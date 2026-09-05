@@ -39,7 +39,7 @@ int kmutex_lock(kmutex_t* lock)
     {
         lock->flag = 1;
         xchg(&lock->lock, 0);
-    } else 
+    } else
     {
         /*
         add process to parked list.
@@ -71,7 +71,7 @@ int kmutex_unlock(kmutex_t* lock)
     if(mtx_queue_empty(&lock->wait_queue))
     {
         lock->flag = 0;
-    } else 
+    } else
     {
         /*
         unpark front the queue process

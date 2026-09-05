@@ -10,7 +10,7 @@ int memcmp(const void* addr_1, const void* addr_2, size_t byte_size)
         if(ptr_1[i] < ptr_2[i])
         {
             return -1;
-        } else if (ptr_1[i] > ptr_2[i])
+        } else if(ptr_1[i] > ptr_2[i])
         {
             return 1;
         }

@@ -6,14 +6,14 @@
 #include <stdint.h>
 #include <limits.h>
 
-static size_t int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
+static size_t __int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
 {
     size_t size = 0;
     size_t pushed = 0;
     char buffer[128];
     char chars[17] = "0123456789abcdef";
 
-    if(isSigned && val > INT_MAX) 
+    if(isSigned && val > INT_MAX)
     {
         str[0] = '-';
         size++;
@@ -27,7 +27,7 @@ static size_t int_to_string(unsigned long val, uint8_t base, char* str, uint8_t 
     {
         str[0] = '0';
         size++;
-    } else 
+    } else
     {
         while(val != 0)
         {
@@ -49,19 +49,19 @@ static size_t int_to_string(unsigned long val, uint8_t base, char* str, uint8_t 
     return size;
 }
 
-static int print_string(const char* str, size_t size)
+static int __print_string(const char* str, size_t size)
 {
     write(0, str, size);
     return 1;
 }
 
-static int print_data(const char* str, size_t size, size_t maxsize)
+static int __print_data(const char* str, size_t size, size_t maxsize)
 {
     if(maxsize < size)
     {
         return 0;
     }
-    return print_string(str, size);
+    return __print_string(str, size);
 }
 
 int printf(const char* __restrict format, ...)
@@ -86,20 +86,20 @@ int printf(const char* __restrict format, ...)
                 index++;
                 length++;
             }
-            print_data(&format[base_index], length, maxsize);
-        } else 
+            __print_data(&format[base_index], length, maxsize);
+        } else
         {
             index++;
 
-            switch (format[index])
+            switch(format[index])
             {
             case 'b':
                 {
                     long nbr = va_arg(parameters, long);
                     putchar('b');
                     char str[128];
-                    length = int_to_string(nbr, 2, str, 0);
-                    print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 2, str, 0);
+                    __print_data(str, length, maxsize);
                     index++;
                 }
                 break;
@@ -107,8 +107,8 @@ int printf(const char* __restrict format, ...)
                 {
                     long nbr = va_arg(parameters, long);
                     char str[128];
-                    length = int_to_string(nbr, 10, str, 1);
-                    print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 10, str, 1);
+                    __print_data(str, length, maxsize);
                     index++;
                 }
                 break;
@@ -116,8 +116,8 @@ int printf(const char* __restrict format, ...)
                 {
                     long nbr = va_arg(parameters, unsigned long);
                     char str[128];
-                    length = int_to_string(nbr, 10, str, 0);
-                    print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 10, str, 0);
+                    __print_data(str, length, maxsize);
                     index++;
                 }
                 break;
@@ -126,8 +126,8 @@ int printf(const char* __restrict format, ...)
                     unsigned long nbr = va_arg(parameters, unsigned long);
                     putchar('x');
                     char str[128];
-                    length = int_to_string(nbr, 16, str, 0);
-                    print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 16, str, 0);
+                    __print_data(str, length, maxsize);
                     index++;
                 }
                 break;
@@ -135,21 +135,21 @@ int printf(const char* __restrict format, ...)
             case 'c':
                 length = 1;
                 char c = (char) va_arg(parameters, int);
-                print_data(&c, 1, maxsize);
+                __print_data(&c, 1, maxsize);
                 index++;
                 break;
             case 's':
                 {
                     const char* str = va_arg(parameters, const char*);
                     length = strlen(str);
-                    print_data(str, length, maxsize);
+                    __print_data(str, length, maxsize);
                     index++;
                 }
                 break;
             
             default:
                 length = 1;
-                print_string("%", length);
+                __print_string("%", length);
                 //index--;
                 break;
             }

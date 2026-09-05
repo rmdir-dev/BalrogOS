@@ -11,7 +11,8 @@ extern process* current_running;
 void sys_debug(interrupt_regs* stack_frame)
 {
 #ifdef KDB_DEBUG
-    if(current_running->uid != 0) {
+    if(current_running->uid != 0)
+    {
         return;
     }
 

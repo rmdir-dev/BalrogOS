@@ -14,7 +14,8 @@ void list_init(list_t* list)
 
 list_node_t* list_insert(list_t* list, int key, list_node_t* node)
 {
-    if(!node) {
+    if(!node)
+    {
         node = malloc(sizeof(list_node_t));
     }
 
@@ -28,7 +29,8 @@ list_node_t* list_insert(list_t* list, int key, list_node_t* node)
 
     pthread_mutex_lock(&list->lock);
     node->next = list->head;
-    if(list->head) {
+    if(list->head)
+    {
         list->head->prev = node;
     }
     list->head = node;
@@ -42,7 +44,7 @@ list_node_t* list_remove(list_t* list, int key) {
     list_node_t* node = list->head;
     list_node_t* prev = NULL;
 
-    while (node)
+    while(node)
     {
         if(node->key == key)
         {
@@ -50,8 +52,7 @@ list_node_t* list_remove(list_t* list, int key) {
             {
                 prev->next = node->next;
                 node->next->prev = prev;
-            }
-            else
+            } else
             {
                 list->head = node->next;
                 node->next->prev = NULL;
@@ -75,15 +76,14 @@ list_node_t* list_remove_last(list_t* list)
     list_node_t* node = list->head;
     list_node_t* prev = NULL;
 
-    while (node)
+    while(node)
     {
         if(!node->next)
         {
             if(prev)
             {
                 prev->next = NULL;
-            }
-            else
+            } else
             {
                 list->head = NULL;
             }
@@ -102,7 +102,7 @@ list_node_t* list_lookup(list_t* list, int key)
     pthread_mutex_lock(&list->lock);
     list_node_t* node = list->head;
 
-    while (node)
+    while(node)
     {
         if(node->key == key)
         {

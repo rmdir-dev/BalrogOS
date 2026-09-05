@@ -56,7 +56,7 @@
 /*
 	A mask to get the IOPL from the RFLAGS
 */
-#define IOPL_MASK	0x003000
+#define IOPL_MASK       0x003000
 
 /**
  * @brief A macro that return the IOPL contained into the RFLAGS register

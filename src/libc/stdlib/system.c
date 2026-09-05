@@ -5,11 +5,11 @@
 #include <stddef.h>
 #include <fcntl.h>
 
-static void _manage_errors() {
+static void __manage_errors() {
 
 }
 
-static int _parse_command_line(const char* command, char** arguments) {
+static int __parse_command_line(const char* command, char** arguments) {
     int argc_count = 0;
     char* buffer = strdup(command);
 
@@ -34,7 +34,8 @@ static int _parse_command_line(const char* command, char** arguments) {
         cmd = strtok(NULL, ' ');
     }
 
-    if(argc_count == 0) {
+    if(argc_count == 0)
+    {
         arguments[1] = 0;
     }
 
@@ -46,13 +47,13 @@ static int _parse_command_line(const char* command, char** arguments) {
 void system(const char* command)
 {
     char* arguments[32];
-    int argc_count = _parse_command_line(command, arguments);
+    int argc_count = __parse_command_line(command, arguments);
 
     int fd = open(arguments[0], O_RDONLY);
 
     if(fd == -1)
     {
-        _manage_errors();
+        __manage_errors();
         return;
     }
 

@@ -39,7 +39,7 @@ int pthread_mutex_lock(pthread_mutex_t* lock)
     {
         lock->flag = 1;
         xchg(&lock->lock, 0);
-    } else 
+    } else
     {
         /*
         add process to parked list.
@@ -71,7 +71,7 @@ int pthread_mutex_unlock(pthread_mutex_t* lock)
     if(uqueue_empty(&lock->wait_queue))
     {
         lock->flag = 0;
-    } else 
+    } else
     {
         /*
         unpark front the queue process

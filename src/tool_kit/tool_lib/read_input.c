@@ -25,19 +25,25 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
         && input->value == prev_key_ev.value
     )
     {
-        if(cursor_blink_counter == 0) {
+        if(cursor_blink_counter == 0)
+        {
             puts(cursor);
             cursor_blink_counter++;
-        } else if(cursor_blink_counter == 1000000 / 2) {
+        } else if(cursor_blink_counter == 1000000 / 2)
+        {
             puts("\b");
             cursor_blink_counter++;
-        } else if(cursor_blink_counter > 1000000) {
+        } else if(cursor_blink_counter > 1000000)
+        {
             cursor_blink_counter = 0;
-        } else {
+        } else
+        {
             cursor_blink_counter++;
         }
-    } else if(print && cursor) {
-        if(cursor_blink_counter < 1000000 / 2 && cursor_blink_counter > 0) {
+    } else if(print && cursor)
+    {
+        if(cursor_blink_counter < 1000000 / 2 && cursor_blink_counter > 0)
+        {
             puts("\b");
         }
         cursor_blink_counter = -1;
@@ -51,7 +57,8 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
 
             if((keys[KEY_LEFTCTRL] || keys[KEY_RIGHTCTRL]))
             {
-                if(manage_special_keys) {
+                if(manage_special_keys)
+                {
                     return manage_special_keys(KEY_RIGHTCTRL, input->code, keys);
                 }
                 return 0;
@@ -59,13 +66,15 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
 
             if((keys[KEY_LEFTALT] || keys[KEY_RIGHTALT]))
             {
-                if(manage_special_keys) {
+                if(manage_special_keys)
+                {
                     return manage_special_keys(KEY_RIGHTALT, input->code, keys);
                 }
                 return 0;
             }
 
-            if(!buffer) {
+            if(!buffer)
+            {
                 keys[input->code] = input->value;
                 return 0;
             }
@@ -75,12 +84,10 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
             {
                 buffer[*buf_idx] = 0;
                 return -1;
-            } else
-            if(input->code == KEY_SPACE)
+            } else if(input->code == KEY_SPACE)
             {
                 buffer[*buf_idx] = ' ';
-            } else
-            if(input->code == KEY_BACKSPACE)
+            } else if(input->code == KEY_BACKSPACE)
             {
                 bckspace = 1;
                 if(*buf_idx > 0)
@@ -91,28 +98,25 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
                 {
                     buffer[*buf_idx] = 0;
                 }
-            } else
-            if(input->code >= KEY_1 && input->code <= KEY_0 + 2)
+            } else if(input->code >= KEY_1 && input->code <= KEY_0 + 2)
             {
                 buffer[*buf_idx] = _num[(input->code - KEY_1) + (shift * 12)];
-            } else
-            if (input->code >= KEY_Q && input->code <= KEY_P + 2)
+            } else if(input->code >= KEY_Q && input->code <= KEY_P + 2)
             {
                 buffer[*buf_idx] = _qwertyuiop[(input->code - KEY_Q) + (shift * 12)];
-            } else
-            if (input->code >= KEY_A && input->code <= KEY_L + 3)
+            } else if(input->code >= KEY_A && input->code <= KEY_L + 3)
             {
                 buffer[*buf_idx] = _asdfghjkl[(input->code - KEY_A) + (shift * 12)];
-            } else
-            if (input->code >= KEY_Z && input->code <= KEY_M + 3)
+            } else if(input->code >= KEY_Z && input->code <= KEY_M + 3)
             {
                 buffer[*buf_idx] = _zxcvbnm[(input->code - KEY_Z) + (shift * 10)];
             } else
                 // up, down, left, right
-            if (input->code == 72 || input->code == 80 || input->code == 75 || input->code == 77)
+            if(input->code == 72 || input->code == 80 || input->code == 75 || input->code == 77)
             {
                 keys[input->code] = input->value;
-                if(manage_special_keys) {
+                if(manage_special_keys)
+                {
                     return manage_special_keys(input->code, 0, keys);
                 }
             }
@@ -121,7 +125,8 @@ int process_input(struct input_event* input, char* buffer, uint32_t* buf_idx, ui
 
             if(buffer[*buf_idx] != 0)
             {
-                if(print) {
+                if(print)
+                {
                     putchar(buffer[*buf_idx]);
                 }
                 if(bckspace == 0)

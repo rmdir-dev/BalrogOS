@@ -81,7 +81,7 @@ static inline void __rotate(rbt_tree* root, rbt_node* rotating_node, const uint8
     } else if(rotating_node == rotating_node->parent->children[dir])
     {
         rotating_node->parent->children[dir] = pivot;
-    } else 
+    } else
     {
         rotating_node->parent->children[!dir] = pivot;
     }
@@ -117,7 +117,7 @@ static inline void __insert_fixup(rbt_tree* root, rbt_node* ptr)
             uncle_ptr->color = RBT_BLACK;
             grand_parent_ptr->color = RBT_RED;
             ptr = grand_parent_ptr;
-        } else 
+        } else
         {
             if(ptr == parent_ptr->children[!dir])
             {
@@ -220,7 +220,7 @@ static inline void __delete_fixup(rbt_tree* root, rbt_node* unbalanced_entry, ui
             unbalanced_entry->color = RBT_BLACK;
             unbalanced_sibling->color = RBT_RED;
             return;
-        } else 
+        } else
         {
             /*
                 Case 5 :
@@ -259,7 +259,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
                 So it will replace this node perfectly.
             */
             rbt_node* successor = to_delete->children[RBT_RIGHT];
-            while (successor->children[RBT_LEFT])
+            while(successor->children[RBT_LEFT])
             {
                 successor = successor->children[RBT_LEFT];
             }
@@ -301,7 +301,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
         if(to_delete->parent == NULL)
         {
             root->rbt_root = promoted;
-        } else 
+        } else
         {
             /*
                 else we replace to_delete by promoted.
@@ -330,7 +330,7 @@ void rbt_delete(rbt_tree* root, rbt_node* to_delete)
 
             kmutex_unlock(&root->rbt_lock);
             return;
-        } else 
+        } else
         {
             /*
             */

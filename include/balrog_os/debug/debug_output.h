@@ -68,7 +68,7 @@ int kdbprint(const char* __restrict format, ...);
     do { \
         if(__kernel_debug_output(level)) { \
             kprint(__VA_ARGS__); \
-            kdbprint("\n"); \
+            kprint("\n"); \
         } else { \
             kdbprint(__VA_ARGS__); \
             kdbprint("\n"); \

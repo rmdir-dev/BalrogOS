@@ -4,6 +4,10 @@
 #include "balrog/fs/fs_struct.h"
 #include "klib/threading/kmutex.h"
 
+#define FS_DEVICE_TYPE_RAMFS    0
+#define FS_DEVICE_TYPE_ATA      1
+#define FS_DEVICE_TYPE_AHCI     2
+
 struct _file_system_t;
 
 typedef enum _fs_format

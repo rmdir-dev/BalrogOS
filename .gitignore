@@ -14,6 +14,7 @@ files/root/*
 VBox/*
 files/filesys_old.dd
 files/filesys.dd.bak
+files/ramfs.img
 .idea/*
 cmake-build-*/
 

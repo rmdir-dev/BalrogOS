@@ -79,6 +79,80 @@ _DiskLoad:
     PrintStringNextLine DISK_ERROR_STRING   ; declared in io.inc included into start.asm
     jmp $
 
+; INPUT none, everything comes from layout.inc
+; reads the kernel from KERNEL_LBA to KERNEL_ADDR, in chunks because
+; KERNEL_SECTORS does not fit in the dh _DiskLoad reads its count from.
+; the destination is under 1MiB, so the bios writes straight into it and
+; there is nothing to copy afterwards.
+_LoadKernel:
+    mov ecx, KERNEL_SECTORS ; the total number of sectors, from layout.inc
+    mov si, KERNEL_LBA  ; si carries the lba, because di goes to _DiskLoad
+    mov bp, KERNEL_ADDR >> 4    ; the destination as a segment, 0x8000 -> 0x0800
+
+.nextChunk:
+    mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
+    mov dh, CHUNK_SECTORS   ; CHUNK_SECTORS * 512B = 32KiB for this pass
+    mov di, si          ; _DiskLoad takes the start sector in di
+    mov bx, bp          ; higher word of the memory address we want to store
+    mov es, bx          ; our data to, so the kernel segment
+    xor bx, bx          ; lower word of the memory addres into bx
+
+    call _DiskLoad      ; load the disk data
+                        ; it prints and halts by itself if the read fails
+
+    add si, CHUNK_SECTORS   ; walk the lba forward by what has just been read
+    add bp, CHUNK_SECTORS * 32  ; a sector is 512 bytes, so 32 paragraphs
+    sub ecx, CHUNK_SECTORS  ; and count it off the total
+    jnz .nextChunk      ; keep going until everything has been read
+    ret
+
+; INPUT none, everything comes from layout.inc
+_LoadRamfs:
+    mov ecx, RAMFS_SECTORS  ; the total number of sectors, from layout.inc
+    mov edi, RAMFS_PHYS ; the linear destination, it walks forward by itself
+    mov bp, RAMFS_LBA   ; bp carries the lba, and it has to be bp : di and si
+                        ; both belong to the movsd below, which walks them
+                        ; forward by 32KiB on every pass.
+
+.nextChunk:
+    push ecx            ; save the number of sectors left to read
+    push edi            ; di is clobbered right below, and the popa inside
+                        ; _DiskLoad only restores its low 16 bits.
+
+    mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
+    mov dh, CHUNK_SECTORS   ; CHUNK_SECTORS * 512B = 32KiB for this pass
+    mov di, bp          ; _DiskLoad takes the start sector in di
+    mov bx, LOAD_BUFFER_SEG ; higher word of the memory address we want to store
+    mov es, bx          ; our data to, so the low buffer under 1MiB
+    xor bx, bx          ; lower word of the memory addres into bx
+                        ; the buffer is 64KiB aligned so the offset is 0
+
+    call _DiskLoad      ; load the disk data
+                        ; it prints and halts by itself if the read fails
+
+    pop edi             ; recover the linear destination
+
+    push ds             ; save ds, the copy below needs it flat
+    xor ax, ax          ; clear ax
+    mov ds, ax          ; ds and es both flat. their descriptor cache still
+    mov es, ax          ; holds the 4GiB limit from _EnterUnrealMode
+
+    mov esi, LOAD_BUFFER_SEG << 4   ; the buffer, as a linear address
+    mov ecx, CHUNK_SECTORS * 512 / 4    ; the chunk, counted in dwords
+    a32 rep movsd       ; a32 forces 32bit addressing on a 16bit instruction.
+                        ; this is the whole point of unreal mode : esi and
+                        ; edi span 4GiB instead of the 64KiB a real mode
+                        ; segment can see.
+                        ; movsd walks edi forward on its own, so there is
+                        ; nothing to add to it afterwards.
+    pop ds              ; recover ds
+
+    pop ecx             ; recover the number of sectors left to read
+    add bp, CHUNK_SECTORS   ; walk the lba forward by what has just been read
+    sub ecx, CHUNK_SECTORS  ; and count it off the total
+    jnz .nextChunk      ; keep going until everything has been read
+    ret
+
 DISK_ERROR_STRING:
     db "Read",0
 

@@ -28,4 +28,12 @@ void* pmm_calloc();
  * @param SMAPinfo 
  * @param SMAPsize 
  */
+/**
+ * @brief keep a physical range out of pmm_alloc's reach
+ *
+ * @param start
+ * @param size
+ */
+void pmm_reserve(void* start, uint64_t size);
+
 int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize);

@@ -7,6 +7,24 @@ SRC_BASE 		= .
 DEFINES 		= -DKDB_DEBUG -DKDB_DEFAULT_LVL=3 -DKDB_START_SEQ=0 -D__BALROG_VERSION__=\"0.0.1\"
 
 ########################################################
+#	BOOTLOADER LAYOUT
+########################################################
+#	keep in sync with src/bootloader/layout.inc, make cannot include a
+#	nasm file so the two carry the same numbers. layout.inc is the one
+#	that explains where they come from.
+#
+#	   lba 0        the mbr : stage 1 and the partition table
+#	   lba 1-2047   the mbr gap, where grub puts core.img and we put stage 2
+#	   lba 2048     partition 1, the kernel then the ramfs, raw
+STAGE2_LBA 		= 1
+PART1_LBA 		= 2048
+KERNEL_LBA 		= 2048
+KERNEL_SECTORS 	= 256
+RAMFS_LBA 		= 2304
+PART1_SECTORS 	= 16640
+OS_IMAGE 		= build/os/os-image
+
+########################################################
 #	DIRECTORIES
 ########################################################
 OS_BUILD_DIR = build/os
@@ -185,10 +203,37 @@ CODE_MODEL = -mcmodel=large
 #	GDB stays a host tool, the toolbox does not build one.
 GDB = gdb
 
+#	e2fsprogs stays a host tool too. debian installs it in /sbin, which is
+#	not in a normal user PATH, so the full path is spelled out here and the
+#	targets do not depend on how the shell is set up.
+#	making a filesystem inside a regular file needs no privilege, only the
+#	`mount -o loop` further down does.
+MKE2FS = /sbin/mke2fs
+DUMPE2FS = /sbin/dumpe2fs
+DEBUGFS_BIN = /sbin/debugfs
+
+#	debugfs pages its own output whenever stdout is a terminal, and a make
+#	running in a terminal is one : the build stops on a (END) prompt and
+#	waits for a keypress. PAGER=cat turns the pager off.
+DEBUGFS = PAGER=cat $(DEBUGFS_BIN)
+
 ifeq ($(DEBUG),1)
 DEBUG_FLAGS = -g -gdwarf-4 -fno-omit-frame-pointer
 NASM_DEBUG_FLAGS = -g -F dwarf
 endif
+
+########################################################
+#	RAMFS
+########################################################
+RAMFS_IMG = files/ramfs.img
+RAMFS_SIZE_MiB = 8
+RAMFS_MNT = files/ramfs_root
+RAMFS_STAGE = build/ramfs_root
+
+#	the hierarchy, as a make list and not a shell brace expansion : make runs
+#	its recipes with /bin/sh, dash on debian, which does not do brace
+#	expansion. `mkdir -p x/{a,b}` there makes a directory named "{a,b}".
+RAMFS_DIRS = bin sbin etc root home boot tmp mnt dev proc sys lib var
 
 ########################################################
 #	COMPILER FLAGS
@@ -287,6 +332,13 @@ check_toolbox:
 			echo "[ INFO ] $$tool (host) is missing, only needed by make run and make iso"; \
 		fi; \
 	done; \
+	for tool in $(MKE2FS) $(DUMPE2FS) $(DEBUGFS_BIN); do \
+		if [ -x $$tool ]; then \
+			echo "[  OK  ] $$tool (host)"; \
+		else \
+			echo "[ INFO ] $$tool (host) is missing, only needed by make ramfs"; \
+		fi; \
+	done; \
 	if [ $$missing -ne 0 ]; then \
 		echo "toolbox is incomplete, run make install_toolbox"; \
 		exit 1; \
@@ -303,6 +355,9 @@ clean_toolbox:
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
 	$(NASM) -fbin src/bootloader/start.asm -o $(OS_BUILD_DIR)/Bootloader
+#	stage 2 is padded to STAGE2_SECTORS * 512 by the times at the end of
+#	stage2.asm, so KERNEL_LBA never moves when the code in it grows.
+	$(NASM) -fbin src/bootloader/stage2.asm -o $(OS_BUILD_DIR)/Stage2
 
 kernel: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
@@ -322,11 +377,27 @@ h_readble_kernel_asm: $(K_OBJECTS)
 
 os:
 	mkdir -p build/os
-	cat $(OS_BUILD_DIR)/Bootloader $(OS_BUILD_DIR)/kernel.bin > build/os/os-image.bin
-	truncate build/os/os-image.bin -s 1200k
-	dd if=build/os/os-image.bin of=files/filesys.dd bs=512 count=1 conv=notrunc
-	dd if=build/os/os-image.bin of=files/filesys.dd bs=1 skip=512 seek=4014080 conv=notrunc
-	cp files/filesys.dd build/os/os-image
+#	stage 2 reads exactly KERNEL_SECTORS sectors and no more, so a kernel
+#	that outgrows them boots half loaded and fails somewhere else entirely.
+	@KSIZE=$$(stat -c%s $(OS_BUILD_DIR)/kernel.bin); \
+	MAX=$$(( $(KERNEL_SECTORS) * 512 )); \
+	if [ $$KSIZE -gt $$MAX ]; then \
+		echo "[FAILED] kernel.bin is $$KSIZE bytes, KERNEL_SECTORS covers $$MAX"; \
+		echo "         raise KERNEL_SECTORS in src/bootloader/layout.inc and in this file"; \
+		exit 1; \
+	fi
+	@if [ ! -f $(RAMFS_IMG) ]; then \
+		echo "[FAILED] $(RAMFS_IMG) is missing, run make ramfs first"; \
+		exit 1; \
+	fi
+#	the image is built from nothing every time, each piece written at the lba
+#	layout.inc gives it : an mbr, a gap holding stage 2, then partition 1.
+	dd if=/dev/zero of=$(OS_IMAGE) bs=512 count=$$(( $(PART1_LBA) + $(PART1_SECTORS) )) status=none
+	dd if=$(OS_BUILD_DIR)/Bootloader of=$(OS_IMAGE) bs=512 seek=0 conv=notrunc status=none
+	dd if=$(OS_BUILD_DIR)/Stage2 of=$(OS_IMAGE) bs=512 seek=$(STAGE2_LBA) conv=notrunc status=none
+	dd if=$(OS_BUILD_DIR)/kernel.bin of=$(OS_IMAGE) bs=512 seek=$(KERNEL_LBA) conv=notrunc status=none
+	dd if=$(RAMFS_IMG) of=$(OS_IMAGE) bs=512 seek=$(RAMFS_LBA) conv=notrunc status=none
+	@echo "[  OK  ] mbr at 0, stage 2 at $(STAGE2_LBA), kernel at $(KERNEL_LBA), ramfs at $(RAMFS_LBA)"
 #	the vdi is rebuilt from scratch every time, VirtualBox will not pick
 #	up a raw image that changed under an image it already converted.
 	mkdir -p VBox/
@@ -357,9 +428,8 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(ROOT_BUILD_DIR)/setdebug $(ALL_SETDEBUG_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	#$(PSXC_OBJECTS64)
 	sudo mount -o loop files/filesys.dd files/root/
-	sudo mkdir -p files/root/bin | true
-	sudo mkdir -p files/root/sbin | true
-	sudo mkdir -p files/root/root/sbin | true
+	sudo mkdir -p $(addprefix files/root/,$(RAMFS_DIRS))
+	sudo mkdir -p files/root/root/sbin
 	sudo cp -R build/bin/* files/root/bin/
 	sudo cp -R build/sbin/* files/root/sbin/
 	sudo cp -R build/root/sbin/* files/root/root/sbin/
@@ -376,6 +446,47 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	sudo chown root:root files/root/etc/shadow
 	sudo chown -R 1000:1000 files/root/home/rmdir
 	sudo umount files/filesys.dd
+
+ramfs:
+#	the image is filled with mke2fs -d, from a staging directory, and never
+#	mounted, so this target needs no sudo.
+	$(REMOVE) $(RAMFS_STAGE)
+	mkdir -p $(RAMFS_STAGE)
+
+#	the filesystem hierarchy. /mnt for a future installer, /dev /proc /sys
+#	for the drivers that will want them, /lib for shared objects.
+	mkdir -p $(addprefix $(RAMFS_STAGE)/,$(RAMFS_DIRS))
+
+#	the binaries the toolkit just built
+	cp $(BIN_BUILD_DIR)/*  $(RAMFS_STAGE)/bin/
+	cp $(SBIN_BUILD_DIR)/* $(RAMFS_STAGE)/sbin/
+
+#	the versioned configuration and home directories. files/fs is the source,
+#	files/root is only the mount point of the `mount` target.
+#	the dot in files/fs/root/. matters : it copies .spade, which * would skip.
+	cp -r files/fs/etc/*  $(RAMFS_STAGE)/etc/
+	cp -r files/fs/root/. $(RAMFS_STAGE)/root/
+	cp -r files/fs/home/* $(RAMFS_STAGE)/home/
+
+#	/tmp is world writable, the rest is not
+	chmod 1777 $(RAMFS_STAGE)/tmp
+
+	dd if=/dev/zero of=$(RAMFS_IMG) bs=1M count=$(RAMFS_SIZE_MiB) status=none
+	$(MKE2FS) -b 4096 -I 128 -m 0 -F -d $(RAMFS_STAGE) $(RAMFS_IMG)
+	$(DUMPE2FS) -h $(RAMFS_IMG)
+	$(DEBUGFS) -R "ls -l /" $(RAMFS_IMG)
+	@echo "[  OK  ] ramfs image built, $(RAMFS_SIZE_MiB) MiB"
+
+sync_rootfs:
+	sudo mount -o loop files/filesys.dd files/root
+	sudo mkdir -p $(addprefix files/root/,$(RAMFS_DIRS))
+	sudo cp -r files/fs/etc/*  files/root/etc/
+	sudo cp -r files/fs/root/. files/root/root/
+	sudo cp -r files/fs/home/* files/root/home/
+	sudo chmod 1777 files/root/tmp
+	sudo umount files/root
+	$(DUMPE2FS) -h files/filesys.dd
+	$(DEBUGFS) -R "ls -l /" files/filesys.dd
 
 mount:
 	sudo mount -o loop files/filesys.dd files/root/
@@ -397,7 +508,7 @@ run:
 #	complete, greppable, and diffable between two runs, which the VGA text
 #	console is not once it starts scrolling.
 	mv $(OS_LOG_DIR)/kernel.log $(OS_LOG_DIR)/kernel.log.bak | true
-	qemu-system-x86_64 -monitor stdio -m 128 -no-reboot -no-shutdown \
+	qemu-system-x86_64 -monitor stdio -m 4096 -no-reboot -no-shutdown \
 		-drive id=disk,file=build/os/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
 		-device ide-hd,drive=disk,bus=ahci.0 \
@@ -420,11 +531,25 @@ run_debug:
 #	the kernel only has an AHCI driver, a positional image lands on the
 #	default IDE controller and no disk is seen at all.
 	mv $(OS_LOG_DIR)/kernel_debug.log $(OS_LOG_DIR)/kernel_debug.log.bak | true
-	qemu-system-x86_64 -s -S -monitor stdio -m 128 -no-reboot -no-shutdown \
+	qemu-system-x86_64 -s -S -monitor stdio -m 4096 -no-reboot -no-shutdown \
 		-drive id=disk,file=build/os/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
 		-device ide-hd,drive=disk,bus=ahci.0 \
 		-serial file:$(OS_LOG_DIR)/kernel_debug.log
+
+build_all:
+	$(MAKE) tools
+	$(MAKE) ramfs
+	$(MAKE) bootloader
+	$(MAKE) kernel
+	$(MAKE) os
+	@echo "[  OK  ] build os with tools"
+
+build:
+	$(MAKE) bootloader
+	$(MAKE) kernel
+	$(MAKE) os
+	@echo "[  OK  ] build os without tools"
 
 #	attach to the qemu left waiting by make run_debug.
 #	CLion does the same thing through a Remote Debug configuration.

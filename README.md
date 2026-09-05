@@ -48,8 +48,8 @@ Then connect the remote debugger with the following configuration :
 # Todo list :
 
 * RAMFS
-  * should be ISO exportable to run on real hardware after this.
 * USB driver
+  * should be ISO exportable to run on real hardware after this.
 * USB persistance
 * signal
 * improve shell (besh add pipe/redirect/signal)

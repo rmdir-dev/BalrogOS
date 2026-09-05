@@ -30,6 +30,22 @@ void* last_free_addr = 0x0;
 // freed address queue.
 queue_t last_free_q;
 
+/*
+Physical range the bootloader already filled, that pmm_alloc must never hand
+out. Zero length means nothing is reserved.
+*/
+void* reserved_start = 0;
+void* reserved_end = 0;
+
+void pmm_reserve(void* start, uint64_t size)
+{
+    reserved_start = (void*)((uintptr_t)start & ~(PAGE_SIZE - 1));
+    reserved_end = (void*)(((uintptr_t)start + size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1));
+
+    KERNEL_LOG_INFO("pmm : reserved %p to %p, %d MiB", reserved_start, reserved_end,
+        BYTE_TO_MiB((uintptr_t)reserved_end - (uintptr_t)reserved_start));
+}
+
 void pmm_free(void* addr)
 {
     // if addr is greater than next_addr
@@ -80,6 +96,19 @@ void* pmm_alloc()
             next_addr = (void*) 0x100000000;
 
             // Check if there is any usable memory above 4GiB
+            if(next_addr >= pmm_top_addr)
+            {
+                return 0x0;
+            }
+        }
+
+        // step over the reserved range instead of handing it out.
+        // the walk is monotonic, so one comparison is enough : once next_addr
+        // is past the end it never comes back.
+        if(next_addr >= reserved_start && next_addr < reserved_end)
+        {
+            next_addr = reserved_end;
+
             if(next_addr >= pmm_top_addr)
             {
                 return 0x0;

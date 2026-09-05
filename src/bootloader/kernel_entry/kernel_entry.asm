@@ -123,9 +123,12 @@ Upper_half:
     ret
 _KernelEntry:
     mov rax, qword MEMORY_INFO
-    mov word di, [rax]
+    movzx rdi, word [rax]       ; movzx and not a 16 bit mov : the bootloader
     mov rax, qword MEMORY_ENTRIES
-    mov word si, [rax]
+    movzx rsi, word [rax]       ; leaves the upper halves of rsi and rdi dirty,
+                                ; _LoadRamfs copies with esi and edi. a 16 bit
+                                ; mov only replaces the low word, and the map
+                                ; would be read 0x90000 too high.
 
     call kernel_main
     jmp $

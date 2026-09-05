@@ -1,3 +1,14 @@
+; the e820 memory map, read from the bios with int 0x15 ax=0xe820.
+; the bios returns one entry per run of physical memory and decides by itself
+; how many there are : the loop below only stops when it says it is done.
+; so the room for them has to be reserved, and the loop has to be told where
+; that room ends. E820_MAX_ENTRIES is what ties the two together.
+
+E820_MAX_ENTRIES    equ 64      ; 64 * 24B = 1536B of buffer.
+                                ; qemu returns about 6 entries, a real bios with
+                                ; acpi tables and a framebuffer commonly returns
+                                ; 10 to 20, so this leaves a wide margin.
+
 section .text
 
 _DetectMemorySize:
@@ -5,7 +16,7 @@ _DetectMemorySize:
 
     mov di, 0x0000
     mov es, di
-    mov di, MEMORY_SIZE_KB      ; set di to 0x8004 to avoid being stuck in interrupt 0x15
+    mov di, MEMORY_SIZE_KB      ; es:di is where the bios writes the entries
          
     xor ebx, ebx                ; clear ebx must be set to 0 for 0x15 ax 0xe820 first call 
                                 ; bx is the continuation value, it is use to get the next 
@@ -62,6 +73,9 @@ _DetectMemorySize:
     inc bp                      ; good entry so increase bp
     add di, 24                  ; set di to the ext address
 
+    cmp bp, E820_MAX_ENTRIES    ; the bios decides how many entries it sends, so
+    jae .end_e820               ; the loop has to be told where the room ends
+
 .skip_entry:
     test ebx, ebx               ; check if ebx == 0
     jne .e820_loop              ; if ebx != 0 jmp to e820_loop
@@ -79,12 +93,24 @@ _DetectMemorySize:
     ret
 
 MEMORY_ENTRY_COUNT:
-    dw 0x0000       ;
+    dw 0x0000       ; how many entries were actually written below, so bp at
+                    ; the end of the loop. the kernel reads it back to know
+                    ; where to stop.
 
-MEMORY_SIZE_KB:
+; one entry, exactly as the bios lays it out.
+; the first 20 bytes are the ACPI 1.0 layout, the last 4 are the ACPI 3.x
+; extended attributes the loop asks for with ecx = 24.
+%macro E820_ENTRY 0
     dd 0x00000000   ; Base address uint64 lower 4 bytes
     dd 0x00000000   ; Base address uint64 higher 4 bytes
     dd 0x00000000   ; Length uint64 lower 4 bytes
     dd 0x00000000   ; Length uint64 higher 4 bytes
     dd 0x00000000   ; entry type
     dd 0x00000000   ; extended
+%endmacro
+
+MEMORY_SIZE_KB:
+    ; the entries go here, one behind the other, E820_MAX_ENTRIES of them.
+%rep E820_MAX_ENTRIES
+    E820_ENTRY
+%endrep

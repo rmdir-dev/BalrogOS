@@ -104,6 +104,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     phys = pmm_calloc();
     vmm_set_page(proc->PML4T, PROCESS_HEAP_START, phys, user | PAGE_PRESENT | PAGE_WRITE);
 
+    proc->brk = PROCESS_HEAP_START + PAGE_SIZE;
     /*
     STACK
     */
@@ -307,6 +308,7 @@ int fork_process(process* proc, interrupt_regs* regs)
     new->forked_memory = 1;
     new->uid = proc->uid;
     new->gid = proc->gid;
+    new->brk = proc->brk;
     if(proc->cwd) {
         new->cwd = vmalloc(strlen(proc->cwd) + 1);
         memcpy(new->cwd, proc->cwd, strlen(proc->cwd) + 1);

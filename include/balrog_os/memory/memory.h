@@ -117,6 +117,20 @@ addr = 0x101000
 */
 #define PAGE_SIZE 4096
 
+/*
+addr = 0x101abc
+(0x101abc + 0xfff) & ~0xfff
+= 0x102000
+*/
+#define PAGE_ALIGN_UP(addr) (((uintptr_t)addr + PAGE_SIZE - 1) & ~((uintptr_t)PAGE_SIZE - 1))
+
+/*
+addr = 0x101abc
+0x101abc & ~0xfff
+= 0x101000
+*/
+#define PAGE_ALIGN_DOWN(addr) ((uintptr_t)addr & ~((uintptr_t)PAGE_SIZE - 1))
+
 typedef struct SMAP_entry_st
 {
     /*

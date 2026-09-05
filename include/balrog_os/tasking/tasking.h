@@ -22,6 +22,11 @@ typedef struct process_t
     int pid;
     uintptr_t rsp;
     uintptr_t rip;
+    union
+    {
+        uintptr_t brk;
+        uintptr_t heap_top;
+    };
     uintptr_t stack_top;
     uintptr_t kernel_stack_top;
     uint8_t exec;

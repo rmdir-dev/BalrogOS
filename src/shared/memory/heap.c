@@ -99,13 +99,6 @@ void heap_free(block_info* block, block_info* next_block, block_info* current_to
 
         block->previous_chunk->_size += size;
         block = block->previous_chunk;
-
-        // the next block still points to the header we just merged.
-        // set its previous chunk to the new block.
-        if(next_block < current_top)
-        {
-            next_block->previous_chunk = block;
-        }
     }
     // if next block < current heap top addr
     uint8_t contiguous = 1;
@@ -129,18 +122,7 @@ void heap_free(block_info* block, block_info* next_block, block_info* current_to
                     new_free_block->_is_mmapped = block->_is_mmapped;
                     new_free_block->_present = block->_present;
 
-                    // the block after the absorbed one still points to it.
-                    // set its previous chunk to the new free block.
-                    size_t next_blk_size = next_block->_size + sizeof(block_info);
-                    block_info* after_block = (void*)(((uint8_t*)next_block) + next_blk_size);
-
                     new_free_block->_size += next_block->_size + sizeof(block_info);
-
-                    if(after_block < current_top)
-                    {
-                        after_block->previous_chunk = new_free_block;
-                        after_block->_present = 1;
-                    }
 
                     new_free_block->next_free = next_block->next_free;
 
@@ -192,5 +174,14 @@ void heap_free(block_info* block, block_info* next_block, block_info* current_to
             first->next_free = (void*)block;
         }
     }
+
+    block_info* after_free = (void*)(((uint8_t*)block) + block->_size + sizeof(block_info));
+
+    if(after_free < current_top)
+    {
+        after_free->previous_chunk = block;
+        after_free->_present = 1;
+    }
+
     block->_full = 0;
 }

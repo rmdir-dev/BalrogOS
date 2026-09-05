@@ -54,7 +54,7 @@ typedef struct task_register_t
 
 process* new_process(char* name)
 {
-    kernel_debug_output(KDB_LVL_VERBOSE, "creating process");
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : initializing process %s", name);
     process* proc = vmalloc(sizeof(process));
     memset(proc, 0, sizeof(process));
     proc->name = name;
@@ -63,11 +63,18 @@ process* new_process(char* name)
     proc->PML4T = pmm_calloc();
     proc->exec = 0;
     proc->child = 0;
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : name : %s", name);
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : pid : %d", proc->pid);
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : state : %d", proc->state);
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : PML4T : 0%p", proc->PML4T);
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : process initilized", name);
     return proc;
 }
 
 process* create_process(char* name, uintptr_t addr, uint8_t mode)
 {
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : creating process %s", name);
     process* proc = new_process(name);
     proc->rip = mode == 3 ? PROCESS_TEXT : addr; 
     uintptr_t* virt = P2V(proc->PML4T); // Kernel space
@@ -88,10 +95,12 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
 
     if(header->ei_mag == ELF_MAGIC)
     {
+        kernel_debug_output(KDB_LVL_VERBOSE, "tasking : ELF magic detected");
         proc->rip = header->e_entry;
         elf_load_binary(header, addr, proc->PML4T, user | PAGE_PRESENT | PAGE_WRITE);
-    } else 
+    } else
     {
+        kernel_debug_output(KDB_LVL_VERBOSE, "tasking : ELF magic not found");
         void* text = pmm_calloc();
         phys = V2P(addr);
         vmm_set_page(proc->PML4T, PROCESS_TEXT, text, user | PAGE_PRESENT);
@@ -110,12 +119,14 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     /*
     STACK
     */
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : creating process stack");
     phys = pmm_calloc();
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x1000, phys, user | PAGE_PRESENT | PAGE_WRITE);
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x2000, pmm_calloc(), user | PAGE_PRESENT | PAGE_WRITE);
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x3000, pmm_calloc(), user | PAGE_PRESENT | PAGE_WRITE);
     vmm_set_page(proc->PML4T, PROCESS_STACK_TOP - 0x4000, pmm_calloc(), user | PAGE_PRESENT | PAGE_WRITE);
     phys = kstack_alloc();
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : process stack created at : 0%p", phys);
 
     /*
         SETUP THE STACK
@@ -165,27 +176,29 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     stack->rbx = 0;
     stack->rax = 0;
 
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : process %s created", name);
+
     return proc;
 }
 
 int clean_process(process* proc, uint8_t clean_memory)
 {
-    kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process %d", proc->pid);
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : cleaning process %d", proc->pid);
 
     if(clean_memory)
     {
-        kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process memory");
+        kernel_debug_output(KDB_LVL_VERBOSE, "tasking : cleaning process memory");
         vmm_clean_page_table(proc->PML4T);
     }
 
     if(proc->cwd)
     {
-        kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process cwd");
+        kernel_debug_output(KDB_LVL_VERBOSE, "tasking : cleaning process cwd");
         vmfree(proc->cwd);
     }
 
     if(proc->sleeper_node) {
-        kernel_debug_output(KDB_LVL_VERBOSE, "cleaning process sleeper node");
+        kernel_debug_output(KDB_LVL_VERBOSE, "tasking : cleaning process sleeper node");
         remove_sleeper(proc);
     }
 

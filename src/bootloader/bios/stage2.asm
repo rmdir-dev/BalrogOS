@@ -5,9 +5,9 @@
 
 [bits 16]                   ; set the mode as 16 bit real mode
 
-%include "src/bootloader/layout.inc"        ; include the layout shared with stage 1
+%include "src/bootloader/common/layout.inc"        ; include the layout shared with stage 1
                                             ; and the makefile.
-%include "src/bootloader/io/bios/io.inc"    ; include the macros
+%include "src/bootloader/bios/io/bios/io.inc"    ; include the macros
 
 ; _DiskLoad takes its sector count in dh, which is a byte, so a read longer
 ; than 255 sectors has to be split. the loops below step by CHUNK_SECTORS and
@@ -66,12 +66,12 @@ KERNEL_MSG:
 RAMFS_MSG:
     db "ramfs",0
 
-%include "src/bootloader/io/bios/print.asm"
-%include "src/bootloader/io/bios/disk.asm"
-%include "src/bootloader/a20/a20.asm"
-%include "src/bootloader/unreal_mode/unreal_mode.asm"
-%include "src/bootloader/long_mode_x64/long_mode.asm"
-%include "src/bootloader/memory/memory.asm"
+%include "src/bootloader/bios/io/bios/print.asm"
+%include "src/bootloader/bios/io/bios/disk.asm"
+%include "src/bootloader/bios/a20/a20.asm"
+%include "src/bootloader/bios/unreal_mode/unreal_mode.asm"
+%include "src/bootloader/bios/long_mode_x64/long_mode.asm"
+%include "src/bootloader/bios/memory/memory.asm"
 
 BOOT_DRIVE:
     db 0

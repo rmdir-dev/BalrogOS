@@ -6,7 +6,7 @@
 
 extern process* current_running;
 
-extern void sys_read(interrupt_regs* stack_frame);
+extern int sys_read(interrupt_regs* stack_frame);
 extern void sys_write(interrupt_regs* stack_frame);
 extern int sys_open(interrupt_regs* stack_frame);
 extern void sys_close(interrupt_regs* stack_frame);

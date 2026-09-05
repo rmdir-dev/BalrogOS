@@ -186,8 +186,8 @@ void sh_read_input()
     printf("\e[0;96mBalrog\e[0m:/$ ");
     while(1)
     {
-        read(STDIN_FILENO, &input, sizeof(struct input_event));
-        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl) != 0 && buf_idx != 0)
+        int size = read(STDIN_FILENO, &input, sizeof(struct input_event));
+        if(size != 0 && size != -1 && process_input(&input, buffer, &buf_idx, 1, &manage_ctrl) != 0 && buf_idx != 0)
         {
             //keys[KEY_ENTER] = 1;
             break;

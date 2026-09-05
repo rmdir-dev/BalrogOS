@@ -116,23 +116,28 @@ void sys_fstat(interrupt_regs* stack_frame)
     }
 }
 
-void sys_read(interrupt_regs* stack_frame)
+int sys_read(interrupt_regs* stack_frame)
 {
     if(current_running)
     {
         switch (stack_frame->rdi)
         {
         case 0:
-            keyboard_read(stack_frame->rsi);
-            break;
-        
+            if (!user_ptr_ok(stack_frame->rsi))
+            {
+                *current_running->error_no = EFAULT;
+                return -1;
+            }
+            return keyboard_read((struct input_event*) stack_frame->rsi);
+
         default:
             {
                 fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
 
                 if(__check_file_permission(fd, 04) != 0)
                 {
-                    return;
+                    *current_running->error_no = EACCES;
+                    return -1;
                 }
 
                 fs_read(stack_frame->rsi, stack_frame->rdx, fd);
@@ -140,6 +145,8 @@ void sys_read(interrupt_regs* stack_frame)
             }
         }
     }
+
+    return 0;
 }
 
 int sys_creat(interrupt_regs* stack_frame)

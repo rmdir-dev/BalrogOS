@@ -11,9 +11,9 @@
 
 [bits 16]                   ; set the mode as 16 bit real mode
 
-%include "src/bootloader/layout.inc"        ; include the layout shared with stage 2 and the makefile
+%include "src/bootloader/common/layout.inc"        ; include the layout shared with stage 2 and the makefile
                                             ; used for memory mapping and loading addresses.
-%include "src/bootloader/io/bios/io.inc"    ; include the macros
+%include "src/bootloader/bios/io/bios/io.inc"    ; include the macros
 
 section .text
     global _start
@@ -84,8 +84,8 @@ init:
 
     jmp 0x0000:STAGE2_ADDR  ; jumping into stage2
 
-%include "src/bootloader/io/bios/print.asm"
-%include "src/bootloader/io/bios/disk.asm"
+%include "src/bootloader/bios/io/bios/print.asm"
+%include "src/bootloader/bios/io/bios/disk.asm"
 
 BOOT_DRIVE:
     db 0

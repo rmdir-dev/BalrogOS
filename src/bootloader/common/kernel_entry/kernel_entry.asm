@@ -75,7 +75,7 @@ _PrepareKernel:
 
     jmp GDT64.Code:(LongMode - KERNEL_OFFSET)
 
-%include "src/bootloader/long_mode_x64/gdt.asm"
+%include "src/bootloader/common/long_mode_x64/gdt.asm"
 
 [bits 64]                       ; switching to 64bit
 [extern kernel_main]

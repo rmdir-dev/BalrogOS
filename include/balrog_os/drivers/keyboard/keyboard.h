@@ -3,10 +3,12 @@
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include "balrog/input.h"
 
+#define KEYBOARD_QUEUE_SIZE     64
+
 /**
  * @brief Initialize the keyboard
  * 
  */
 int init_keyboard();
 
-void keyboard_read(struct input_event* event);
+int keyboard_read(struct input_event* event);

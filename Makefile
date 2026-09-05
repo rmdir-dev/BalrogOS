@@ -9,7 +9,7 @@ DEFINES 		= -DKDB_DEBUG -DKDB_DEFAULT_LVL=3 -DKDB_START_SEQ=0 -D__BALROG_VERSION
 ########################################################
 #	BOOTLOADER LAYOUT
 ########################################################
-#	keep in sync with src/bootloader/layout.inc, make cannot include a
+#	keep in sync with src/bootloader/common/layout.inc, make cannot include a
 #	nasm file so the two carry the same numbers. layout.inc is the one
 #	that explains where they come from.
 #
@@ -354,15 +354,15 @@ clean_toolbox:
 
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
-	$(NASM) -fbin src/bootloader/start.asm -o $(OS_BUILD_DIR)/Bootloader
+	$(NASM) -fbin src/bootloader/bios/start.asm -o $(OS_BUILD_DIR)/Bootloader
 #	stage 2 is padded to STAGE2_SECTORS * 512 by the times at the end of
 #	stage2.asm, so KERNEL_LBA never moves when the code in it grows.
-	$(NASM) -fbin src/bootloader/stage2.asm -o $(OS_BUILD_DIR)/Stage2
+	$(NASM) -fbin src/bootloader/bios/stage2.asm -o $(OS_BUILD_DIR)/Stage2
 
 kernel: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
 	mkdir -p $(OS_LOG_DIR)
-	$(NASM) -f elf64 $(NASM_DEBUG_FLAGS) src/bootloader/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
+	$(NASM) -f elf64 $(NASM_DEBUG_FLAGS) src/bootloader/common/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
 #	linked as an elf so the symbols survive, the raw image the
 #	bootloader loads is carved out of it right after.
 	$(LD) -o $(OS_BUILD_DIR)/kernel.elf -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000
@@ -370,7 +370,7 @@ kernel: $(K_OBJECTS)
 
 h_readble_kernel_asm: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
-	$(NASM) -f elf64 src/bootloader/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
+	$(NASM) -f elf64 src/bootloader/common/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
 	$(LD) -S -o $(OS_BUILD_DIR)/kernel.asm -T LinkerScript/Kernel.ld build/temp/kernel_entry.o $(ALL_KOBJECTS64) -flto -z max-page-size=0x1000
 	$(OBJDUMP) -S $(OS_BUILD_DIR)/kernel.asm > $(OS_BUILD_DIR)/kernel.asm.txt
 	rm $(OS_BUILD_DIR)/kernel.asm
@@ -383,7 +383,7 @@ os:
 	MAX=$$(( $(KERNEL_SECTORS) * 512 )); \
 	if [ $$KSIZE -gt $$MAX ]; then \
 		echo "[FAILED] kernel.bin is $$KSIZE bytes, KERNEL_SECTORS covers $$MAX"; \
-		echo "         raise KERNEL_SECTORS in src/bootloader/layout.inc and in this file"; \
+		echo "         raise KERNEL_SECTORS in src/bootloader/common/layout.inc and in this file"; \
 		exit 1; \
 	fi
 	@if [ ! -f $(RAMFS_IMG) ]; then \

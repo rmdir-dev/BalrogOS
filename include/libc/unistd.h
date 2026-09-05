@@ -66,9 +66,9 @@ int kill(pid_t pid, int sig);
  * @param fd 
  * @param buf 
  * @param count 
- * @return size_t 
+ * @return int
  */
-size_t read(int fd, void* buf, size_t count);
+int read(int fd, void* buf, size_t count);
 
 /**
  * @brief 
@@ -76,9 +76,9 @@ size_t read(int fd, void* buf, size_t count);
  * @param fd 
  * @param buf 
  * @param count 
- * @return size_t 
+ * @return int
  */
-size_t write(int fd, void* buf, size_t count);
+int write(int fd, void* buf, size_t count);
 
 /**
  * @brief 

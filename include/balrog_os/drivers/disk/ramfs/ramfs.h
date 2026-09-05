@@ -5,7 +5,7 @@
 /*
 Where stage 2 dropped the ramfs image, and how much of it there is.
 
-Keep in sync with src/bootloader/layout.inc : RAMFS_PHYS and RAMFS_SECTORS.
+Keep in sync with src/bootloader/common/layout.inc : RAMFS_PHYS and RAMFS_SECTORS.
 */
 #define RAMFS_PHYS  0x10000000              // 256 MiB
 #define RAMFS_SIZE  (16384 * 512)           // RAMFS_SECTORS * 512, so 8 MiB

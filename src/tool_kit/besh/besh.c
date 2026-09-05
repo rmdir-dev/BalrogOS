@@ -79,7 +79,11 @@ void manage_child_input(int pid) {
         struct input_event input = {};
         while(1)
         {
-            read(STDIN_FILENO, &input, sizeof(struct input_event));
+            int size = read(STDIN_FILENO, &input, sizeof(struct input_event));
+            if (size == 0 || size == -1)
+            {
+                continue;
+            }
             process_input(&input, NULL, NULL, 0, &process_child_process_ctrl_key);
         }
     }
@@ -306,7 +310,7 @@ void sh_parse_cmd()
     cmd = strtok(NULL, ' ');
     while(cmd && argc_count < ARG_MAX - 1)
     {
-        arguments[++argc_count] = cmd;
+        arguments[++argc_count] = strdup(cmd);
         cmd = strtok(NULL, ' ');
     }
 
@@ -413,18 +417,23 @@ void sh_read_input()
 
     buf_idx = 0;
     memset(buffer, 0, 255);
-    if (arguments[0] != 0)
+
+    for(int i = 0; i < ARG_MAX; i++)
     {
-        free(arguments[0]);
+        if (arguments[i] != 0)
+        {
+            free(arguments[i]);
+            arguments[i] = 0;
+        }
     }
 
     printf("\e[0;94m%s\e[0;92m@\e[0;96m%s\e[0m:%s%s ", user_info.username, hostname, get_cwd_value(), user_info.uid == 0 ? "#" : "$");
 
     while(1)
     {
-        read(STDIN_FILENO, &input, sizeof(struct input_event));
+        int size = read(STDIN_FILENO, &input, sizeof(struct input_event));
 
-        if(process_input(&input, buffer, &buf_idx, 1, &manage_ctrl) != 0 && buf_idx != 0)
+        if(size != 0 && size != -1 && process_input(&input, buffer, &buf_idx, 1, &manage_ctrl) != 0 && buf_idx != 0)
         {
             //keys[KEY_ENTER] = 1;
             break;

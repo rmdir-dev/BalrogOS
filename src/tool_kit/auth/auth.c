@@ -57,8 +57,8 @@ void manage_input(int mode)
     
     while(1)
     {
-        read(STDIN_FILENO, &input, sizeof(struct input_event));
-        if(process_input(&input, buffer, &buf_idx, mode, NULL) != 0 && buf_idx != 0)
+        int size = read(STDIN_FILENO, &input, sizeof(struct input_event));
+        if(size != 0 && size != -1 && process_input(&input, buffer, &buf_idx, mode, NULL) != 0 && buf_idx != 0)
         {
             break;
         }

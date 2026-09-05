@@ -4,6 +4,7 @@
 #include "balrog_os/memory/vmm.h"
 #include "balrog_os/memory/pmm.h"
 #include <stddef.h>
+#include "balrog_os/debug/debug_output.h"
 
 static fs_file file_table[FS_MAX_FILE] = {};
 static uint8_t free_buffer_map[4096] = {};
@@ -21,6 +22,9 @@ uint32_t _fs_cache_add_file_array(const char* filename, uint32_t inbr, uint8_t* 
             return i;
         }
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "fs cache : the %d slots are all taken, %s not cached",
+            FS_MAX_FILE, filename);
     return FS_MAX_FILE;
 }
 
@@ -28,10 +32,15 @@ int fs_cache_add_file(const char* filename, uint8_t* buffer, uint32_t inbr, uint
 {
     *index = _fs_cache_add_file_array(filename, inbr, buffer, size);
 
-    if(*index > FS_MAX_FILE)
+    // _fs_cache_add_file_array returns FS_MAX_FILE when the table is full.
+    if(*index >= FS_MAX_FILE)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "fs cache : no slot for %s, inode %d", filename, inbr);
         return -1;
     }
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "fs cache : %s cached in slot %d, inode %d, %d bytes",
+            filename, *index, inbr, size);
 
     return 0;
 }
@@ -124,6 +133,9 @@ int fs_cache_invalidate(uint32_t index)
 {
     if(index >= FS_MAX_FILE || file_table[index].reference == 0)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "fs cache : slot %d not invalidated, %s",
+                index,
+                index >= FS_MAX_FILE ? "index out of the table" : "nobody references it");
         return -1;
     }
 
@@ -131,9 +143,12 @@ int fs_cache_invalidate(uint32_t index)
     // This would lead to a use after free.
     if (file_table[index].reference != 0)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "fs cache : slot %d still has %d references, not invalidated",
+                index, file_table[index].reference);
         return -1;
     }
 
+    kernel_debug_output(KDB_LVL_VERBOSE, "fs cache : slot %d invalidated", index);
     __fs_cache_free_buffer(index);
     file_table[index].size = 0;
     return 0;
@@ -143,9 +158,13 @@ int fs_cache_close_file(uint32_t index)
 {
     if(--file_table[index].reference == 0)
     {
+        kernel_debug_output(KDB_LVL_VERBOSE, "fs cache : slot %d released, buffer freed", index);
         __fs_cache_free_buffer(index);
         file_table[index].size = 0;
         return 0;
     }
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "fs cache : slot %d still has %d references",
+            index, file_table[index].reference);
     return -1;
 }

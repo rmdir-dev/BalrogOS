@@ -43,6 +43,13 @@ static void* vmm_find_page(page_table* PML4T, void* virt_addr, uint8_t create)
             return 0;
         }
         void* p = pmm_calloc();
+
+        if(!p)
+        {
+            kernel_debug_output(KDB_LVL_ERROR, "vmm : no page left for the pdpt of 0%p", virt_addr);
+            return 0;
+        }
+
         PDPT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PML4T[PML4T_OFFSET(virt_addr)] = (page_table)PDPT;
     }
@@ -58,6 +65,13 @@ static void* vmm_find_page(page_table* PML4T, void* virt_addr, uint8_t create)
         }
 
         void* p = pmm_calloc();
+
+        if(!p)
+        {
+            kernel_debug_output(KDB_LVL_ERROR, "vmm : no page left for the pdt of 0%p", virt_addr);
+            return 0;
+        }
+
         PDT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PDPT[PDPT_OFFSET(virt_addr)] = (page_table)PDT;
     }
@@ -72,6 +86,13 @@ static void* vmm_find_page(page_table* PML4T, void* virt_addr, uint8_t create)
             return 0;
         }
         void* p = pmm_calloc();
+
+        if(!p)
+        {
+            kernel_debug_output(KDB_LVL_ERROR, "vmm : no page left for the pt of 0%p", virt_addr);
+            return 0;
+        }
+
         PT = (void*)ADD_FLAGS(p, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PDT[PDT_OFFSET(virt_addr)] = (page_table)PT;
     }
@@ -106,11 +127,22 @@ void* vmm_set_page(page_table* PML4T, void* virt_addr, void* phys_addr, uint32_t
 
     if(!PT)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "vmm : 0%p cannot be mapped, no page table for it", virt_addr);
         return 0x00;
     }
 
+    if(flags & PAGE_USER)
+    {
+        kernel_debug_output(KDB_LVL_VERBOSE, "vmm : 0%p -> 0%p, %s%s%s%s",
+                virt_addr, phys_addr,
+                flags & PAGE_PRESENT ? "present " : "",
+                flags & PAGE_WRITE ? "write " : "read-only ",
+                flags & PAGE_USER ? "user" : "supervisor",
+                flags & PAGE_NOCACHE ? " nocache" : "");
+    }
+
     PT[PT_OFFSET(virt_addr)] = ADD_FLAGS(phys_addr, flags);
-    
+
     return (void*)PT[PT_OFFSET(virt_addr)];
 }
 
@@ -132,7 +164,10 @@ void vmm_free_page(page_table* PML4T, void* virt_addr)
     {
         pmm_free((void*)STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]));
         PT[PT_OFFSET(virt_addr)] = 0;
+        return;
     }
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "vmm : 0%p freed but it was not mapped", virt_addr);
 }
 
 static int __vmm_clean(page_table* table, uint8_t level)

@@ -2,6 +2,9 @@
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include "balrog/debug/debug.h"
 #include "balrog_os/debug/debug_output.h"
+#include "balrog_os/tasking/tasking.h"
+
+extern process* current_running;
 
 extern void sys_read(interrupt_regs* stack_frame);
 extern void sys_write(interrupt_regs* stack_frame);
@@ -29,7 +32,7 @@ extern void sys_park(interrupt_regs* stack_frame);
 extern void sys_setpark(interrupt_regs* stack_frame);
 extern void sys_debug(interrupt_regs* stack_frame);
 
-static int (*syscall[255])(interrupt_regs*) =
+static int (*syscall[SYSCALL_MAX])(interrupt_regs*) =
 {
     [SYS_READ] &sys_read,
     [SYS_WRITE] &sys_write,
@@ -58,14 +61,66 @@ static int (*syscall[255])(interrupt_regs*) =
     [SYS_DEBUG] &sys_debug,
 };
 
+static const char* syscall_name[SYSCALL_MAX] =
+{
+    [SYS_READ] = "read",        [SYS_WRITE] = "write",      [SYS_OPEN] = "open",
+    [SYS_CLOSE] = "close",      [SYS_FSTAT] = "fstat",      [SYS_BRK] = "brk",
+    [SYS_NANOSLEEP] = "nanosleep", [SYS_GETPID] = "getpid", [SYS_FORK] = "fork",
+    [SYS_EXECVE] = "execve",    [SYS_EXIT] = "exit",        [SYS_WAIT] = "wait",
+    [SYS_KILL] = "kill",        [SYS_CREAT] = "creat",      [SYS_MKDIR] = "mkdir",
+    [SYS_UNLINK] = "unlink",    [SYS_RMDIR] = "rmdir",      [SYS_GETCWD] = "getcwd",
+    [SYS_CHDIR] = "chdir",      [SYS_GETUID] = "getuid",    [SYS_SETUID] = "setuid",
+    [SYS_GETPPID] = "getppid",  [SYS_REBOOT] = "reboot",    [SYS_PARK] = "park",
+    [SYS_SETPARK] = "setpark",  [SYS_DEBUG] = "debug",
+};
+
 static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
 {
+    if(stack_frame->rax >= SYSCALL_MAX)
+    {
+        kernel_debug_output(KDB_LVL_CRITICAL, "syscall %d is out of the table, pid %d",
+                stack_frame->rax, current_running->pid);
+        while(1) {}
+        return stack_frame;
+    }
+
     if(!syscall[stack_frame->rax])
     {
         kernel_debug_output(KDB_LVL_CRITICAL, "Unknown syscall %d\n", stack_frame->rax);
         while(1) {}
         return stack_frame;
     }
+
+    static uint64_t last_call = SYSCALL_MAX;
+    static int last_pid = -1;
+    static size_t repeated = 0;
+
+    if(stack_frame->rax == last_call && current_running->pid == last_pid)
+    {
+        repeated++;
+    } else
+    {
+        if(repeated)
+        {
+            kernel_debug_output(KDB_LVL_VERBOSE, "syscall %s pid %d, %d more of the same",
+                    syscall_name[last_call] ? syscall_name[last_call] : "?",
+                    last_pid, repeated);
+            repeated = 0;
+        }
+
+        last_call = stack_frame->rax;
+        last_pid = current_running->pid;
+
+        kernel_debug_output(KDB_LVL_VERBOSE, "syscall %d %s pid %d, rdi 0%x rsi 0%x rdx 0%x",
+                stack_frame->rax,
+                syscall_name[stack_frame->rax] ? syscall_name[stack_frame->rax] : "?",
+                current_running->pid,
+                stack_frame->rdi, stack_frame->rsi, stack_frame->rdx);
+    }
+
+    /*  rax holds the return value on the way out, so the number has to be
+        kept if we still want to name the call afterwards.  */
+    uint64_t called = stack_frame->rax;
 
     /*
         Syscall dispatcher
@@ -74,7 +129,14 @@ static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
     {
         stack_frame->rax = syscall[stack_frame->rax](stack_frame);
     }
-    
+
+    if((long) stack_frame->rax < 0)
+    {
+        kernel_debug_output(KDB_LVL_INFO, "syscall %s returned %d to pid %d",
+                syscall_name[called] ? syscall_name[called] : "?",
+                (long) stack_frame->rax, current_running->pid);
+    }
+
     return stack_frame;
 }
 

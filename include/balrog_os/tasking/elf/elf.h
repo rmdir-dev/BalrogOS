@@ -5,6 +5,9 @@
 
 #define ELF_MAGIC   0x464c457f
 
+#define ELF_CLASS_64        2
+#define ELF_MACHINE_X86_64  0x3E
+
 #define ELF_PT_NULL     0x00000000
 #define ELF_PT_LOAD     0x00000001
 #define ELF_PT_DYNAMIC  0x00000002

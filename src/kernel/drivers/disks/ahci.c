@@ -86,6 +86,9 @@ static int __find_free_cmd_slot(ahci_device_t* dev)
         }
         slots >>= 1;
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ahci : the %d command slots are all taken, sact 0%b ci 0%b",
+            AHCI_CMD_SLOTS, dev->port->sact, dev->port->ci);
     return -1;
 }
 
@@ -107,9 +110,13 @@ static int __ahci_send_command(ahci_device_t* dev, ahci_cmd_t* command)
 
     if(slot < 0)
     {
-        KERNEL_LOG_FAIL("no command slot available.");
+        kernel_debug_output(KDB_LVL_ERROR, "ahci : no command slot available on port %d", dev->port_no);
         return -1;
     }
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "ahci : port %d slot %d, command 0%x lba %d count %d %s",
+            dev->port_no, slot, command->command, command->lba, command->count,
+            command->write ? "write" : "read");
 
     ahci_cmd_header_t* header = &dev->cmd_list->cmd[slot];
     memset(header, 0, sizeof(ahci_cmd_header_t));
@@ -154,7 +161,8 @@ static int __ahci_send_command(ahci_device_t* dev, ahci_cmd_t* command)
 
     if(to_counter == AHCI_TIMEOUT)
     {
-        KERNEL_LOG_FAIL("port is hung.");
+        kernel_debug_output(KDB_LVL_ERROR, "ahci : port %d is hung before the command, tfd 0%x serr 0%x",
+                dev->port_no, dev->port->tfd, dev->port->serr);
         return -1;
     }
 
@@ -165,14 +173,17 @@ static int __ahci_send_command(ahci_device_t* dev, ahci_cmd_t* command)
     {
         if(dev->port->is & HBA_PxIS_TFES || to_counter++ == AHCI_TIMEOUT)
         {
-            KERNEL_LOG_FAIL("command 0%x failed.", command->command);
+            kernel_debug_output(KDB_LVL_ERROR, "ahci : command 0%x failed on port %d, is 0%x tfd 0%x serr 0%x, after %d turns",
+                    command->command, dev->port_no,
+                    dev->port->is, dev->port->tfd, dev->port->serr, to_counter);
             return -1;
         }
     }
 
     if(dev->port->is & HBA_PxIS_TFES)
     {
-        KERNEL_LOG_FAIL("command 0%x ended on a task file error.", command->command);
+        kernel_debug_output(KDB_LVL_ERROR, "ahci : command 0%x ended on a task file error, port %d tfd 0%x",
+                command->command, dev->port_no, dev->port->tfd);
         return -1;
     }
 
@@ -262,12 +273,25 @@ static int __ahci_sata_ident(ahci_device_t* dev)
 
     if(__ahci_send_command(dev, &command))
     {
-        KERNEL_LOG_FAIL("could not initialize device");
+        kernel_debug_output(KDB_LVL_ERROR, "ahci : IDENTIFY failed on port %d", dev->port_no);
         return -1;
     }
 
     ata_id* ident = (void*)P2V(dev->dma_buffer);
-    KERNEL_LOG_INFO("AHCI sata device : %s %dMiB", &ident->model[0], (ident->capacity_lba48 / 1024) / 2);
+
+    /*  model is 40 bytes, not null terminated so 41 and we null terminate it  */
+    char model[41];
+
+    for(size_t i = 0; i < 40; i += 2)
+    {
+        model[i] = ident->model[i + 1];
+        model[i + 1] = ident->model[i];
+    }
+    model[40] = 0;
+
+    KERNEL_LOG_INFO("AHCI sata device : %s %dMiB", model, (ident->capacity_lba48 / 1024) / 2);
+    kernel_debug_output(KDB_LVL_INFO, "ahci : port %d, %d sectors in lba48, %d MiB",
+            dev->port_no, ident->capacity_lba48, (ident->capacity_lba48 / 1024) / 2);
 
     dev->initialized = 1;
 
@@ -291,9 +315,13 @@ static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
 
     if(!cmd_list || !fis || !dma_buffer)
     {
-        KERNEL_LOG_FAIL("could not allocate the port structures.");
+        kernel_debug_output(KDB_LVL_ERROR, "ahci : port %d, no page for the command list 0%p, the fis 0%p or the dma buffer 0%p",
+                port_no, cmd_list, fis, dma_buffer);
         return -1;
     }
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "ahci : port %d, command list 0%p fis 0%p dma 0%p",
+            port_no, cmd_list, fis, dma_buffer);
 
     dev->dma_buffer = dma_buffer;
 
@@ -309,7 +337,8 @@ static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
 
         if(!page)
         {
-            KERNEL_LOG_FAIL("could not allocate the command tables.");
+            kernel_debug_output(KDB_LVL_ERROR, "ahci : port %d, no page for command table %d of %d",
+                    port_no, i, AHCI_CMD_TABLE_PAGES);
             return -1;
         }
         dev->cmd_table_page[i] = (void*)P2V(page);
@@ -334,6 +363,9 @@ static int __ahci_get_port_type(hba_port_t* port)
     uint32_t ssts = port->ssts;
     uint8_t ipm = (ssts >> 8) & 0x0F;
     uint8_t det = ssts & 0x0F;
+
+    /*  det and ipm are what tells an empty port from a port with a disk that asleep  */
+    kernel_debug_output(KDB_LVL_VERBOSE, "ahci : ssts 0%x, det 0%x ipm 0%x, sig 0%x", ssts, det, ipm, port->sig);
 
     if(det != HBA_PORT_DET_PRESENT || ipm != HBA_PORT_IPM_ACTIVE)
     {
@@ -365,6 +397,7 @@ static ahci_device_t* __ahci_create_device(pci_device_t* dev, hba_mem_t* hba, hb
 {
     if(!(hba->cap & AHCI_64_BIT_CAP))
     {
+        kernel_debug_output(KDB_LVL_ERROR, "ahci : the hba is not 64 bit capable, cap 0%x", hba->cap);
         return 0;
     }
 
@@ -383,6 +416,8 @@ static ahci_device_t* __ahci_create_device(pci_device_t* dev, hba_mem_t* hba, hb
 static int __ahci_probe_ports(pci_device_t* dev, hba_mem_t* hba)
 {
     uint32_t pi = hba->pi;
+
+    kernel_debug_output(KDB_LVL_INFO, "ahci : probing the ports, pi 0%b", pi);
     uint32_t i = 0;
     while(i < 32)
     {
@@ -397,7 +432,7 @@ static int __ahci_probe_ports(pci_device_t* dev, hba_mem_t* hba)
                     ahci_device_t* device = __ahci_create_device(dev, hba, &hba->ports[i]);
                     if(!device)
                     {
-                        KERNEL_LOG_FAIL("AHCI device is not 64 bit capable");
+                        kernel_debug_output(KDB_LVL_ERROR, "ahci : port %d, device not created", i);
                         return -1;
                     }
 
@@ -408,6 +443,8 @@ static int __ahci_probe_ports(pci_device_t* dev, hba_mem_t* hba)
                         node->value = device;
                         return 0;
                     }
+
+                    kernel_debug_output(KDB_LVL_ERROR, "ahci : port %d holds a sata disk that would not come up", i);
                     return -1;
                     break;
 
@@ -431,6 +468,8 @@ static int __ahci_probe_ports(pci_device_t* dev, hba_mem_t* hba)
         pi >>= 1;
         i++;
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ahci : none of the ports in 0%b carries a sata disk", hba->pi);
     return -1;
 }
 
@@ -452,6 +491,8 @@ static int __ahci_check_device(pci_device_t* dev, hba_mem_t* hba)
 
         return __ahci_probe_ports(dev, hba);
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ahci : the controller is not in ahci mode, ghc 0%x", hba->ghc);
     return -1;
 }
 
@@ -549,6 +590,8 @@ int ahci_get_boot_device(fs_device_t* device)
             }
         }
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ahci : no drive answered with an mbr signature, no boot device");
     vmfree(buffer);
     return -1;
 }

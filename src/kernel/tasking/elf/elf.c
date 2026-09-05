@@ -44,7 +44,7 @@ static inline void __elf_load_prog(elf_program* prog, uint8_t* data, page_table*
 
         if(phys == 0)
         {
-            kernel_debug_output(KDB_LVL_CRITICAL, "should not prompt 0%p\n", vaddr);
+            kernel_debug_output(KDB_LVL_CRITICAL, "elf : 0%p was not mapped by the memsz pass, should not prompt", vaddr);
             phys = pmm_calloc();
             vmm_set_page(PML4T, vaddr, phys, flags);
         }
@@ -58,13 +58,37 @@ static inline void __elf_load_prog(elf_program* prog, uint8_t* data, page_table*
 }
 
 int elf_load_binary(elf_header* header, uint8_t* data, page_table* PML4T, uint32_t flags)
-{    
+{
+    if(header->ei_mag != ELF_MAGIC)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "elf : bad magic 0%x, expected 0%x", header->ei_mag, ELF_MAGIC);
+        return -1;
+    }
+
+    if(header->ei_class != ELF_CLASS_64)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "elf : class %d is not 64 bit", header->ei_class);
+        return -1;
+    }
+
+    if(header->e_machine != ELF_MACHINE_X86_64)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "elf : machine 0%x is not x86-64", header->e_machine);
+        return -1;
+    }
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "elf : entry 0%p, %d program headers at 0%x",
+            header->e_entry, header->e_phnum, header->e_phoff);
+
     uint64_t ph_offset = header->e_phoff;
     elf_program* prog = &data[ph_offset];
     for(size_t i = 0; i < header->e_phnum; i++)
     {
         if(prog[i].p_type == ELF_PT_LOAD)
         {
+            kernel_debug_output(KDB_LVL_VERBOSE, "elf : load 0%p, filesz %d memsz %d, offset 0%x, flags 0%x",
+                    prog[i].p_vaddr, prog[i].p_filesz, prog[i].p_memsz,
+                    prog[i].p_offset, prog[i].p_flags);
             __elf_load_prog(&prog[i], data, PML4T, flags);
         }
     }

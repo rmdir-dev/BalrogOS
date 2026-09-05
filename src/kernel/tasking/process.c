@@ -180,7 +180,7 @@ int proc_remove_process(int pid)
 
 void proc_transfert_to_waiting(int pid)
 {
-    kernel_debug_output(KDB_LVL_VERBOSE, "proc_transfert_to_waiting %d", pid)
+    kernel_debug_output(KDB_LVL_VERBOSE, "proc_transfert_to_waiting %d", pid);
     process* proc = proc_get_process(pid);
 
     // ! proc should never be null !

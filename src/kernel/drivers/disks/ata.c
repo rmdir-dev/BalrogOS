@@ -102,9 +102,11 @@ static void __ata_init_drive(ata_drive* drive)
     //command.wait_status = ATA_STATUS_DRQ;
 
     /* check if the drive is ATAPI */
+    kernel_debug_output(KDB_LVL_VERBOSE, "ata : bus 0%x answered lba 0%x after the reset", io_bus, lba);
+
     if(lba == ATAPI_LBA_MAGIC)
     {
-        KERNEL_LOG_OK("drive is ATAPI, 0%x", io_bus);
+        kernel_debug_output(KDB_LVL_INFO, "ata : bus 0%x holds an atapi drive", io_bus);
         drive->atapi = 1;
         command.command = ATA_CMD_IDENT_PCK_DEV;
     }
@@ -113,7 +115,11 @@ static void __ata_init_drive(ata_drive* drive)
     // the first command will wake it up.
     if(!__ata_send_command(&command))
     {
-        //KERNEL_LOG_FAIL("fail to exectue command");
+        // Command and status are a union in ata_cmd, so the structure
+        // has nothing left to say once the call gave up so we read
+        // the registers instead.
+        kernel_debug_output(KDB_LVL_ERROR, "ata : bus 0%x did not answer IDENTIFY, status 0%x error 0%x",
+                io_bus, in_byte(ATA_REG_R_STATUS(io_bus)), in_byte(ATA_REG_R_ERROR(io_bus)));
         return;
     }
 
@@ -183,6 +189,12 @@ int ata_get_boot_device(fs_device_t* device)
     for(size_t i = 0; i < 4; i++)
     {
         KERNEL_LOG_INFO("searching boot device. %d", i);
+
+        if(!drives[i].exist)
+        {
+            kernel_debug_output(KDB_LVL_VERBOSE, "ata : drive %d does not exist, skipped", i);
+            continue;
+        }
         if(!__ata_read_sector(&drives[i], buffer, 0))
         {
             if(buffer[255] == 0xaa55)
@@ -197,6 +209,8 @@ int ata_get_boot_device(fs_device_t* device)
             }
         }
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ata : none of the 4 drives answered with an mbr signature");
     vmfree(buffer);
     return -1;
 }

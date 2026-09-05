@@ -17,6 +17,8 @@ static int __copy_user_path(uintptr_t user, char* dst, size_t dst_size)
 {
   if(!user_ptr_ok(user))
   {
+      kernel_debug_output(KDB_LVL_ERROR, "path 0%p is not a user pointer, pid %d",
+              user, current_running->pid);
       *current_running->error_no = EFAULT;
       return -1;
   }
@@ -25,6 +27,8 @@ static int __copy_user_path(uintptr_t user, char* dst, size_t dst_size)
 
   if(len >= dst_size)
   {
+      kernel_debug_output(KDB_LVL_ERROR, "path is %d long, the buffer holds %d, pid %d",
+              len, dst_size, current_running->pid);
       *current_running->error_no = ENAMETOOLONG;
       return -1;
   }
@@ -44,6 +48,10 @@ int __check_file_permission(fs_fd* fd, uint16_t mode) {
         if(!(current_file_stat.mode & mode)) {
             if(current_file_stat.gid != current_running->gid || !(current_file_stat.mode & (mode << 3)))
             {
+                kernel_debug_output(KDB_LVL_ERROR, "permission denied : mode 0%b asked on a 0%b file, uid %d gid %d against %d/%d",
+                        mode, current_file_stat.mode,
+                        current_running->uid, current_running->gid,
+                        current_file_stat.uid, current_file_stat.gid);
                 *current_running->error_no = EACCES;
                 return -1;
             }
@@ -66,9 +74,12 @@ int sys_open(interrupt_regs* stack_frame)
         }
         if(fs_open(name, fd) != 0)
         {
+            kernel_debug_output(KDB_LVL_ERROR, "open : %s not found, pid %d", name, current_running->pid);
             *current_running->error_no = ENOENT;
             return -1;
         }
+
+        kernel_debug_output(KDB_LVL_VERBOSE, "open : %s on fd 3, pid %d", name, current_running->pid);
 
         if(__check_file_permission(fd, 04) != 0)
         {
@@ -76,6 +87,8 @@ int sys_open(interrupt_regs* stack_frame)
         }
         return 3;
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "open called with no running process");
     return -1;
 }
 
@@ -138,8 +151,11 @@ int sys_creat(interrupt_regs* stack_frame)
         {
             return -1;
         }
+        kernel_debug_output(KDB_LVL_VERBOSE, "creat : %s", name);
         return fs_touch(name);
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "creat called with no running process");
     return -1;
 }
 
@@ -152,8 +168,11 @@ int sys_mkdir(interrupt_regs* stack_frame)
         {
             return -1;
         }
+        kernel_debug_output(KDB_LVL_VERBOSE, "mkdir : %s", name);
         return fs_mkdir(name);
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "mkdir called with no running process");
     return -1;
 }
 
@@ -166,8 +185,11 @@ int sys_unlink(interrupt_regs* stack_frame)
         {
             return -1;
         }
+        kernel_debug_output(KDB_LVL_VERBOSE, "unlink : %s", name);
         return fs_unlink(name);
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "unlink called with no running process");
     return -1;
 }
 
@@ -180,8 +202,11 @@ int sys_rmdir(interrupt_regs* stack_frame)
         {
             return -1;
         }
+        kernel_debug_output(KDB_LVL_VERBOSE, "rmdir : %s", name);
         return fs_rmdir(name);
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "rmdir called with no running process");
     return -1;
 }
 

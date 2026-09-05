@@ -3,6 +3,7 @@
 #include "balrog_os/memory/pmm.h"
 #include "balrog_os/memory/vmm.h"
 #include "klib/io/kprint.h"
+#include "balrog_os/debug/debug_output.h"
 #include <stddef.h>
 
 extern page_table* KernelPML4T;
@@ -34,6 +35,7 @@ void* _kstack_find_free_pt(uintptr_t* virt_addr)
         }
     }
 
+    kernel_debug_output(KDB_LVL_ERROR, "kstack : the 128 pdpt entries above 384 are all taken");
     return 0;
 }
 
@@ -42,13 +44,24 @@ void* kstack_alloc()
     uintptr_t vaddr = 0;
     page_table* PT = _kstack_find_free_pt(&vaddr);
 
+    /*  a kernel stack that was never allocated shows up as a double fault
+        with nothing to say where it came from.  */
+    if(!PT)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "kstack : no page table free, no kernel stack");
+        return 0;
+    }
+
     for(size_t i = 511; i > 505; i--)
     {
         PT[i] = (uintptr_t)pmm_calloc();
         PT[i] |= PAGE_PRESENT | PAGE_WRITE;
     }
 
-    return (void*)((KERNEL_OFFSET | vaddr) + (4096 * 511));
+    void* top = (void*)((KERNEL_OFFSET | vaddr) + (4096 * 511));
+    kernel_debug_output(KDB_LVL_VERBOSE, "kstack : 6 pages, top at 0%p", top);
+
+    return top;
 }
 
 void kstack_free(uintptr_t* addr)

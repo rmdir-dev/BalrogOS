@@ -7,6 +7,7 @@
 #include "balrog_os/cpu/rflags/rflag.h"
 #include "balrog_os/cpu/pit/pit.h"
 #include "balrog_os/tasking/process.h"
+#include "balrog_os/debug/debug_output.h"
 #include "klib/io/kprint.h"
 #include <stddef.h>
 
@@ -121,8 +122,11 @@ int init_scheduler()
 uintptr_t push_process(char* name, uintptr_t func, uint8_t mode)
 {
     process* proc = create_process(name, func, mode);
-    
+
     proc_insert_to_ready_queue(proc);
+
+    kernel_debug_output(KDB_LVL_INFO, "scheduler : %s pid %d ready, entry 0%p, ring %d",
+            name, proc->pid, func, mode);
 
     return proc->pid;
 }

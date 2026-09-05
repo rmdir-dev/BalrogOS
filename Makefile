@@ -38,6 +38,7 @@ DONUT_SRC = src/tool_kit/donut/
 SETDEBUG_SRC = src/tool_kit/setdebug/
 SLEEP_SRC = src/tool_kit/sleep/
 TLIB_SRC = src/tool_kit/tool_lib/
+OS_LOG_DIR = logs/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
 	-I./include/posix
@@ -305,6 +306,7 @@ bootloader:
 
 kernel: $(K_OBJECTS)
 	mkdir -p $(OS_BUILD_DIR)
+	mkdir -p $(OS_LOG_DIR)
 	$(NASM) -f elf64 $(NASM_DEBUG_FLAGS) src/bootloader/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
 #	linked as an elf so the symbols survive, the raw image the
 #	bootloader loads is carved out of it right after.
@@ -394,11 +396,12 @@ run:
 #	COM1 goes to a file : stdio is already taken by the monitor. the log is
 #	complete, greppable, and diffable between two runs, which the VGA text
 #	console is not once it starts scrolling.
+	mv $(OS_LOG_DIR)/kernel.log $(OS_LOG_DIR)/kernel.log.bak | true
 	qemu-system-x86_64 -monitor stdio -m 128 -no-reboot -no-shutdown \
 		-drive id=disk,file=build/os/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
 		-device ide-hd,drive=disk,bus=ahci.0 \
-		-serial file:$(OS_BUILD_DIR)/kernel.log
+		-serial file:$(OS_LOG_DIR)/kernel.log
 
 iso:
 	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b Booloader files/
@@ -416,17 +419,18 @@ run_debug:
 #	same machine as `run`, only frozen at reset waiting for gdb on :1234.
 #	the kernel only has an AHCI driver, a positional image lands on the
 #	default IDE controller and no disk is seen at all.
+	mv $(OS_LOG_DIR)/kernel_debug.log $(OS_LOG_DIR)/kernel_debug.log.bak | true
 	qemu-system-x86_64 -s -S -monitor stdio -m 128 -no-reboot -no-shutdown \
 		-drive id=disk,file=build/os/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
 		-device ide-hd,drive=disk,bus=ahci.0 \
-		-serial file:$(OS_BUILD_DIR)/kernel.log
+		-serial file:$(OS_LOG_DIR)/kernel_debug.log
 
 #	attach to the qemu left waiting by make run_debug.
 #	CLion does the same thing through a Remote Debug configuration.
 #	follow the serial log of a running kernel, or read the last one.
 log:
-	@tail -f $(OS_BUILD_DIR)/kernel.log
+	@tail -f $(OS_LOG_DIR)/kernel.log
 
 gdb:
 	$(GDB) $(OS_BUILD_DIR)/kernel.elf \

@@ -62,8 +62,46 @@
  */
 int kdbprint(const char* __restrict format, ...);
 
-#define kernel_debug_output(level, ...) if((__kernel_debug_output(level) || (kdbprint(__VA_ARGS__) || kdbprint("\n"))) && kprint(__VA_ARGS__) && kprint("\n")){}
-#define kernel_debug_output_no_ln(level, ...) if((__kernel_debug_output(level) || kdbprint(__VA_ARGS__)) && kprint(__VA_ARGS__)){}
+#ifdef KDB_DEBUG
+
+#define kernel_debug_output(level, ...) \
+    do { \
+        if(__kernel_debug_output(level)) { \
+            kprint(__VA_ARGS__); \
+            kdbprint("\n"); \
+        } else { \
+            kdbprint(__VA_ARGS__); \
+            kdbprint("\n"); \
+        }\
+    } while(0)
+#define kernel_debug_output_no_ln(level, ...) \
+    do { \
+        if(__kernel_debug_output(level)) { \
+            kprint(__VA_ARGS__); \
+        } else { \
+            kdbprint(__VA_ARGS__); \
+        }\
+    } while(0)
+
+#else
+
+#define kernel_debug_output(level, ...) \
+      do { \
+          if((level) == KDB_LVL_CRITICAL) \
+          { \
+              __kernel_debug_output(level); kprint(__VA_ARGS__); kprint("\n"); \
+          } \
+      } while(0)
+
+#define kernel_debug_output_no_ln(level, ...) \
+      do { \
+          if((level) == KDB_LVL_CRITICAL) \
+          { \
+              __kernel_debug_output(level); kprint(__VA_ARGS__); \
+          } \
+      } while(0)
+
+#endif
 
 int __kernel_debug_output(int level);
 

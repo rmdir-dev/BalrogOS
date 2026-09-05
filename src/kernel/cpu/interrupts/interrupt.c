@@ -92,6 +92,10 @@ interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler hand
 {
     interrupt_handler old = int_handlers[id];
     int_handlers[id] = handler;
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "interrupt : vector %d -> 0%p%s",
+            id, handler, old ? ", replacing a handler" : "");
+
     return old;
 }
 
@@ -115,6 +119,8 @@ interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
         // if not print a message and loop
         kernel_debug_output(KDB_LVL_CRITICAL, "interrupt %d has no handler!\n", stack_frame->interrupt_no);
         kernel_debug_output(KDB_LVL_CRITICAL, "RFLAGS 0%x \n", stack_frame->rflags);
+        kernel_debug_output(KDB_LVL_CRITICAL, "  rip 0%x cs 0%x rsp 0%x ss 0%x",
+                stack_frame->rip, stack_frame->cs, stack_frame->rsp, stack_frame->ss);
 
         while(1){}
     }

@@ -4,6 +4,7 @@
 #include "balrog_os/tasking/tasking.h"
 #include "balrog_os/memory/kheap.h"
 #include "klib/io/kprint.h"
+#include "balrog_os/debug/debug_output.h"
 #include <errno.h>
 #include <string.h>
 
@@ -20,6 +21,8 @@ int sys_chdir(interrupt_regs* stack_frame)
 
     if (!user_ptr_ok((uintptr_t) user_path))
     {
+        kernel_debug_output(KDB_LVL_ERROR, "chdir : 0%p is not a user pointer, pid %d",
+                user_path, current_running->pid);
         *current_running->error_no = EFAULT;
         return -1;
     }
@@ -29,6 +32,7 @@ int sys_chdir(interrupt_regs* stack_frame)
 
     if (!path)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "chdir : no memory for a path of %d bytes", len + 1);
         *current_running->error_no = ENOMEM;
         return -1;
     }
@@ -38,6 +42,7 @@ int sys_chdir(interrupt_regs* stack_frame)
 
     if(fs_open(path, &fd) != 0)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "chdir : %s does not open, pid %d", path, current_running->pid);
         vmfree(path);
         *current_running->error_no = ENOENT;
         return -1;
@@ -45,6 +50,7 @@ int sys_chdir(interrupt_regs* stack_frame)
 
     if(__check_file_permission(&fd, 01) != 0)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "chdir : %s is not executable by pid %d", path, current_running->pid);
         fs_close(&fd);
         vmfree(path);
         return -1;
@@ -52,8 +58,12 @@ int sys_chdir(interrupt_regs* stack_frame)
 
     fs_close(&fd);
     vmfree(current_running->cwd);
+    // TODO : path should always be absolute path.
     current_running->cwd = (char*) vmalloc(len + 1);
     memcpy(current_running->cwd, path, len + 1);
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "chdir : pid %d cwd is now %s", current_running->pid, current_running->cwd);
+
     vmfree(path);
 
     return 0;

@@ -69,7 +69,7 @@ void* vmalloc(size_t size)
     size += sizeof(block_info) * 3; // add 72 bytes to the size to protect against heap corruption
 
     kernel_debug_output(KDB_LVL_VERBOSE, "vm heap c %d start 0%p -> 0%p", alloc_count, start_block, first_free);
-    kernel_debug_output_no_ln(KDB_LVL_VERBOSE, "vmalloc first free block = 0%p | size : %d ", current_block, size);
+    kernel_debug_output(KDB_LVL_VERBOSE, "vmalloc first free block = 0%p | size : %d ", current_block, size);
 
     block_info* prev_block = current_block;
     uint8_t first_block = 1;

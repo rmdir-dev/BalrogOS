@@ -101,8 +101,10 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     /*
     HEAP
     */
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : creating process heap");
     phys = pmm_calloc();
     vmm_set_page(proc->PML4T, PROCESS_HEAP_START, phys, user | PAGE_PRESENT | PAGE_WRITE);
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : process heap created at : 0%p", phys);
 
     proc->brk = PROCESS_HEAP_START + PAGE_SIZE;
     /*
@@ -118,6 +120,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     /*
         SETUP THE STACK
     */
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : setting up process stack");
     proc->stack_top = PROCESS_STACK_TOP - 1;
 
     proc->kernel_stack_top = P2V(phys) + 4095;
@@ -360,6 +363,9 @@ int fork_process(process* proc, interrupt_regs* regs)
     stack->rbx = regs->rbx;
     stack->rax = 0;
 
+    kernel_debug_output(KDB_LVL_INFO, "tasking : fork, pid %d -> pid %d, %s, rip 0%p rsp 0%p",
+            proc->pid, new->pid, new->name, regs->rip, regs->rsp);
+
     return new->pid;
 }
 
@@ -379,6 +385,7 @@ static int __copy_add_args_to_stack(process* proc, char** argv)
 
     if(phys == 0) 
     {
+        kernel_debug_output(KDB_LVL_ERROR, "tasking : no page for the argv of %s", proc->name);
         return -1;
     }
 
@@ -432,7 +439,14 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     fs_fd fd;
     fs_file file;
-    fs_get_file(name, &file, &fd);
+
+    if(fs_get_file(name, &file, &fd) != 0)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "tasking : exec %s, the file system does not have it", name);
+    }
+
+    kernel_debug_output(KDB_LVL_INFO, "tasking : exec %s, %d bytes at 0%p", name, file.size, file.data);
+
     process* proc = create_process(name, file.data, 3);
 
     if(current_running)
@@ -492,8 +506,11 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     if(__copy_add_args_to_stack(proc, argv) != 0)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "tasking : exec %s, the arguments could not be pushed", name);
         return -1;
     }
+
+    kernel_debug_output(KDB_LVL_INFO, "tasking : %s is pid %d, entry 0%p", name, proc->pid, proc->rip);
 
     if(kill == 1)
     {

@@ -199,7 +199,12 @@ static uint32_t __ext2_find_higher_half_free_blocks(fs_device_t* dev)
         fs_data->sb.unalloc_blocks--;
         fs_data->blk_grp_desc.num_of_unalloc_block--;
         __ext2_update_sb_and_blk_desc(dev, fs_data);
+
+        kernel_debug_output(KDB_LVL_VERBOSE, "ext2 : block %d allocated, %d left", block_id, fs_data->sb.unalloc_blocks);
+        return block_id;
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ext2 : no free block left, %d claimed free in the superblock", fs_data->sb.unalloc_blocks);
     return block_id;
 }
 
@@ -215,7 +220,12 @@ static uint32_t __ext2_find_free_blocks(fs_device_t* dev)
         fs_data->sb.unalloc_blocks--;
         fs_data->blk_grp_desc.num_of_unalloc_block--;
         __ext2_update_sb_and_blk_desc(dev, fs_data);
+
+        kernel_debug_output(KDB_LVL_VERBOSE, "ext2 : block in the higher half %d allocated, %d left", block_id, fs_data->sb.unalloc_blocks);
+        return block_id;
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ext2 : no free block in the higher half left, %d claimed free in the superblock", fs_data->sb.unalloc_blocks);
     return block_id;
 }
 
@@ -235,7 +245,12 @@ static uint32_t __ext2_find_free_inode(fs_device_t* dev)
         fs_data->sb.unalloc_inodes--;
         fs_data->blk_grp_desc.num_of_unalloc_inode--;
         __ext2_update_sb_and_blk_desc(dev, fs_data);
+
+        kernel_debug_output(KDB_LVL_VERBOSE, "ext2 : inode %d allocated, %d left", block_id, fs_data->sb.unalloc_inodes);
+        return block_id;
     }
+
+    kernel_debug_output(KDB_LVL_ERROR, "ext2 : no free inode left, %d claimed free in the superblock", fs_data->sb.unalloc_inodes);
     return block_id;
 }
 
@@ -1224,6 +1239,8 @@ int ext2_probe(fs_device_t* dev)
 
     if(sb->ext2_signature != EXT2_SIGNATURE)
     {
+        kernel_debug_output(KDB_LVL_CRITICAL, "ext2 : signature 0%x at 0%p is not 0%x",
+                sb->ext2_signature, sb, EXT2_SIGNATURE);
         KERNEL_LOG_FAIL("not ext 2 0%p 0%x", sb, &sb->ext2_signature);
         vmfree(sb);
         while(1){}
@@ -1252,6 +1269,16 @@ int ext2_probe(fs_device_t* dev)
 
     memcpy(&fs_data->blk_grp_desc, block_desc, sizeof(ext2_block_group_descriptor));
     vmfree(block_desc);
+
+    kernel_debug_output(KDB_LVL_INFO, "ext2 : block size %d, %d sectors a block, group descriptor at block %d",
+            fs_data->block_size, fs_data->sec_per_block, block_grp_loc);
+    kernel_debug_output(KDB_LVL_INFO, "ext2 : %d blocks, %d free, %d inodes, %d free",
+            fs_data->sb.blocks, fs_data->sb.unalloc_blocks,
+            fs_data->sb.inodes, fs_data->sb.unalloc_inodes);
+    kernel_debug_output(KDB_LVL_INFO, "ext2 : block usage bitmap at %d, inode usage bitmap at %d, inode table at %d",
+            fs_data->blk_grp_desc.block_addr_of_block_usage_bitmap,
+            fs_data->blk_grp_desc.block_addr_of_inode_usage_bitmap,
+            fs_data->blk_grp_desc.block_addr_of_inode_table);
 
     dev->fs = vmalloc(sizeof(file_system_t));
     dev->fs->probe = ext2_probe;

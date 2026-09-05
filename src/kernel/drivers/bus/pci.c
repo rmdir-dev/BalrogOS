@@ -49,6 +49,18 @@ static void __pci_check_function(pci_t bus)
     node->value = device;
     KERNEL_LOG_OK("PCI device: %x vendor: %x class: %x subclass: %x progif: %x",
         device->device_id, device->vendor_id, device->class, device->subclass, device->prog_if);
+
+    /*  the bars and the irq line are what a driver needs to find its
+        registers. the day a controller sits somewhere unexpected,
+        this is the line that says so.  */
+    kernel_debug_output(KDB_LVL_VERBOSE, "pci %d:%d.%d bar 0%x 0%x 0%x 0%x 0%x 0%x",
+        device->bus.bus, device->bus.slot, device->bus.func,
+        device->bar[0], device->bar[1], device->bar[2],
+        device->bar[3], device->bar[4], device->bar[5]);
+    kernel_debug_output(KDB_LVL_VERBOSE, "pci %d:%d.%d irq pin %d line %d, command 0%x status 0%x, header 0%x",
+        device->bus.bus, device->bus.slot, device->bus.func,
+        device->interrupt_pin, device->interrupt_line,
+        device->command, device->status, device->header_type);
     // if class is a PCI to PCI bridge
     if((device->class == PCI_CLASS_BRIDGE) && (device->subclass == PCI_SUBCLASS_PCI_TO_PCI_BRIDGE))
     {
@@ -146,6 +158,11 @@ int init_pci()
 {
     // Check if the PCI bus does exist.
     out_dword(PCI_CONFIG_ADDRESS, 0x80000000);
+    if(in_dword(PCI_CONFIG_ADDRESS) != 0x80000000)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "pci : no configuration space at 0%x, no bus to walk", PCI_CONFIG_ADDRESS);
+    }
+
     if(in_dword(PCI_CONFIG_ADDRESS) == 0x80000000)
     {
         for(int i = 0; i < PCI_MAX_CLASS; i++)
@@ -157,11 +174,13 @@ int init_pci()
         if((pci_read_byte(pci, PCI_B_HEADER_TYPE) & PCI_MULTIFUNCTIONAL_DEVICE) == 0)
         {
             /* Single PCI host controller */
+            kernel_debug_output(KDB_LVL_INFO, "pci : single host controller");
             __pci_probe_bus(pci);
 
         } else
         {
             /* Multiple PCI host controllers */
+            kernel_debug_output(KDB_LVL_INFO, "pci : multiple host controllers");
             for(uint8_t function = 0; function < 8; function++)
             {
                 pci.func = function;

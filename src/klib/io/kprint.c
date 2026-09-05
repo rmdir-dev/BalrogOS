@@ -7,7 +7,7 @@
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/drivers/serial/serial.h"
 
-static size_t k_int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
+static size_t __int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
 {
     size_t size = 0;
     size_t pushed = 0;
@@ -50,29 +50,30 @@ static size_t k_int_to_string(unsigned long val, uint8_t base, char* str, uint8_
     return size;
 }
 
-static int k_print_string(const char* str, size_t size)
+static int __print_string(const char* str, size_t size, int debug_only)
 {
-    vga_write(str, size);
+    if (debug_only == 0)
+    {
+        vga_write(str, size);
+    }
+
     KERNEL_DEBUG_EXEC({
         serial_write(str, size);
     });
     return 1;
 }
 
-static int k_print_data(const char* str, size_t size, size_t maxsize)
+static int __print_data(const char* str, size_t size, size_t maxsize, int debug_only)
 {
     if(maxsize < size)
     {
         return 0;
     }
-    return k_print_string(str, size);
+    return __print_string(str, size, debug_only);
 }
 
-int kprint(const char* __restrict format, ...)
+int __kernel_print(const char* format, va_list parameters, int debug_only)
 {
-    va_list parameters;
-    va_start(parameters, format);
-
     int written = 0;
 
     size_t index = 0;
@@ -80,7 +81,7 @@ int kprint(const char* __restrict format, ...)
 
     while(format[index] != 0)
     {
-        size_t maxsize = INT_MAX - written; 
+        size_t maxsize = INT_MAX - written;
         size_t length = 0;
 
         if(format[index] != '%')
@@ -90,8 +91,8 @@ int kprint(const char* __restrict format, ...)
                 index++;
                 length++;
             }
-            k_print_data(&format[base_index], length, maxsize);
-        } else 
+            __print_data(&format[base_index], length, maxsize, debug_only);
+        } else
         {
             index++;
 
@@ -100,10 +101,10 @@ int kprint(const char* __restrict format, ...)
             case 'b':
                 {
                     long nbr = va_arg(parameters, long);
-                    kputchar('b');
+                    __print_string("b", 1, debug_only);
                     char str[128];
-                    length = k_int_to_string(nbr, 2, str, 0);
-                    k_print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 2, str, 0);
+                    __print_data(str, length, maxsize, debug_only);
                     index++;
                 }
                 break;
@@ -111,8 +112,8 @@ int kprint(const char* __restrict format, ...)
                 {
                     long nbr = va_arg(parameters, long);
                     char str[128];
-                    length = k_int_to_string(nbr, 10, str, 1);
-                    k_print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 10, str, 1);
+                    __print_data(str, length, maxsize, debug_only);
                     index++;
                 }
                 break;
@@ -120,18 +121,18 @@ int kprint(const char* __restrict format, ...)
                 {
                     long nbr = va_arg(parameters, unsigned long);
                     char str[128];
-                    length = k_int_to_string(nbr, 10, str, 0);
-                    k_print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 10, str, 0);
+                    __print_data(str, length, maxsize, debug_only);
                     index++;
                 }
                 break;
             case 'x': case 'p':
                 {
                     unsigned long nbr = va_arg(parameters, unsigned long);
-                    kputchar('x');
+                    __print_string("x", 1, debug_only);
                     char str[128];
-                    length = k_int_to_string(nbr, 16, str, 0);
-                    k_print_data(str, length, maxsize);
+                    length = __int_to_string(nbr, 16, str, 0);
+                    __print_data(str, length, maxsize, debug_only);
                     index++;
                 }
                 break;
@@ -139,21 +140,21 @@ int kprint(const char* __restrict format, ...)
             case 'c':
                 length = 1;
                 char c = (char) va_arg(parameters, int);
-                k_print_data(&c, 1, maxsize);
+                __print_data(&c, 1, maxsize, debug_only);
                 index++;
                 break;
             case 's':
                 {
                     const char* str = va_arg(parameters, const char*);
                     length = strlen(str);
-                    k_print_data(str, length, maxsize);
+                    __print_data(str, length, maxsize, debug_only);
                     index++;
                 }
                 break;
-            
+
             default:
                 length = 1;
-                k_print_string("%", length);
+                __print_string("%", length, debug_only);
                 break;
             }
         }
@@ -161,6 +162,27 @@ int kprint(const char* __restrict format, ...)
         written += length;
     }
 
-    va_end(parameters);
     return written;
+}
+
+int kdbprint(const char* __restrict format, ...)
+{
+    va_list parameters;
+    va_start(parameters, format);
+    __kernel_print(format, parameters, 1);
+    va_end(parameters);
+
+    // Must return 0, else it breaks debug_output.h macros !
+    return 0;
+}
+
+int kprint(const char* __restrict format, ...)
+{
+    va_list parameters;
+    va_start(parameters, format);
+
+    int ret = __kernel_print(format, parameters, 0);
+    va_end(parameters);
+
+    return ret;
 }

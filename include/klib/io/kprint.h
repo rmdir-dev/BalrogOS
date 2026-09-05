@@ -16,11 +16,3 @@ int kprint(const char* __restrict format, ...);
  * @return int 
  */
 int kputs(const char* str);
-
-/**
- * @brief 
- * 
- * @param c 
- * @return int 
- */
-int kputchar(int c);

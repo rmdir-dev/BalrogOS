@@ -8,6 +8,13 @@ void queue_init(queue_t* queue)
     The dummy node will be the only node with a next value at NULL.
     */
     queue_node_t* tmp = kmalloc(sizeof(queue_node_t));
+
+    if(!tmp)
+    {
+        queue->head = queue->tail = NULL;
+        return;
+    }
+
     tmp->next = NULL;
     queue->head = queue->tail = tmp;
     kmutex_init(&queue->head_lock);
@@ -17,7 +24,15 @@ void queue_init(queue_t* queue)
 void queue_enqueue(queue_t* queue, uint64_t value)
 {
     queue_node_t* node = kmalloc(sizeof(queue_node_t));
-    
+
+    /*
+    check if we receive a valid address
+    */
+    if(!node || !queue->tail)
+    {
+        return;
+    }
+
     node->value = value;
     node->next = NULL;
 
@@ -29,11 +44,16 @@ void queue_enqueue(queue_t* queue, uint64_t value)
 
 int queue_dequeue(queue_t* queue, uint64_t* value)
 {
+    if(!queue->head)
+    {
+        return -1;
+    }
+
     kmutex_lock(&queue->head_lock);
     queue_node_t* tmp = queue->head;
     queue_node_t* new_head = tmp->next;
 
-    /* 
+    /*
     if new_head is null then it is the dummy node.
     */
     if(!new_head)
@@ -63,7 +83,7 @@ int queue_empty(queue_t* queue)
     Check if the next element is the dummy head.
     If it is then the queue is empty.
     */
-    if(queue->head->next)
+    if(queue->head && queue->head->next)
     {
         return 0;
     }

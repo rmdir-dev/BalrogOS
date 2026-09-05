@@ -7,25 +7,25 @@ ADDRESSES
 
 /*
 Balrog Memory Map :
-    Start			    End			        Size		Use
+    Start                           End                         Size            Use
     -----------------------------------------------------------------------
-    0000000000000000	ffffff7fffffffff	 255.5TB	user
-    ffffff8000000000	ffffff8000017fff	 95KB		kernel stack, code
-    ffffff8000018000	ffffff800009fbff	 542KB		kernel logical heap
-    ffffff800009fc00	ffffff80000fffff	 385KB		RESERVED
-    ffffff8000100000	ffffff9fffffffff	 128GB		MEMORY (real size : 128GiB - 1MiB)
-    ffffffa000000000    ffffffbfffffffff     128GB      Kernel open files cache
-    ffffffc000000000	ffffffdfffffffff	 128GB		Kernel virtual heap
-    ffffffe000000000	ffffffffffffffff	 128GB		Process kernel stack space
+    0000000000000000    ffffff7fffffffff         255.5TiB       user
+    ffffff8000000000    ffffff8000017fff         95KiB          kernel stack, code
+    ffffff8000018000    ffffff800009fbff         542KiB         kernel logical heap
+    ffffff800009fc00    ffffff80000fffff         385KiB         RESERVED
+    ffffff8000100000    ffffff9fffffffff         128GiB         MEMORY (real size : 128GiB - 1MiB)
+    ffffffa000000000    ffffffbfffffffff         128GiB         Kernel open files cache
+    ffffffc000000000    ffffffdfffffffff         128GiB         Kernel virtual heap
+    ffffffe000000000    ffffffffffffffff         128GiB         Process kernel stack space
 
 Balrog Process memory map :
-    Start			    End			        Size		Use
+    Start                           End                         Size            Use
     -----------------------------------------------------------------------
-    0000000000400000	000055c0603d2fff	 85TB	    code
-    000055c0603d3000	00007ffd0d812000	 42TB		heap
+    0000000000400000    000055c0603d2fff         85TiB      code
+    000055c0603d3000    00007ffd0d812000         42TiB      heap
     2MB buffer
-    00007ffd0da12000	00007ffd0e212000	 8MB		stack
-    00007ffd0da13000	00007ffd0e213fff	 4KB		proc meta data (argvs)
+    00007ffd0da12000    00007ffd0e212000         8MiB       stack
+    00007ffd0da13000    00007ffd0e213fff         4KiB       proc meta data (argvs)
 
 Max Memory size :
     128GiB
@@ -47,6 +47,19 @@ addr = 0x101000
 = 0xFFFFFF8000101000
 */
 #define P2V(addr) ((uintptr_t)addr | KERNEL_OFFSET)
+
+/*
+P2V is an or, not an addition, so it only holds while the address fits in the
+MEMORY window of the map above.
+
+addr = 0x2000000000
+0x2000000000 | 0xFFFFFF8000000000
+= 0xFFFFFFA000000000
+the open files cache, not memory
+
+A bar or a framebuffer up there needs a window of its own.
+*/
+#define P2V_MAX 0x2000000000ULL
 
 /*
 ----------------------------------------------------------------------------------

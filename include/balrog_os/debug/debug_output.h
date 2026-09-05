@@ -54,8 +54,16 @@
 #define KDB_DEFAULT_LVL 3
 #endif
 
-#define kernel_debug_output(level, ...) if(__kernel_debug_output(level) && kprint(__VA_ARGS__) && kprint("\n")){}
-#define kernel_debug_output_no_ln(level, ...) if(__kernel_debug_output(level) && kprint(__VA_ARGS__)){}
+/**
+ * @brief print only in serial, should only be used in
+ * @param format
+ * @param ...
+ * @return
+ */
+int kdbprint(const char* __restrict format, ...);
+
+#define kernel_debug_output(level, ...) if((__kernel_debug_output(level) || (kdbprint(__VA_ARGS__) || kdbprint("\n"))) && kprint(__VA_ARGS__) && kprint("\n")){}
+#define kernel_debug_output_no_ln(level, ...) if((__kernel_debug_output(level) || kdbprint(__VA_ARGS__)) && kprint(__VA_ARGS__)){}
 
 int __kernel_debug_output(int level);
 

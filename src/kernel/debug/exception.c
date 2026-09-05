@@ -41,7 +41,6 @@ static interrupt_regs* __general_protection_fault_handler(interrupt_regs* stack_
 
     uint64_t error = stack_frame->error_code;
 
-    kernel_debug_output_no_ln(KDB_LVL_CRITICAL, "");
     // Doc : https://wiki.osdev.org/Exceptions#General_Protection_Fault
     // Error code: The General Protection Fault sets an error code, which is the segment selector index
     // when the exception is segment related. Otherwise, 0.

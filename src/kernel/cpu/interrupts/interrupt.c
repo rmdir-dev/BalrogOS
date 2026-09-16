@@ -7,6 +7,7 @@
 extern void _set_idt();
 extern void _load_idt(void* idt);
 extern void* isr_table[];
+uint8_t interrupt_enabled = 0; // they are off when entering the kernel.
 
 struct IDT_Gates
 {

@@ -137,6 +137,8 @@ interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler hand
  */
 void set_interrupt_flag(uint32_t id, uint8_t flag);
 
-#define disable_interrupt() asm volatile("cli")
+extern uint8_t interrupt_enabled;
 
-#define enable_interrupt() asm volatile("sti")
+#define disable_interrupt() asm volatile("cli"); interrupt_enabled = 0;
+
+#define enable_interrupt() asm volatile("sti"); interrupt_enabled = 1;

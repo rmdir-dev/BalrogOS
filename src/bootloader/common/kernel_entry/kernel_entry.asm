@@ -130,6 +130,8 @@ _KernelEntry:
                                 ; mov only replaces the low word, and the map
                                 ; would be read 0x90000 too high.
 
+    mov rsp, kernel_stack_top   ; move rsp to kernel stack top
+
     call kernel_main
     jmp $
     sti                         ; enable interrupt
@@ -144,3 +146,10 @@ MEMORY_INFO:
 
 MEMORY_ENTRIES:
     dw 0x0000
+
+section .bss
+;   64KiB of stack for the kernel.
+align 16
+kernel_stack_bottom:
+    resb 65536
+kernel_stack_top:

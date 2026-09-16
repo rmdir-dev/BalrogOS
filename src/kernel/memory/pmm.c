@@ -175,6 +175,14 @@ int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
             }
         }
 
+        /*
+         * Skip the last entry except if it is type 1 (usable).
+         * source : https://wiki.osdev.org/Memory_Map_(x86)
+         *
+         * The types we get here, and what they mean :
+         * 1 usable, 2 reserved, 3 acpi reclaimable, 4 acpi nvs, 5 bad memory.
+         * source : https://wiki.osdev.org/Detecting_Memory_(x86)
+         */
         if(i != *SMAPsize - 1 || SMAPinfo[i].Type == 1)
         {
             for(void* p = start; (p + PAGE_SIZE) < end; p += PAGE_SIZE)

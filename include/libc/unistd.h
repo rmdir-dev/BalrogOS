@@ -170,6 +170,14 @@ int chdir(char* dir);
  */
 int sleep(size_t ms);
 
+
+/**
+ * @brief Reboot or shutdown system
+ * @param option BALROG_REBOOT_POWER_OFF | BALROG_REBOOT_RESTART
+ * @return
+ */
+int reboot(int option);
+
 #ifdef __cplusplus
 }
 #endif

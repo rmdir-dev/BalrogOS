@@ -22,6 +22,7 @@
 #include "balrog_os/user/user_manager.h"
 #include "balrog_os/cpu/fpu/fpu.h"
 #include "balrog_os/drivers/serial/serial.h"
+#include "balrog_os/cpu/acpi/acpi.h"
 
 /* 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -115,6 +116,9 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    PROCESS        */
     KERNEL_LOG_ASSERT(init_process(), "Process table : ", "done", "not initialized");
+
+    /*    ACPI          */
+    KERNEL_LOG_ASSERT(init_acpi(), "ACPI : ", "done", "not available");
 
     /*    KEYBOARD       */
     KERNEL_LOG_ASSERT(init_keyboard(), "Keyboard : ", "done", "not initialized");

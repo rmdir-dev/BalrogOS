@@ -26,6 +26,13 @@ To build the toolkit (shell, ls, ...)
 make tools
 ```
 
+For UEFI :
+
+```shell
+make kernel esp                                                                                                                                                          
+make run_uefi
+```
+
 # Run instruction 
 
 ```shell
@@ -47,9 +54,10 @@ Then connect the remote debugger with the following configuration :
 
 # Todo list :
 
-* RAMFS
+* RAMFS : done
+* shutdown : done
+  * should be ISO exportable to run on real hardware after this. (done BIOS TODO : UEFI -currently not working on test laptop 2-)
 * USB driver
-  * should be ISO exportable to run on real hardware after this.
 * USB persistance
 * signal
 * improve shell (besh add pipe/redirect/signal)

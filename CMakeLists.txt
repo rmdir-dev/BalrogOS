@@ -31,10 +31,15 @@ set(C_POSIX_SRC		src/posix)
 set(SHARED_SRC		src/shared)
 set(TOOLKIT_SRC		src/tool_kit)
 
+#	lai is a git submodule, the AML interpreter we evaluate _PTS with.
+#	the directory is empty until git submodule update --init has run.
+set(LAI_SRC			lai)
+
 include_directories(
 	${CMAKE_SOURCE_DIR}/include
 	${CMAKE_SOURCE_DIR}/include/libc
 	${CMAKE_SOURCE_DIR}/include/posix
+	${CMAKE_SOURCE_DIR}/${LAI_SRC}/include
 )
 
 ########################################################
@@ -73,6 +78,11 @@ file(GLOB_RECURSE SHARED_SRCS	CONFIGURE_DEPENDS ${SHARED_SRC}/*.c)
 # Kernel
 file(GLOB_RECURSE C_SRCS		CONFIGURE_DEPENDS ${KERNEL_SRC}/*.c ${KLIB_SRC}/*.c)
 
+# lai, third party. core is the interpreter itself, helpers holds
+# lai_enter_sleep, drivers holds the embedded controller _PTS talks to.
+file(GLOB_RECURSE LAI_SRCS		CONFIGURE_DEPENDS
+	${LAI_SRC}/core/*.c ${LAI_SRC}/helpers/*.c ${LAI_SRC}/drivers/*.c)
+
 # libc
 file(GLOB_RECURSE LIBC_SRCS		CONFIGURE_DEPENDS ${C_LIB_SRC}/*.c)
 
@@ -88,8 +98,18 @@ file(GLOB_RECURSE ALL_HEADERS	CONFIGURE_DEPENDS include/*.h)
 ########################################################
 #	INDEXING TARGETS
 ########################################################
-add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
-add_library(libc		OBJECT ${LIBC_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
+add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS}
+		src/kernel/syscall/system_management/sys_reboot.c
+		include/balrog/system/reboot.h
+		src/tool_kit/shutdown/shutdown.c)
+
+#	its own target, so we don't mix its warnings with ours. CLion still
+#	indexes lai_enter_sleep and the rest of it.
+if(LAI_SRCS)
+	add_library(lai		OBJECT ${LAI_SRCS})
+endif()
+add_library(libc		OBJECT ${LIBC_SRCS} ${SHARED_SRCS} ${ALL_HEADERS}
+		src/libc/unistd/reboot.c)
 add_library(libpthread	OBJECT ${PTHREADC_SRCS})
 add_library(tools		OBJECT ${TOOLS_SRCS})
 

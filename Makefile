@@ -19,9 +19,9 @@ DEFINES 		= -DKDB_DEBUG -DKDB_DEFAULT_LVL=3 -DKDB_START_SEQ=0 -D__BALROG_VERSION
 STAGE2_LBA 		= 1
 PART1_LBA 		= 2048
 KERNEL_LBA 		= 2048
-KERNEL_SECTORS 	= 256
-RAMFS_LBA 		= 2304
-PART1_SECTORS 	= 16640
+KERNEL_SECTORS 	= 768
+RAMFS_LBA 		= 2816
+PART1_SECTORS 	= 17152
 OS_IMAGE 		= build/os/os-image
 
 ########################################################
@@ -55,11 +55,20 @@ WHOAMI_SRC = src/tool_kit/whoami/
 DONUT_SRC = src/tool_kit/donut/
 SETDEBUG_SRC = src/tool_kit/setdebug/
 SLEEP_SRC = src/tool_kit/sleep/
+SHUTDOWN_SRC = src/tool_kit/shutdown/
 TLIB_SRC = src/tool_kit/tool_lib/
+
+#	lai is a git submodule, an AML interpreter. we need it to evaluate the
+#	_PTS method the firmware wants before a shutdown. _PTS is code and not
+#	data, so we cannot read it out of the DSDT the way we read _S5_.
+#	run  git submodule update --init  if the directory is empty.
+LAI_SRC = lai
+
 OS_LOG_DIR = logs/
 INCLUDE_DIR = -I./include\
 	-I./include/libc\
-	-I./include/posix
+	-I./include/posix\
+	-I./$(LAI_SRC)/include
 
 ########################################################
 #	SOURCE FILES
@@ -69,6 +78,10 @@ SHARED_SRCS += $(shell find $(SHARED_SRC) -name *.c)
 
 # Kernel
 C_SRCS += $(shell find $(KERNEL_SRC) -name *.c)
+
+#	core is the interpreter itself, helpers holds lai_enter_sleep, and
+#	drivers holds the embedded controller that _PTS talks to on a laptop.
+LAI_SRCS += $(shell find $(LAI_SRC)/core $(LAI_SRC)/helpers $(LAI_SRC)/drivers -name *.c 2>/dev/null)
 ASM_SRCS += $(shell find $(KERNEL_SRC) -name *.asm)
 GNU_ASM_SRCS += $(shell find $(KERNEL_SRC) -name *.S)
 C_SRCS += $(shell find $(KLIB_SRC) -name *.c)
@@ -95,6 +108,7 @@ WHOAMI_SRCS = $(shell find $(WHOAMI_SRC) -name *.c)
 DONUT_SRCS = $(shell find $(DONUT_SRC) -name *.c)
 SETDEBUG_SRCS = $(shell find $(SETDEBUG_SRC) -name *.c)
 SLEEP_SRCS = $(shell find $(SLEEP_SRC) -name *.c)
+SHUTDOWN_SRCS = $(shell find $(SHUTDOWN_SRC) -name *.c)
 PWD_SRCS = $(shell find $(PWD_SRC) -name *.c)
 TOUCH_SRCS = $(shell find $(TOUCH_SRC) -name *.c)
 MKDIR_SRCS = $(shell find $(MKDIR_SRC) -name *.c)
@@ -112,7 +126,9 @@ TLIB_SRCS = $(shell find $(TLIB_SRC) -name *.c)
 COBJECTS64		:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(C_SRCS))
 ASMOBJECT64		:= $(patsubst %.asm, $(TEMP_DIR)/obj64/%.asm.o, $(ASM_SRCS))
 GNU_ASMOBJECT64	:= $(patsubst %.S, $(TEMP_DIR)/obj64/%.S.o, $(GNU_ASM_SRCS))
-ALL_KOBJECTS64	:= $(sort $(COBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64))
+LAI_OBJECTS64	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(LAI_SRCS))
+
+ALL_KOBJECTS64	:= $(sort $(COBJECTS64) $(ASMOBJECT64) $(GNU_ASMOBJECT64) $(LAI_OBJECTS64))
 
 # libc
 LIBC_OBJECTS64 	:= $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(LIBC_SRCS))
@@ -134,6 +150,7 @@ ALL_WHOAMI_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(WHOAMI_SRCS))
 ALL_DONUT_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(DONUT_SRCS))
 ALL_SETDEBUG_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SETDEBUG_SRCS))
 ALL_SLEEP_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SLEEP_SRCS))
+ALL_SHUTDOWN_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SHUTDOWN_SRCS))
 ALL_PWD_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(PWD_SRCS))
 ALL_TOUCH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(TOUCH_SRCS))
 ALL_MKDIR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(MKDIR_SRCS))
@@ -208,6 +225,12 @@ GDB = gdb
 #	targets do not depend on how the shell is set up.
 #	making a filesystem inside a regular file needs no privilege, only the
 #	`mount -o loop` further down does.
+#	OVMF, the free uefi firmware, for run_uefi. debian puts it there.
+OVMF_CODE = /usr/share/OVMF/OVMF_CODE_4M.fd
+OVMF_VARS = /usr/share/OVMF/OVMF_VARS_4M.fd
+
+NM = $(TOOLBOX_BIN)/$(TOOLBOX_TARGET)-nm
+
 MKE2FS = /sbin/mke2fs
 DUMPE2FS = /sbin/dumpe2fs
 DEBUGFS_BIN = /sbin/debugfs
@@ -259,12 +282,15 @@ LD_OPTIMIZATION = -flto
 ########################################################
 #	GENERATE OBJECT FILES
 ########################################################
-K_OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o)
+#	LAI_SRCS is here and not only in ALL_KOBJECTS64. the kernel target
+#	depends on this list, so this is what gets compiled. ALL_KOBJECTS64
+#	only names the objects we give to the linker.
+K_OBJECTS = $(C_SRCS:.c=.o) $(ASM_SRCS:.asm=.asm.o) $(GNU_ASM_SRCS:.S=.S.o) $(LAI_SRCS:.c=.o)
 LIBC_OBJECTS = $(LIBC_SRCS:.c=.o)
 LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) \
 			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) \
-			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o) $(SLEEP_SRCS:.c=.o) \
+			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o) $(SLEEP_SRCS:.c=.o) $(SHUTDOWN_SRCS:.c=.o) \
 			$(TOUCH_SRCS:.c=.o) $(MKDIR_SRCS:.c=.o) $(RM_SRCS:.c=.o) $(RMDIR_SRCS:.c=.o)
 
 install_toolbox: $(TOOLBOX_LD) $(TOOLBOX_CC) $(TOOLBOX_NASM)
@@ -281,7 +307,8 @@ $(TOOLBOX_LD):
 	[ -f $(TOOLBOX_SRC)/build-binutils/config.status ] || \
 		(cd $(TOOLBOX_SRC)/build-binutils && ../binutils-$(BINUTILS_VERSION)/configure \
 			--target=$(TOOLBOX_TARGET) --prefix=$(TOOLBOX_DIR) \
-			--with-sysroot --disable-nls --disable-werror)
+			--with-sysroot --disable-nls --disable-werror \
+			--enable-targets=x86_64-pep)
 	$(MAKE) -C $(TOOLBOX_SRC)/build-binutils -j$(TOOLBOX_JOBS)
 	$(MAKE) -C $(TOOLBOX_SRC)/build-binutils install
 
@@ -360,6 +387,10 @@ bootloader:
 	$(NASM) -fbin src/bootloader/bios/stage2.asm -o $(OS_BUILD_DIR)/Stage2
 
 kernel: $(K_OBJECTS)
+	@if [ -z "$(LAI_SRCS)" ]; then \
+		echo "[FAILED] $(LAI_SRC) is empty, run : git submodule update --init"; \
+		exit 1; \
+	fi
 	mkdir -p $(OS_BUILD_DIR)
 	mkdir -p $(OS_LOG_DIR)
 	$(NASM) -f elf64 $(NASM_DEBUG_FLAGS) src/bootloader/common/kernel_entry/kernel_entry.asm -o build/temp/kernel_entry.o
@@ -425,6 +456,7 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/whoami $(ALL_WHOAMI_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/donut $(ALL_DONUT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sleep $(ALL_SLEEP_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/shutdown $(ALL_SHUTDOWN_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(ROOT_BUILD_DIR)/setdebug $(ALL_SETDEBUG_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	#$(PSXC_OBJECTS64)
 	sudo mount -o loop files/filesys.dd files/root/

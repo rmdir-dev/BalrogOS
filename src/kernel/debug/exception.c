@@ -90,7 +90,7 @@ static interrupt_regs* __page_fault_handler(interrupt_regs* stack_frame)
     // protection fault in user mode on forked process
     // Currently lazy fork TODO : COW (Copy On Write) fork.
     if(current_running && (stack_frame->error_code & 0x04 || stack_frame->error_code & 0x01) && current_running->forked_memory) {
-        kernel_debug_output(KDB_LVL_INFO, "forked process memory protection fault -> copy parent memory \n");
+        kernel_debug_output(KDB_LVL_INFO, "cow fault at 0%p, copying the parent memory", address);
         uintptr_t fault_base_address = address & 0xfffffffffffff000;
         copy_forked_process_memory(current_running, fault_base_address);
         return stack_frame;

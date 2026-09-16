@@ -2,8 +2,11 @@
 #include "balrog_os/cpu/ports/ports.h"
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include "balrog_os/cpu/interrupts/irq.h"
+#include "balrog_os/cpu/apic/apic.h"
 #include "balrog_os/tasking/proc_sleep.h"
+#include "balrog_os/debug/debug_output.h"
 #include <stddef.h>
+
 
 #define FREQUENCY 100
 static unsigned long timer_ticks = 0;
@@ -33,20 +36,39 @@ void _init_clock_frequency(uint32_t frequency) {
     // Send the low then the high byte to the PIT
     out_byte(0x40, low);
     out_byte(0x40, high);
+
+    kernel_debug_output(KDB_LVL_INFO, "pit : channel 0 at %d Hz, divisor %d, mode 3", frequency, divisor);
 }
 
-interrupt_regs* irq0_handler(interrupt_regs* stack_frame) {
+static void __on_tick()
+{
     if(++timer_ms == FREQUENCY) {
         timer_ms = 0;
         timer_ticks++;
     }
 
-    irq_end(INT_IRQ_0);
-
     wake_up(timer_ticks, timer_ms);
     if(scheduler_event != NULL) {
         scheduler_event(timer_ticks, timer_ms);
     }
+}
+
+void timer_set_event(pit_event event)
+{
+    scheduler_event = event;
+}
+
+interrupt_regs* timer_lvt_handler(interrupt_regs* stack_frame)
+{
+    lapic_eoi();
+    __on_tick();
+
+    return stack_frame;
+}
+
+interrupt_regs* irq0_handler(interrupt_regs* stack_frame) {
+    irq_end(INT_IRQ_0);
+    __on_tick();
 
     return stack_frame;
 }
@@ -68,9 +90,10 @@ int pit_compare(timespec* time) {
 
 void init_pit(pit_event scheduler)
 {
+    kernel_debug_output(KDB_LVL_INFO, "pit : driving the scheduler on irq %d", INT_IRQ_0);
     irq_pic_toggle_mask_bit(INT_IRQ_0);
     register_interrupt_handler(INT_IRQ_0, &irq0_handler);
-    scheduler_event = scheduler;
+    timer_set_event(scheduler);
 
     _init_clock_frequency(FREQUENCY);
 }

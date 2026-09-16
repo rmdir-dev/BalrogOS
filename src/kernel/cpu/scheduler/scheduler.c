@@ -8,6 +8,7 @@
 #include "balrog_os/cpu/pit/pit.h"
 #include "balrog_os/tasking/process.h"
 #include "balrog_os/debug/debug_output.h"
+#include "balrog_os/cpu/apic/apic.h"
 #include "klib/io/kprint.h"
 #include <stddef.h>
 
@@ -35,7 +36,6 @@ static void __exec()
     asm volatile("pop %r8");
     asm volatile("pop %rdi");
     asm volatile("pop %rsi");
-    asm volatile("out %%al, %%dx": :"d"(0x20), "a"(0x20));
     asm volatile("pop %rdx");
     asm volatile("pop %rcx");
     asm volatile("pop %rbx");
@@ -86,7 +86,6 @@ static void __round_robin()
     asm volatile("pop %r8");
     asm volatile("pop %rdi");
     asm volatile("pop %rsi");
-    asm volatile("out %%al, %%dx": :"d"(0x20), "a"(0x20));
     asm volatile("pop %rdx");
     asm volatile("pop %rcx");
     asm volatile("pop %rbx");
@@ -97,6 +96,13 @@ void schedule(size_t tick, uint16_t ms)
 {
     if(rdy_proc_list.head == NULL)
     {
+        static int said = 0;
+
+        if(!said)
+        {
+            said = 1;
+            KERNEL_LOG_FAIL("scheduler : the ready list is empty, nothing left to run");
+        }
         return;
     }
 
@@ -110,8 +116,16 @@ void schedule(size_t tick, uint16_t ms)
     }
 }
 
+/*  the same hundred ticks a second the pit was programmed for  */
+#define SCHEDULER_HZ 100
+
 int init_scheduler()
 {
+    if(lapic_timer_init(SCHEDULER_HZ, &schedule) == 0)
+    {
+        return 0;
+    }
+
     // TODO set the pit speed faster to 10 000 or more
     init_pit(&schedule);
 

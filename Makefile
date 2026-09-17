@@ -321,6 +321,9 @@ TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS
 		bootloader kernel h_readble_kernel_asm os tools ramfs \
 		sync_rootfs mount mount_os_dd umount uefi esp iso \
 		run run_uefi run_debug run_debug_efi run_uefi_q35 \
+		release release_uefi run_vbox run_vbox_uefi \
+		run_vbox_debug run_vbox_uefi_debug \
+		run_vbox_usb_uefi run_vbox_usb_uefi_debug \
 		release release_uefi debug log gdb clean \
 		build build_debug build_all build_all_debug
 
@@ -416,6 +419,11 @@ clean_toolbox_src:
 
 clean_toolbox:
 	$(REMOVE) $(TOOLBOX_DIR)
+
+
+########################################################
+#	BUILD
+########################################################
 
 bootloader:
 	mkdir -p $(OS_BUILD_DIR)
@@ -547,42 +555,6 @@ ramfs:
 	$(DEBUGFS) -R "ls -l /" $(RAMFS_IMG)
 	@echo "[  OK  ] ramfs image built, $(RAMFS_SIZE_MiB) MiB"
 
-sync_rootfs:
-	sudo mount -o loop files/filesys.dd files/root
-	sudo mkdir -p $(addprefix files/root/,$(RAMFS_DIRS))
-	sudo cp -r files/fs/etc/*  files/root/etc/
-	sudo cp -r files/fs/root/. files/root/root/
-	sudo cp -r files/fs/home/* files/root/home/
-	sudo chmod 1777 files/root/tmp
-	sudo umount files/root
-	$(DUMPE2FS) -h files/filesys.dd
-	$(DEBUGFS) -R "ls -l /" files/filesys.dd
-
-mount:
-	sudo mount -o loop files/filesys.dd files/root/
-	#sudo chown -R $(USER):$(USER) files/root/
-
-mount_os_dd:
-	sudo mount -o loop build/os/os-image files/root/
-	#sudo chown -R $(USER):$(USER) files/root/
-
-
-umount:
-	#sudo chown -R root:root files/root/* | true
-	sudo umount files/filesys.dd | true
-	sudo umount files/os-image | true
-	sudo umount files/root | true
-
-run:
-#	COM1 goes to a file : stdio is already taken by the monitor. the log is
-#	complete, greppable, and diffable between two runs, which the VGA text
-#	console is not once it starts scrolling.
-	mv $(OS_LOG_DIR)/kernel.log $(OS_LOG_DIR)/kernel.log.bak | true
-	qemu-system-x86_64 -monitor stdio -m 4096 -no-reboot -no-shutdown \
-		-drive id=disk,file=build/os/os-image,format=raw,if=none \
-		-device ahci,id=ahci \
-		-device ide-hd,drive=disk,bus=ahci.0 \
-		-serial file:$(OS_LOG_DIR)/kernel.log
 #	the loader enters the kernel at its LongMode label and writes into its
 #	MEMORY_INFO and MEMORY_ENTRIES, so it needs to know where they are. we
 #	read them out of kernel.elf every build instead of writing them down |
@@ -632,6 +604,184 @@ esp: uefi
 	cp $(RAMFS_IMG) $(ESP_DIR)/
 	@echo "[  OK  ] $(ESP_DIR)"
 
+#	el torito, hard disk emulation : the bios emulates a disk out of the
+#	image and our int 0x13 reads work in 512 byte sectors like everywhere
+#	else. the no emulation mode would address the cd in 2048 byte sectors,
+#	which _DiskLoad does not know how to do.
+#	mkisofs warns that the partition does not start at chs 0/1/1, because
+#	ours starts at lba 2048 like every modern tool aligns it. seabios does
+#	not boot the result, so this is for a real cd drive or a vm, and the usb
+#	target below is the one to use on real hardware.
+iso:
+	@if [ ! -f $(OS_IMAGE) ]; then \
+		echo "[FAILED] $(OS_IMAGE) is missing, run make os first"; \
+		exit 1; \
+	fi
+	$(REMOVE) $(ISO_ROOT)
+	mkdir -p $(ISO_ROOT)/boot
+	cp $(OS_IMAGE) $(ISO_ROOT)/boot/os-image
+	mkisofs -quiet -R -J -V BALROGOS \
+		-b boot/os-image -hard-disk-boot \
+		-o $(OS_BUILD_DIR)/balrog.iso $(ISO_ROOT)
+	@echo "[  OK  ] $(OS_BUILD_DIR)/balrog.iso"
+
+########################################################
+#	BUILD SETS
+########################################################
+
+build_all:
+	$(MAKE) tools
+	$(MAKE) ramfs
+	$(MAKE) bootloader
+	$(MAKE) kernel
+	$(MAKE) os
+	@echo "[  OK  ] build os with tools"
+
+build_all_debug:
+	$(MAKE) clean
+	$(MAKE) DEBUG=1 tools
+	$(MAKE) DEBUG=1 ramfs
+	$(MAKE) DEBUG=1 bootloader
+	$(MAKE) DEBUG=1 kernel
+	$(MAKE) DEBUG=1 esp
+	$(MAKE) DEBUG=1 os
+	@echo "[  OK  ] symbols are in $(OS_BUILD_DIR)/kernel.elf"
+	@echo "         now run make run_debug or make run_debug_efi, then make gdb"
+
+build:
+	$(MAKE) bootloader
+	$(MAKE) kernel
+	$(MAKE) esp
+	$(MAKE) os
+	@echo "[  OK  ] build os without tools"
+
+build_debug:
+	$(MAKE) DEBUG=1 bootloader
+	$(MAKE) DEBUG=1 kernel
+	$(MAKE) DEBUG=1 esp
+	$(MAKE) DEBUG=1 os
+	@echo "[  OK  ] symbols are in $(OS_BUILD_DIR)/kernel.elf"
+	@echo "         now run make run_debug or make run_debug_efi, then make gdb"
+
+########################################################
+#	RELEASE
+########################################################
+RELEASE_DIR = build/release
+
+#	the esp holds the ramfs, so it has to be bigger than it. 64MiB leaves room
+#	for the ramfs to grow without touching this.
+ESP_IMG_SIZE = 64
+
+#	the partition starts at the sector 2048, the same place grub leaves it and
+#	the same one src/Bootloader/common/layout.inc uses.
+ESP_IMG_LBA = 2048
+
+#	the whole image, in MiB : the esp above plus the ext2 root behind it.
+#	the firmware reads the esp with its own fat driver and never looks at the
+#	second partition | this kernel has no fat driver at all and mounts the
+#	second one, so a key with only an esp has nowhere to persist anything.
+ROOT_IMG_SIZE = 96
+
+#	vbox wants a vdi rather than a raw file, so we hand it one when VBoxManage
+#	is around. it goes on a sata port, or on a usb one :
+#
+#	  VBoxManage storagectl <vm> --name USB --add usb --controller USB
+#	  VBoxManage storageattach <vm> --storagectl USB --port 0 --type hdd \
+#	      --medium build/release/balrog-uefi.vdi
+#
+#	the usb controller has been there since vbox 5.0 and it boots, which makes
+#	it the only firmware other than the dell that reaches the kernel through
+#	usb. worth having when the xhci driver lands.
+#
+#	the uuids are fixed on purpose! convertfromraw draws a new one every time,
+#	and vbox then refuses the medium with "does not match the value stored in
+#	the media registry" until you closemedium it by hand. one each, a single
+#	uuid for both would be refused as a duplicate.
+VDI_UUID_BIOS = ba109050-0000-4000-8000-ba1090500001
+VDI_UUID_UEFI = ba109050-0000-4000-8000-ba1090500002
+VBOXMANAGE = VBoxManage
+
+#	everything a bios machine needs. the raw image goes on a usb key with dd,
+#	the vdi gets attached to a virtualbox sata port.
+#
+#	no iso here. make iso still builds one, but el torito hard disk emulation
+#	never gets past our mbr : the bios hands stage 1 a geometry built from the
+#	partition entry, and ours says 0xffffff on purpose because we read in lba.
+release:
+	$(MAKE) ramfs
+	$(MAKE) bootloader
+	$(MAKE) kernel
+	$(MAKE) os
+	mkdir -p $(RELEASE_DIR)
+	cp $(OS_IMAGE) $(RELEASE_DIR)/balrog-bios.img
+	@echo "[  OK  ] $(RELEASE_DIR)/balrog-bios.img  -> dd on a usb key"
+	@if command -v $(VBOXMANAGE) > /dev/null; then \
+		$(REMOVE) $(RELEASE_DIR)/balrog-bios.vdi; \
+		$(VBOXMANAGE) convertfromraw $(RELEASE_DIR)/balrog-bios.img \
+			$(RELEASE_DIR)/balrog-bios.vdi --format VDI --uuid $(VDI_UUID_BIOS) > /dev/null; \
+		echo "[  OK  ] $(RELEASE_DIR)/balrog-bios.vdi  -> a vbox sata port, EFI off"; \
+	else \
+		echo "[ INFO ] VBoxManage is missing, the raw image is still there"; \
+	fi
+
+#	the same thing for a machine that only boots uefi.
+#
+#	a bootable esp is a gpt disk carrying one fat32 partition with
+#	/EFI/BOOT/BOOTX64.EFI in it, so we build the whole disk and not just the
+#	tree : both a usb key and virtualbox want a partition table.
+#
+#	mkfs.vfat formats the partition in place with --offset, and mcopy fills it
+#	through the same offset. -s walks the tree and makes EFI/BOOT on its own.
+#	a loop mount would have needed root for what is an ordinary build step.
+release_uefi:
+	$(MAKE) ramfs
+	$(MAKE) kernel
+	$(MAKE) esp
+	mkdir -p $(RELEASE_DIR)
+	$(REMOVE) $(RELEASE_DIR)/balrog-uefi.img
+	truncate -s $(ROOT_IMG_SIZE)M $(RELEASE_DIR)/balrog-uefi.img
+#	two partitions : U is the efi system partition, L a plain linux one. the
+#	root lba is not written down anywhere, it is the esp start plus its size
+#	so the two can never drift apart.
+	printf 'label: gpt\n,$(ESP_IMG_SIZE)MiB,U\n,,L\n' \
+		| $(SFDISK) $(RELEASE_DIR)/balrog-uefi.img > /dev/null
+	$(MKFS_VFAT) -F 32 --offset $(ESP_IMG_LBA) -n BALROGOS \
+		$(RELEASE_DIR)/balrog-uefi.img > /dev/null
+#	-b 4096 is not a preference! it is the block size this ext2 driver
+#	assumes, and files/ramfs.img is built with it too. -F because we are
+#	formatting inside a plain file, and the size is what is left after the esp.
+	$(MKE2FS) -q -F -t ext2 -b 4096 \
+		-E offset=$$(( ($(ESP_IMG_LBA) + $(ESP_IMG_SIZE) * 2048) * 512 )) \
+		$(RELEASE_DIR)/balrog-uefi.img \
+		$$(( $(ROOT_IMG_SIZE) * 2048 - $(ESP_IMG_LBA) - $(ESP_IMG_SIZE) * 2048 ))s \
+		> /dev/null
+	$(MCOPY) -s -i $(RELEASE_DIR)/balrog-uefi.img@@$$(( $(ESP_IMG_LBA) * 512 )) \
+		$(ESP_DIR)/* ::/
+	@echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.img  -> dd on a usb key"
+	@if command -v $(VBOXMANAGE) > /dev/null; then \
+		$(REMOVE) $(RELEASE_DIR)/balrog-uefi.vdi; \
+		$(VBOXMANAGE) convertfromraw $(RELEASE_DIR)/balrog-uefi.img \
+			$(RELEASE_DIR)/balrog-uefi.vdi --format VDI > /dev/null; \
+		echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.vdi  -> a vbox sata port, EFI on"; \
+	else \
+		echo "[ INFO ] VBoxManage is missing, the raw image is still there"; \
+	fi
+
+########################################################
+#	RUN, QEMU
+########################################################
+
+run:
+#	COM1 goes to a file : stdio is already taken by the monitor. the log is
+#	complete, greppable, and diffable between two runs, which the VGA text
+#	console is not once it starts scrolling.
+	mv $(OS_LOG_DIR)/kernel.log $(OS_LOG_DIR)/kernel.log.bak | true
+	qemu-system-x86_64 -monitor stdio -m 4096 -no-reboot -no-shutdown \
+		-drive id=disk,file=build/os/os-image,format=raw,if=none \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=disk,bus=ahci.0 \
+		-serial file:$(OS_LOG_DIR)/kernel.log
+
 #	OVMF is the free uefi firmware, we need it to test without hardware.
 #	the vars file has to be writable, so we copy it.
 run_uefi: esp
@@ -672,102 +822,6 @@ run_uefi_q35: esp
 		-drive file=fat:rw:$(ESP_DIR),format=raw \
 		-serial file:$(OS_BUILD_DIR)/kernel_q35.log
 
-
-#	el torito, hard disk emulation : the bios emulates a disk out of the
-#	image and our int 0x13 reads work in 512 byte sectors like everywhere
-#	else. the no emulation mode would address the cd in 2048 byte sectors,
-#	which _DiskLoad does not know how to do.
-#	mkisofs warns that the partition does not start at chs 0/1/1, because
-#	ours starts at lba 2048 like every modern tool aligns it. seabios does
-#	not boot the result, so this is for a real cd drive or a vm, and the usb
-#	target below is the one to use on real hardware.
-iso:
-	@if [ ! -f $(OS_IMAGE) ]; then \
-		echo "[FAILED] $(OS_IMAGE) is missing, run make os first"; \
-		exit 1; \
-	fi
-	$(REMOVE) $(ISO_ROOT)
-	mkdir -p $(ISO_ROOT)/boot
-	cp $(OS_IMAGE) $(ISO_ROOT)/boot/os-image
-	mkisofs -quiet -R -J -V BALROGOS \
-		-b boot/os-image -hard-disk-boot \
-		-o $(OS_BUILD_DIR)/balrog.iso $(ISO_ROOT)
-	@echo "[  OK  ] $(OS_BUILD_DIR)/balrog.iso"
-
-########################################################
-#	RELEASE
-########################################################
-RELEASE_DIR = build/release
-
-#	the esp holds the ramfs, so it has to be bigger than it. 64MiB leaves room
-#	for the ramfs to grow without touching this.
-ESP_IMG_SIZE = 64
-
-#	the partition starts at the sector 2048, the same place grub leaves it and
-#	the same one src/Bootloader/common/layout.inc uses.
-ESP_IMG_LBA = 2048
-
-#	virtualbox has no usb mass storage controller of its own, so a usb key is
-#	tested by attaching the very same image to a sata port : the firmware sees a
-#	disk with a partition table either way, which is all our bootloaders read.
-#	vbox wants a vdi rather than a raw file, so we hand it one when VBoxManage
-#	is around.
-VBOXMANAGE = VBoxManage
-
-#	everything a bios machine needs. the raw image goes on a usb key with dd,
-#	the vdi gets attached to a virtualbox sata port.
-#
-#	no iso here. make iso still builds one, but el torito hard disk emulation
-#	never gets past our mbr : the bios hands stage 1 a geometry built from the
-#	partition entry, and ours says 0xffffff on purpose because we read in lba.
-release:
-	$(MAKE) ramfs
-	$(MAKE) bootloader
-	$(MAKE) kernel
-	$(MAKE) os
-	mkdir -p $(RELEASE_DIR)
-	cp $(OS_IMAGE) $(RELEASE_DIR)/balrog-bios.img
-	@echo "[  OK  ] $(RELEASE_DIR)/balrog-bios.img  -> dd on a usb key"
-	@if command -v $(VBOXMANAGE) > /dev/null; then \
-		$(REMOVE) $(RELEASE_DIR)/balrog-bios.vdi; \
-		$(VBOXMANAGE) convertfromraw $(RELEASE_DIR)/balrog-bios.img \
-			$(RELEASE_DIR)/balrog-bios.vdi --format VDI > /dev/null; \
-		echo "[  OK  ] $(RELEASE_DIR)/balrog-bios.vdi  -> a vbox sata port, EFI off"; \
-	else \
-		echo "[ INFO ] VBoxManage is missing, the raw image is still there"; \
-	fi
-
-#	the same thing for a machine that only boots uefi.
-#
-#	a bootable esp is a gpt disk carrying one fat32 partition with
-#	/EFI/BOOT/BOOTX64.EFI in it, so we build the whole disk and not just the
-#	tree : both a usb key and virtualbox want a partition table.
-#
-#	mkfs.vfat formats the partition in place with --offset, and mcopy fills it
-#	through the same offset. -s walks the tree and makes EFI/BOOT on its own.
-#	a loop mount would have needed root for what is an ordinary build step.
-release_uefi:
-	$(MAKE) ramfs
-	$(MAKE) kernel
-	$(MAKE) esp
-	mkdir -p $(RELEASE_DIR)
-	$(REMOVE) $(RELEASE_DIR)/balrog-uefi.img
-	truncate -s $(ESP_IMG_SIZE)M $(RELEASE_DIR)/balrog-uefi.img
-	printf 'label: gpt\n,,U\n' | $(SFDISK) $(RELEASE_DIR)/balrog-uefi.img > /dev/null
-	$(MKFS_VFAT) -F 32 --offset $(ESP_IMG_LBA) -n BALROGOS \
-		$(RELEASE_DIR)/balrog-uefi.img > /dev/null
-	$(MCOPY) -s -i $(RELEASE_DIR)/balrog-uefi.img@@$$(( $(ESP_IMG_LBA) * 512 )) \
-		$(ESP_DIR)/* ::/
-	@echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.img  -> dd on a usb key"
-	@if command -v $(VBOXMANAGE) > /dev/null; then \
-		$(REMOVE) $(RELEASE_DIR)/balrog-uefi.vdi; \
-		$(VBOXMANAGE) convertfromraw $(RELEASE_DIR)/balrog-uefi.img \
-			$(RELEASE_DIR)/balrog-uefi.vdi --format VDI > /dev/null; \
-		echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.vdi  -> a vbox sata port, EFI on"; \
-	else \
-		echo "[ INFO ] VBoxManage is missing, the raw image is still there"; \
-	fi
-
 debug:
 	$(MAKE) clean
 	$(MAKE) DEBUG=1 bootloader
@@ -786,39 +840,141 @@ run_debug:
 		-device ide-hd,drive=disk,bus=ahci.0 \
 		-serial file:$(OS_LOG_DIR)/kernel_debug.log
 
-build_all:
-	$(MAKE) tools
-	$(MAKE) ramfs
-	$(MAKE) bootloader
-	$(MAKE) kernel
-	$(MAKE) os
-	@echo "[  OK  ] build os with tools"
+########################################################
+#	VIRTUALBOX
+########################################################
+#	the vm is built from nothing on every run and destroyed on the way out, so
+#	there is never a stale one holding the vdi. same reason the medium is
+#	closed : vbox keeps it in its registry otherwise, and the next attach
+#	fails on the uuid.
+VBOX_VM_BIOS = balrog-run-bios
+VBOX_VM_UEFI = balrog-run-uefi
+VBOX_VM_USB = balrog-run-usb
 
-build_all_debug:
-	$(MAKE) clean
-	$(MAKE) DEBUG=1 tools
-	$(MAKE) DEBUG=1 ramfs
-	$(MAKE) DEBUG=1 bootloader
-	$(MAKE) DEBUG=1 kernel
-	$(MAKE) DEBUG=1 esp
-	$(MAKE) DEBUG=1 os
-	@echo "[  OK  ] symbols are in $(OS_BUILD_DIR)/kernel.elf"
-	@echo "         now run make run_debug or make run_debug_efi, then make gdb"
+#	3f8 irq 4, the same com1 the kernel writes to, into logs/ like every other
+#	run target.
+VBOX_UART = --uart1 0x3F8 4 --uart-type1 16550A
 
-build:
-	$(MAKE) bootloader
-	$(MAKE) kernel
-	$(MAKE) esp
-	$(MAKE) os
-	@echo "[  OK  ] build os without tools"
+#	release builds have no KDB_DEBUG, so a real release writes nothing on the
+#	serial and the log would come out empty. these two targets are for looking
+#	at what happens, so they build the release layout with the debug defines.
+#	for a true release run, make release_uefi and attach the vdi by hand.
+VBOX_DEFINES = RELEASE_DEFINES='$(DEFINES)'
 
-build_debug:
-	$(MAKE) DEBUG=1 bootloader
-	$(MAKE) DEBUG=1 kernel
-	$(MAKE) DEBUG=1 esp
-	$(MAKE) DEBUG=1 os
-	@echo "[  OK  ] symbols are in $(OS_BUILD_DIR)/kernel.elf"
-	@echo "         now run make run_debug or make run_debug_efi, then make gdb"
+#	$(1) the vm name
+#	unregistervm right after a poweroff fails : vbox still holds the session
+#	for a moment and answers that the machine is locked. so we retry, and only
+#	give up after five seconds | doing it once leaves the vm behind, which is
+#	exactly what this is here to avoid.
+define vbox_destroy
+	@$(VBOXMANAGE) controlvm $(1) poweroff > /dev/null 2>&1 || true
+	@for i in 1 2 3 4 5 6 7 8 9 10; do \
+		$(VBOXMANAGE) unregistervm $(1) --delete > /dev/null 2>&1 && break; \
+		$(VBOXMANAGE) list vms | grep -q '"$(1)"' || break; \
+		sleep 0.5; \
+	done
+	@$(VBOXMANAGE) list vms | grep -q '"$(1)"' \
+		&& echo "[ INFO ] $(1) is still registered, remove it by hand" || true
+endef
+
+#	vbox 7 carries a gdb stub of its own, so the same `make gdb` works on a vm
+#	as on qemu | the port is the 1234 that target already connects to.
+VBOX_GDB = --guest-debug-provider gdb --guest-debug-io-provider tcp \
+	--guest-debug-address 127.0.0.1 --guest-debug-port 1234
+
+#	$(1) vm name, $(2) vdi, $(3) log, $(4) firmware, $(5) storagectl arguments,
+#	$(6) anything more for modifyvm, the gdb stub for the debug targets
+define vbox_run
+	@command -v $(VBOXMANAGE) > /dev/null || { echo "[FAILED] VBoxManage is missing"; exit 1; }
+	$(call vbox_destroy,$(1))
+	@$(VBOXMANAGE) closemedium disk $(CURDIR)/$(2) > /dev/null 2>&1 || true
+	mkdir -p $(OS_LOG_DIR)
+	@$(REMOVE) $(OS_LOG_DIR)$(3)
+	@$(VBOXMANAGE) createvm --name $(1) --ostype Other_64 --register > /dev/null
+	@$(VBOXMANAGE) modifyvm $(1) --memory 4096 --firmware $(4) --boot1 disk \
+		--usb-xhci on $(VBOX_UART) --uart-mode1 file $(CURDIR)/$(OS_LOG_DIR)$(3) \
+		$(6) > /dev/null
+	@$(VBOXMANAGE) storagectl $(1) $(5) > /dev/null
+	@$(VBOXMANAGE) storageattach $(1) --storagectl DISK --port 0 --type hdd \
+		--medium $(CURDIR)/$(2) > /dev/null
+	@echo "[  OK  ] $(1) starting, serial goes to $(OS_LOG_DIR)$(3)"
+	@$(VBOXMANAGE) startvm $(1) --type gui > /dev/null
+#	startvm returns as soon as the window is up, so wait for the machine to
+#	stop before tearing it down. closing the window is what ends this.
+	@while $(VBOXMANAGE) showvminfo $(1) --machinereadable 2>/dev/null \
+			| grep -q 'VMState="running"'; do sleep 2; done
+	$(call vbox_destroy,$(1))
+	@$(VBOXMANAGE) closemedium disk $(CURDIR)/$(2) > /dev/null 2>&1 || true
+	@echo "[  OK  ] $(1) removed, log kept in $(OS_LOG_DIR)$(3)"
+endef
+
+run_vbox:
+	$(MAKE) $(VBOX_DEFINES) release
+	$(call vbox_run,$(VBOX_VM_BIOS),$(RELEASE_DIR)/balrog-bios.vdi,kernel_vbox.log,bios,--name DISK --add sata --controller IntelAhci,)
+
+#	same vm, with the gdb stub open. it does not wait for a connection the way
+#	qemu -S does, so break somewhere that is reached late enough | kernel_main
+#	is what the gdb target breaks on and that one is fine.
+run_vbox_debug:
+	$(MAKE) $(VBOX_DEFINES) DEBUG=1 release
+	$(call vbox_run,$(VBOX_VM_BIOS),$(RELEASE_DIR)/balrog-bios.vdi,kernel_vbox_debug.log,bios,--name DISK --add sata --controller IntelAhci,$(VBOX_GDB))
+
+#	usb and not sata : this is the only firmware other than the dell that
+#	reaches the kernel through a usb controller, which is what step 5 needs.
+run_vbox_uefi:
+	$(MAKE) $(VBOX_DEFINES) release_uefi
+	$(call vbox_run,$(VBOX_VM_UEFI),$(RELEASE_DIR)/balrog-uefi.vdi,kernel_vbox_uefi.log,efi,--name DISK --add usb --controller USB,)
+
+run_vbox_uefi_debug:
+	$(MAKE) $(VBOX_DEFINES) DEBUG=1 release_uefi
+	$(call vbox_run,$(VBOX_VM_UEFI),$(RELEASE_DIR)/balrog-uefi.vdi,kernel_vbox_uefi_debug.log,efi,--name DISK --add usb --controller USB,$(VBOX_GDB))
+
+#	the same again with ohci and ehci turned off, so the stick has nowhere to
+#	appear but behind the xhci controller. run_vbox_uefi leaves them on, and
+#	virtualbox is free to hand the device to one of them, which our driver
+#	never sees | this is the shape the dell has, and the one the enumeration
+#	has to work on.
+run_vbox_usb_uefi:
+	$(MAKE) $(VBOX_DEFINES) release_uefi
+	$(call vbox_run,$(VBOX_VM_USB),$(RELEASE_DIR)/balrog-uefi.vdi,kernel_vbox_usb_uefi.log,efi,--name DISK --add usb --controller USB,--usb-ohci off --usb-ehci off)
+
+run_vbox_usb_uefi_debug:
+	$(MAKE) $(VBOX_DEFINES) DEBUG=1 release_uefi
+	$(call vbox_run,$(VBOX_VM_USB),$(RELEASE_DIR)/balrog-uefi.vdi,kernel_vbox_usb_uefi_debug.log,efi,--name DISK --add usb --controller USB,--usb-ohci off --usb-ehci off $(VBOX_GDB))
+
+########################################################
+#	DISK IMAGES
+########################################################
+
+sync_rootfs:
+	sudo mount -o loop files/filesys.dd files/root
+	sudo mkdir -p $(addprefix files/root/,$(RAMFS_DIRS))
+	sudo cp -r files/fs/etc/*  files/root/etc/
+	sudo cp -r files/fs/root/. files/root/root/
+	sudo cp -r files/fs/home/* files/root/home/
+	sudo chmod 1777 files/root/tmp
+	sudo umount files/root
+	$(DUMPE2FS) -h files/filesys.dd
+	$(DEBUGFS) -R "ls -l /" files/filesys.dd
+
+mount:
+	sudo mount -o loop files/filesys.dd files/root/
+	#sudo chown -R $(USER):$(USER) files/root/
+
+mount_os_dd:
+	sudo mount -o loop build/os/os-image files/root/
+	#sudo chown -R $(USER):$(USER) files/root/
+
+
+umount:
+	#sudo chown -R root:root files/root/* | true
+	sudo umount files/filesys.dd | true
+	sudo umount files/os-image | true
+	sudo umount files/root | true
+
+########################################################
+#	DEBUG TOOLS
+########################################################
 
 #	attach to the qemu left waiting by make run_debug.
 #	CLion does the same thing through a Remote Debug configuration.

@@ -19,6 +19,7 @@
 #include "balrog_os/file_system/fs_cache.h"
 #include "balrog_os/memory/kstack.h"
 #include "balrog_os/drivers/bus/pci.h"
+#include "balrog_os/drivers/usb/xhci/xhci.h"
 #include "balrog_os/user/user_manager.h"
 #include "balrog_os/cpu/fpu/fpu.h"
 #include "balrog_os/drivers/serial/serial.h"
@@ -120,6 +121,9 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    ACPI          */
     KERNEL_LOG_ASSERT(init_acpi(), "ACPI : ", "done", "not available");
+
+    /*    USB           */
+    KERNEL_LOG_ASSERT(init_xhci(), "XHCI controller : ", "done", "not found");
 
     /*    KEYBOARD       */
     KERNEL_LOG_ASSERT(init_keyboard(), "Keyboard : ", "done", "not initialized");

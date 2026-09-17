@@ -98,10 +98,7 @@ file(GLOB_RECURSE ALL_HEADERS	CONFIGURE_DEPENDS include/*.h)
 ########################################################
 #	INDEXING TARGETS
 ########################################################
-add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS}
-		src/kernel/syscall/system_management/sys_reboot.c
-		include/balrog/system/reboot.h
-		src/tool_kit/shutdown/shutdown.c)
+add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
 
 #	its own target, so we don't mix its warnings with ours. CLion still
 #	indexes lai_enter_sleep and the rest of it.

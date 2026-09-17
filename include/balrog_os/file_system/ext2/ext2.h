@@ -32,6 +32,9 @@
     else 
         (((name_len / 4) + 0) * 4) + struct_size
 */
+/*  inode, entry_size, name_length and type : no entry can be shorter  */
+#define EXT2_DIR_ENTRY_MIN              8
+
 #define EXT2_DIR_ENTRY_SIZE(name_len) (name_len % 4) ? (((name_len / 4) + 1) * 4) + (sizeof(ext2_dir_entry) - 1) :\
                                                         (((name_len / 4)) * 4) + (sizeof(ext2_dir_entry) - 1)
 

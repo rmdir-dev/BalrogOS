@@ -26,6 +26,51 @@ typedef struct _entry_read_dir_entries
     ext2_dir_entry* next_entry;
 } entry_read_dir_entries;
 
+
+typedef struct __ext2_dir_walk_t
+{
+    void* ptr;
+    ext2_dir_entry* entry;
+    ext2_dir_entry* previous;
+    char name[256];
+} ext2_dir_walk_t;
+
+static void __ext2_entry_name(ext2_dir_entry* entry, char* out)
+{
+    memcpy(out, &entry->name, entry->name_length);
+    out[entry->name_length] = 0;
+}
+
+static void __ext2_walk_begin(ext2_dir_walk_t* walk, void* dir)
+{
+    walk->ptr = dir;
+    walk->entry = 0;
+    walk->previous = 0;
+}
+
+static int __ext2_walk_next(ext2_dir_walk_t* walk)
+{
+    if(walk->entry != 0 && ((ext2_dir_entry*)walk->ptr)->inode == 0)
+    {
+        return 0;
+    }
+
+    ext2_dir_entry* entry = walk->ptr;
+
+    if(entry->entry_size < EXT2_DIR_ENTRY_MIN)
+    {
+        return 0;
+    }
+
+    walk->previous = walk->entry;
+    walk->entry = entry;
+    walk->ptr += entry->entry_size;
+
+    __ext2_entry_name(entry, walk->name);
+
+    return 1;
+}
+
 static char** __ext2_get_path(char* src, const char delimiter, size_t* out_size, uint8_t* from_root)
 {
     *from_root = 0;
@@ -118,13 +163,13 @@ static inline uint32_t __ext2_find_free_bitmap(fs_device_t* dev, size_t bitmap_s
 static int __ext2_update_sb_and_blk_desc(fs_device_t* dev, ext2_fs_data* fs_data)
 {
     dev->write(dev, (void*)&fs_data->sb, 2, 2);
-    if(fs_data->block_size == 1024)
-    {
-        dev->write(dev, (void*)&fs_data->blk_grp_desc,  1 * fs_data->sec_per_block, 1);
-    } else 
-    {
-        dev->write(dev, (void*)&fs_data->blk_grp_desc,  2 * fs_data->sec_per_block, 1);
-    }
+
+    /*  the same block the probe reads it from : the one after the superblock,
+        which is block 2 for a 1024 byte block and block 1 for anything else.  */
+    uint32_t block_grp_loc = (fs_data->block_size == 1024) ? 2 : 1;
+
+    dev->write(dev, (void*)&fs_data->blk_grp_desc, block_grp_loc * fs_data->sec_per_block, 1);
+
     return 0;
 }
 
@@ -320,25 +365,18 @@ static uint32_t __ext2_get_entry_inode_idx(fs_device_t* dev, ext2_dir_entry* dir
         return 0;
     }
 
-    char name_buffer[255];
-    void* dir_ptr = dir;
-    ext2_dir_entry* entry;
-    ext2_dir_entry* next_entry;
+    ext2_dir_walk_t walk;
+    __ext2_walk_begin(&walk, dir);
 
-    do
+    while(__ext2_walk_next(&walk))
     {
-        entry = dir_ptr;
-        next_entry = dir_ptr + entry->entry_size;
-        strcpy(&name_buffer, &entry->name);
-        name_buffer[entry->name_length] = 0;
-        if(entry->type != 0 && !strcmp(&entry->name, filename))
+        if(walk.entry->type != 0 && !strcmp(walk.name, filename))
         {
-            return entry->inode;
+            return walk.entry->inode;
         }
-        dir_ptr += entry->entry_size;
-    } while(next_entry->inode);
+    }
 
-    return next_entry->inode;
+    return 0;
 }
 
 /*
@@ -397,22 +435,31 @@ static int __ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset
     uint32_t buf[EXT2_SIBP_ENTRIES];
     memset(&buf, 0, sizeof(buf));
 
+    /* TODO : a file never shrinks it is only ever written over or grown */
+    if(inode->size < offset + len)
+    {
+        inode->size = offset + len;
+    }
+
     /*  the file needs one block per EXT2_BLOCK_SIZE bytes. the first 12 are
         the direct ones, the rest is held by the single indirect block.
     */
-    size_t needed = (len + (EXT2_BLOCK_SIZE - 1)) / EXT2_BLOCK_SIZE;
+    size_t needed = (inode->size + (EXT2_BLOCK_SIZE - 1)) / EXT2_BLOCK_SIZE;
 
     if(needed > EXT2_MAX_BLOCKS)
     {
         needed = EXT2_MAX_BLOCKS;
     }
 
+    uint8_t new_sibp = 0;
+
     if(needed > 12 && inode->sibp == 0)
     {
         inode->sibp = __ext2_find_higher_half_free_blocks(dev);
+        new_sibp = 1;
     }
 
-    if(inode->sibp != 0)
+    if(inode->sibp != 0 && !new_sibp)
     {
         dev->read(dev, (void*)&buf, inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
     }
@@ -434,27 +481,27 @@ static int __ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset
         }
     }
 
-    /* a file never shrinks here, it is only ever written over or grown */
-    if(inode->size < len)
-    {
-        inode->size = len;
-    }
-
-    inode->nbr_sectors = (inode->size / 512) + 8;
+    inode->nbr_sectors = needed * fs_data->sec_per_block;
 
     if(inode->sibp != 0)
     {
         /* update the single indirect block pointer */
         dev->write(dev, (void*)&buf, inode->sibp * fs_data->sec_per_block, fs_data->sec_per_block);
-        inode->nbr_sectors += 8;
+        inode->nbr_sectors += fs_data->sec_per_block;
     }
 
     __ext2_update_inode_table(dev, inode_id, inode);
 
-    /*  only the blocks len covers are written back, the ones past it would
-        be filled with whatever follows the buffer the caller handed over.
-    */
-    for(size_t i = 0; i < needed; i++)
+    /* writing only what is necessary instead of the whole file each time. */
+    size_t first = offset / EXT2_BLOCK_SIZE;
+    size_t last = (offset + len + (EXT2_BLOCK_SIZE - 1)) / EXT2_BLOCK_SIZE;
+
+    if(last > needed)
+    {
+        last = needed;
+    }
+
+    for(size_t i = first; i < last; i++)
     {
         uint32_t block_id = (i < 12) ? inode->dbp[i] : buf[i - 12];
 
@@ -463,8 +510,7 @@ static int __ext2_update_file(fs_device_t* dev, uint8_t* buffer, uint64_t offset
             continue;
         }
 
-        dev->write(dev, buffer, block_id * fs_data->sec_per_block, fs_data->sec_per_block);
-        buffer += 512 * fs_data->sec_per_block;
+        dev->write(dev, buffer + (i * EXT2_BLOCK_SIZE), block_id * fs_data->sec_per_block, fs_data->sec_per_block);
     }
 
     return 0;
@@ -515,22 +561,22 @@ static int __ext2_update_dir_entry(fs_device_t* dev, ext2_inode* dir_inode, ext2
 
 static int __ext2_read_dir_entry(void* dir_ptr, entry_read_dir_entries* read_entries, const char* filename)
 {
-    char name_buffer[255];
+    ext2_dir_walk_t walk;
+    __ext2_walk_begin(&walk, dir_ptr);
 
-    do
+    read_entries->entry = dir_ptr;
+    read_entries->next_entry = dir_ptr;
+
+    while(__ext2_walk_next(&walk))
     {
-        read_entries->entry = dir_ptr;
-        read_entries->next_entry = dir_ptr + read_entries->entry->entry_size;
-        strcpy(&name_buffer, &read_entries->entry->name);
-        name_buffer[read_entries->entry->name_length] = 0;
-        int scmp = strcmp(&name_buffer[0], filename);
-        if(read_entries->entry->type != 0 && scmp == 0)
+        read_entries->entry = walk.entry;
+        read_entries->next_entry = walk.ptr;
+
+        if(walk.entry->type != 0 && strcmp(walk.name, filename) == 0)
         {
             return 0;
         }
-
-        dir_ptr += read_entries->entry->entry_size;
-    } while(read_entries->next_entry->inode);
+    }
 
     return -1;
 }
@@ -755,36 +801,28 @@ static int __ext2_free_file_blocks(fs_device_t* dev, ext2_inode* inode)
 */
 static uint32_t __ext2_remove_dir_entry(void* dir_ptr, const char* filename)
 {
-    char name_buffer[255];
-    ext2_dir_entry* previous = 0;
-    ext2_dir_entry* entry;
+    ext2_dir_walk_t walk;
+    __ext2_walk_begin(&walk, dir_ptr);
 
-    do
+    while(__ext2_walk_next(&walk))
     {
-        entry = dir_ptr;
-        strcpy(&name_buffer, &entry->name);
-        name_buffer[entry->name_length] = 0;
-
-        if(entry->type != 0 && strcmp(&name_buffer[0], filename) == 0)
+        if(walk.entry->type != 0 && strcmp(walk.name, filename) == 0)
         {
-            uint32_t inode_id = entry->inode;
+            uint32_t inode_id = walk.entry->inode;
 
-            if(previous != 0)
+            if(walk.previous != 0)
             {
-                previous->entry_size += entry->entry_size;
+                walk.previous->entry_size += walk.entry->entry_size;
             } else
             {
-                entry->inode = 0;
-                entry->name_length = 0;
-                entry->type = EXT2_TYPE_UNKNOWN_TYPE;
+                walk.entry->inode = 0;
+                walk.entry->name_length = 0;
+                walk.entry->type = EXT2_TYPE_UNKNOWN_TYPE;
             }
 
             return inode_id;
         }
-
-        previous = entry;
-        dir_ptr += entry->entry_size;
-    } while(((ext2_dir_entry*)dir_ptr)->inode);
+    }
 
     return 0;
 }
@@ -793,22 +831,16 @@ static uint32_t __ext2_remove_dir_entry(void* dir_ptr, const char* filename)
 */
 static uint8_t __ext2_dir_is_empty(void* dir_ptr)
 {
-    char name_buffer[255];
-    ext2_dir_entry* entry;
+    ext2_dir_walk_t walk;
+    __ext2_walk_begin(&walk, dir_ptr);
 
-    do
+    while(__ext2_walk_next(&walk))
     {
-        entry = dir_ptr;
-        strcpy(&name_buffer, &entry->name);
-        name_buffer[entry->name_length] = 0;
-
-        if(entry->type != 0 && strcmp(&name_buffer[0], ".") != 0 && strcmp(&name_buffer[0], "..") != 0)
+        if(walk.entry->type != 0 && strcmp(walk.name, ".") != 0 && strcmp(walk.name, "..") != 0)
         {
             return 0;
         }
-
-        dir_ptr += entry->entry_size;
-    } while(((ext2_dir_entry*)dir_ptr)->inode);
+    }
 
     return 1;
 }
@@ -895,21 +927,12 @@ static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, u
 
 static uint8_t __ext2_list_dir(uint8_t* dir)
 {
-    char name_buffer[255];
-    void* dir_ptr = dir;
-    ext2_dir_entry* entry;
-    ext2_dir_entry* next_entry;
-    uint32_t idx = 0;
-    
-    do
+    ext2_dir_walk_t walk;
+    __ext2_walk_begin(&walk, dir);
+
+    while(__ext2_walk_next(&walk))
     {
-        entry = dir_ptr;
-        next_entry = dir_ptr + entry->entry_size;
-        strcpy(&name_buffer, &entry->name);
-        name_buffer[entry->name_length] = 0;
-        dir_ptr += entry->entry_size;
-        memset(&name_buffer, 0, 255);
-    } while(next_entry->inode);
+    }
 
     return 0;
 }
@@ -1071,7 +1094,7 @@ static int ext2_write(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd
 
     /* update the cached copy, then push the whole file back to the disk */
     __ext2_write(file->data, buffer, (uintptr_t)fd->offset, len);
-    __ext2_update_file(dev, file->data, 0, file->size, &inode->inode, inode->inode_nbr);
+    __ext2_update_file(dev, file->data, (uintptr_t)fd->offset, len, &inode->inode, inode->inode_nbr);
 
     return 0;
 }

@@ -77,7 +77,6 @@ static char** __ext2_get_path(char* src, const char delimiter, size_t* out_size,
             *(ret + idx) = 0;
             *out_size = idx;
         }
-        
     }
 
     return ret;
@@ -658,6 +657,12 @@ static uint32_t __ext2_get_start_inode(fs_device_t* dev, uint8_t from_root)
     }
 
     char* cwd = strdup(current_running->cwd);
+
+    if (cwd == 0)
+    {
+        return -1;
+    }
+
     size_t cwd_index;
     uint8_t cwd_from_root;
     char** cwd_path = __ext2_get_path(cwd, '/', &cwd_index, &cwd_from_root);
@@ -826,7 +831,10 @@ static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, u
 
     entry_read_dir_entries entries;
     uint32_t inode_id = 0;
-   
+
+    /* we start reading from the parent directory */
+    uint32_t parent_id = start_inode;
+
     size_t size = 0;
     uint8_t found = 0;
     while(*path)
@@ -852,6 +860,7 @@ static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, u
             allocsize = root_itable->inode.size + (4096 - (root_itable->inode.size % 4096));
             buffer = kmalloc(allocsize);
             __ext2_read_file(dev, buffer, &root_itable->inode);
+            parent_id = inode_id;
             size++;
         }
         path++;
@@ -872,6 +881,9 @@ static uint32_t __ext2_find_file(fs_device_t* dev, char** path, size_t* index, u
             *index = 0;
             return 0;
         }
+
+        *index = size;
+        return parent_id;
     } else if(found == 0)
     {
         return 0;
@@ -917,11 +929,20 @@ static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
 {
     size_t index;
     uint8_t from_root;
-    char** path = __ext2_get_path(filename, '/', &index, &from_root);
+    char* cwd = strdup(filename);
+
+    if (cwd == 0)
+    {
+        return -1;
+    }
+
+    char** path = __ext2_get_path(cwd, '/', &index, &from_root);
     uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 0, from_root);
     
     if(file_inode_nbr == 0)
     {
+        vmfree(cwd);
+        vmfree(path);
         return -1;
     }
 
@@ -941,6 +962,7 @@ static int ext2_open(fs_device_t* dev, char* filename, fs_fd* fd)
     fd->offset = 0;
     fd->inode_nbr = file_inode->inode_nbr;
 
+    vmfree(cwd);
     vmfree(path);
 
     return 0;
@@ -972,11 +994,20 @@ static int ext2_touch(fs_device_t* dev, char* filename)
 
     size_t index;
     uint8_t from_root;
-    char** path = __ext2_get_path(filename, '/', &index, &from_root);
+    char* cwd = strdup(filename);
+
+    if (cwd == 0)
+    {
+        return -1;
+    }
+
+    char** path = __ext2_get_path(cwd, '/', &index, &from_root);
     uint32_t file_inode_nbr = __ext2_find_file(dev, path, &index, 1, from_root);
 
     if(file_inode_nbr == 0)
     {
+        vmfree(cwd);
+        vmfree(path);
         return -1;
     }
 
@@ -993,6 +1024,7 @@ static int ext2_touch(fs_device_t* dev, char* filename)
     uint32_t inode = __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
 
     kfree(buffer);
+    vmfree(cwd);
     vmfree(path);
 
     if (root_itable->open != 0)
@@ -1052,11 +1084,19 @@ static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_t
 {
     size_t index;
     uint8_t from_root;
-    char** path = __ext2_get_path(filename, '/', &index, &from_root);
+    char* cwd = strdup(filename);
+
+    if (cwd == 0)
+    {
+        return -1;
+    }
+
+    char** path = __ext2_get_path(cwd, '/', &index, &from_root);
     uint32_t dir_inode_nbr = __ext2_find_file(dev, path, &index, 1, from_root);
 
     if(dir_inode_nbr == 0 || path == 0)
     {
+        vmfree(cwd);
         vmfree(path);
         return -1;
     }
@@ -1075,6 +1115,7 @@ static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_t
     {
         kfree(buffer);
         vmfree(path);
+        vmfree(cwd);
         return -1;
     }
 
@@ -1082,6 +1123,7 @@ static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_t
     {
         kfree(buffer);
         vmfree(path);
+        vmfree(cwd);
         return -1;
     }
 
@@ -1100,6 +1142,7 @@ static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_t
             kfree(dir_buffer);
             kfree(buffer);
             vmfree(path);
+            vmfree(cwd);
             return -1;
         }
 
@@ -1110,6 +1153,7 @@ static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_t
     {
         kfree(buffer);
         vmfree(path);
+        vmfree(cwd);
         return -1;
     }
 
@@ -1140,6 +1184,7 @@ static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_t
 
     kfree(buffer);
     vmfree(path);
+    vmfree(cwd);
 
     return 0;
 }
@@ -1162,13 +1207,21 @@ static int ext2_list(fs_device_t* dev, char* dirname, uint8_t* buffer)
 {
     size_t index;
     uint8_t from_root;
-    char** path = __ext2_get_path(dirname, '/', &index, &from_root);
+    char* cwd = strdup(dirname);
+
+    if (cwd == 0)
+    {
+        return -1;
+    }
+
+    char** path = __ext2_get_path(cwd, '/', &index, &from_root);
     uint32_t inode = __ext2_find_file(dev, path, &index, 0, from_root);
     ext2_idata* root_itable = ext2_cache_search_inode(dev, inode);
     __ext2_read_file(dev, buffer, &root_itable->inode);
     __ext2_list_dir(buffer);
 
     vmfree(path);
+    vmfree(cwd);
     return 0;
 }
 
@@ -1181,11 +1234,20 @@ static int ext2_mkdir(fs_device_t* dev, char* dirname)
 
     size_t index;
     uint8_t from_root;
-    char** path = __ext2_get_path(dirname, '/', &index, &from_root);
+    char* cwd = strdup(dirname);
+
+    if (cwd == 0)
+    {
+        return -1;
+    }
+
+    char** path = __ext2_get_path(cwd, '/', &index, &from_root);
     uint32_t prev_inode = __ext2_find_file(dev, path, &index, 1, from_root);
     
     if(prev_inode == 0)
     {
+        vmfree(path);
+        vmfree(cwd);
         return -1;
     }
     
@@ -1200,6 +1262,7 @@ static int ext2_mkdir(fs_device_t* dev, char* dirname)
         kernel_debug_output(KDB_LVL_ERROR, "ext2_mkdir() : could not create '%s'", path[index]);
         vmfree(buffer);
         vmfree(path);
+        vmfree(cwd);
         return -1;
     }
 
@@ -1214,6 +1277,7 @@ static int ext2_mkdir(fs_device_t* dev, char* dirname)
 
     vmfree(buffer);
     vmfree(path);
+    vmfree(cwd);
 
     if (root_itable->open != 0)
     {

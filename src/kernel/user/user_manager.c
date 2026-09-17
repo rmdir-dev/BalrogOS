@@ -34,12 +34,24 @@ user_data* usm_get_user_data(uint32_t uid) {
 int init_user_manager() {
     rbt_init(&user_tree);
 
-    fs_fd fd;
-    fs_file file;
-    fs_get_file("/etc/shadow", &file, &fd);
+    fs_fd fd = {};
+    fs_file file = {};
 
-    char* file_data = vmalloc(file.size);
+    if(fs_get_file("/etc/shadow", &file, &fd) != 0)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "user manager : /etc/shadow did not open, no user loaded");
+        return -1;
+    }
+
+    char* file_data = vmalloc(file.size + 1);
     void* original_address = file_data;
+
+    if(!file_data)
+    {
+        fs_close(&fd);
+        return -1;
+    }
+
     memcpy(file_data, file.data, file.size);
     file_data[file.size] = 0;
     fs_close(&fd);

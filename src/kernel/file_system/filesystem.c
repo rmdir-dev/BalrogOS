@@ -42,10 +42,25 @@ int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
     char* fname = vmalloc(len + 1);
     memcpy(fname, name, len);
     fname[len] = 0;
-    boot_dev.fs->open(&boot_dev, fname, fd);
-    fs_file* tmp = fs_cache_get_file(fd->ftable_idx);
-    *file = *tmp;
+
+    int ret = boot_dev.fs->open(&boot_dev, fname, fd);
+
     vmfree(fname);
+
+    if(ret != 0)
+    {
+        return -1;
+    }
+
+    fs_file* tmp = fs_cache_get_file(fd->ftable_idx);
+
+    if(!tmp)
+    {
+        return -1;
+    }
+
+    *file = *tmp;
+
     return 0;
 }
 
@@ -75,8 +90,13 @@ int fs_write(uint8_t* buffer, uint64_t len, fs_fd* fd)
 
 int fs_touch(char* filename)
 {
+    return fs_create(filename, 0);
+}
+
+int fs_create(char* filename, uint64_t size)
+{
     kmutex_lock(&boot_dev.lock);
-    int ret = boot_dev.fs->touch(&boot_dev, filename);
+    int ret = boot_dev.fs->create(&boot_dev, filename, size);
     kmutex_unlock(&boot_dev.lock);
     return ret;
 }

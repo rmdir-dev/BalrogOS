@@ -52,6 +52,12 @@ void fs_cache_increase_ref(uint32_t index)
 
 fs_file* fs_cache_get_file(uint32_t index)
 {
+    if(index >= FS_MAX_FILE)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "fs cache : slot %d is not in the table", index);
+        return 0;
+    }
+
     return &file_table[index];
 }
 
@@ -98,12 +104,31 @@ uint8_t* fs_cache_get_new_buffer(uint64_t size)
             free_buffer_map[i] = 1;
         }
         
-        // create the file pages
-        for(size_t i = 0; i < size; i += PAGE_SIZE)
+        uint64_t to_map = size ? size : PAGE_SIZE;
+
+        for(size_t i = 0; i < to_map; i += PAGE_SIZE)
         {
-            vmm_set_page(0, addr + i, pmm_calloc(), PAGE_PRESENT | PAGE_WRITE);
+            void* p = pmm_calloc();
+
+            if(!p || !vmm_set_page(0, addr + i, p, PAGE_PRESENT | PAGE_WRITE))
+            {
+                kernel_debug_output(KDB_LVL_ERROR, "fs cache : no page for 0%p, %d KiB buffer dropped",
+                        addr + i, BYTE_TO_KiB(size));
+
+                for(size_t done = 0; done < i; done += PAGE_SIZE)
+                {
+                    vmm_free_page(0, addr + done);
+                }
+
+                for(size_t b = start_buffer_index; b < end_block_buffer; b++)
+                {
+                    free_buffer_map[b] = 0;
+                }
+
+                return 0;
+            }
         }
-        
+
         return addr;
     }
 

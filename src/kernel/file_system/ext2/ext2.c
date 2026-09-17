@@ -1010,7 +1010,7 @@ static int ext2_stat(fs_device_t* dev, fs_fd* fd, fs_file_stat* stat)
     return 0;
 }
 
-static int ext2_touch(fs_device_t* dev, char* filename)
+static int ext2_create(fs_device_t* dev, char* filename, uint64_t size)
 {
     int i = 0;
     int last_part = 0;
@@ -1044,7 +1044,7 @@ static int ext2_touch(fs_device_t* dev, char* filename)
     char* buffer = kmalloc(allocsize);
 
     __ext2_read_file(dev, buffer, &root_itable->inode);
-    uint32_t inode = __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, 0, EXT2_TYPE_REGULAR_FILE);
+    uint32_t inode = __ext2_create_new_dir_entry(dev, (void*)buffer, path[index], &root_itable->inode, size, EXT2_TYPE_REGULAR_FILE);
 
     kfree(buffer);
     vmfree(cwd);
@@ -1326,11 +1326,9 @@ int ext2_probe(fs_device_t* dev)
 
     if(sb->ext2_signature != EXT2_SIGNATURE)
     {
-        kernel_debug_output(KDB_LVL_CRITICAL, "ext2 : signature 0%x at 0%p is not 0%x",
-                sb->ext2_signature, sb, EXT2_SIGNATURE);
-        KERNEL_LOG_FAIL("not ext 2 0%p 0%x", sb, &sb->ext2_signature);
+        kernel_debug_output(KDB_LVL_ERROR, "ext2 : signature 0%x is not 0%x, not ext2",
+                sb->ext2_signature, EXT2_SIGNATURE);
         vmfree(sb);
-        while(1){}
         return -1;
     }
     KERNEL_LOG_OK("fs is ext2");
@@ -1374,7 +1372,7 @@ int ext2_probe(fs_device_t* dev)
     dev->fs->stat = ext2_stat;
     dev->fs->read = ext2_read;
     dev->fs->write = ext2_write;
-    dev->fs->touch = ext2_touch;
+    dev->fs->create = ext2_create;
     dev->fs->list = ext2_list;
     dev->fs->mkdir = ext2_mkdir;
     dev->fs->unlink = ext2_unlink;

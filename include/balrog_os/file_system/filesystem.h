@@ -62,7 +62,7 @@ typedef struct _file_system_t
     int (*stat)(fs_device_t* dev, fs_fd* fd, fs_file_stat* stat);
     int (*read)(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
     int (*write)(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
-    int (*touch)(fs_device_t* dev, char* filename);
+    int (*create)(fs_device_t* dev, char* filename, uint64_t size);
     int (*list)(fs_device_t* dev, char* dirname, uint8_t* buffer);
     int (*mkdir)(fs_device_t* dev, char* dirname);
     int (*unlink)(fs_device_t* dev, char* filename);
@@ -111,12 +111,22 @@ int fs_read(uint8_t* buffer, uint64_t len, fs_fd* fd);
 int fs_write(uint8_t* buffer, uint64_t len, fs_fd* fd);
 
 /**
- * @brief create an empty file
+ * @brief create an empty file, a create of size zero
  * 
  * @param filename 
  * @return int 
  */
 int fs_touch(char* filename);
+
+/**
+ * @brief create a file of a given size
+ * 
+ * @param filename 
+ * @param size the size the inode is created with, which is all a write can
+ *             ever reach : __ext2_write refuses an offset past it
+ * @return int 
+ */
+int fs_create(char* filename, uint64_t size);
 
 /**
  * @brief create an empty directory

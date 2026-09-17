@@ -183,12 +183,15 @@ int init_pci()
             kernel_debug_output(KDB_LVL_INFO, "pci : multiple host controllers");
             for(uint8_t function = 0; function < 8; function++)
             {
-                pci.func = function;
-                if(pci_read_word(pci, PCI_W_VENDOR_ID) != 0xffff)
+                pci_t host = { 0, 0, function };
+
+                if(pci_read_word(host, PCI_W_VENDOR_ID) == 0xffff)
                 {
-                    break;
+                    continue;
                 }
-                __pci_probe_bus(pci);
+
+                pci_t bus = { function, 0, 0 };
+                __pci_probe_bus(bus);
             }
         }
     }

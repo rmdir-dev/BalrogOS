@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "balrog_os/memory/memory.h"
+#include "balrog_os/drivers/screen/fb_backend.h"
 #include <string.h>
 
 enum vga_color {
@@ -48,20 +49,27 @@ static inline uint16_t vga_entry(unsigned char uc, uint8_t color)
 	return (uint16_t) uc | (uint16_t) color << 8;
 }
 
-static const size_t VGA_WIDTH = 80;
-static const size_t VGA_HEIGHT = 25;
+size_t VGA_WIDTH = 80;
+size_t VGA_HEIGHT = 25;
  
 size_t vga_row;
 size_t vga_column;
 uint8_t vga_color;
 uint16_t* vga_buffer;
 
+static void (*screen_put)(size_t index, unsigned char uc, uint8_t color);
+
+static void vga_put(size_t index, unsigned char uc, uint8_t color)
+{
+	vga_buffer[index] = vga_entry(uc, color);
+}
+
 void vga_clear()
 {
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
 			const size_t index = y * VGA_WIDTH + x;
-			vga_buffer[index] = vga_entry(' ', vga_color);
+			screen_put(index, ' ', vga_color);
 		}
 	}
 	vga_row = 0;
@@ -235,7 +243,7 @@ static size_t vga_check_text(const char* data, size_t start_index)
 	{
 		for (size_t x = vga_column; x < VGA_WIDTH; x++)
 		{
-			vga_buffer[vga_row * VGA_WIDTH + x] = vga_entry(' ', vga_color);
+			screen_put(vga_row * VGA_WIDTH + x, ' ', vga_color);
 		}
 		start_index += 1;
 	}
@@ -248,7 +256,16 @@ int vga_init()
     vga_row = 0;
 	vga_column = 0;
 	vga_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-	vga_buffer = (uint16_t*) P2V(0xb8000);
+
+	if(fb_init(&VGA_WIDTH, &VGA_HEIGHT) == 0)
+	{
+		screen_put = fb_put;
+	} else
+	{
+		vga_buffer = (uint16_t*) P2V(0xb8000);
+		screen_put = vga_put;
+	}
+
 	vga_clear();
 
 	// TODO: test vga
@@ -282,7 +299,7 @@ void vga_write(const char* data, size_t size)
 		case '\b':
 			vga_column--;
 			const size_t index = vga_row * VGA_WIDTH + vga_column;
-			vga_buffer[index] = vga_entry(0, vga_color);
+			screen_put(index, 0, vga_color);
 			break;
 
 		case '\t':
@@ -297,7 +314,7 @@ void vga_write(const char* data, size_t size)
 		default:
 		{
 			const size_t index = vga_row * VGA_WIDTH + vga_column;
-			vga_buffer[index] = vga_entry(data[i], vga_color);
+			screen_put(index, data[i], vga_color);
 
 			increase_vga_column();
 			break;

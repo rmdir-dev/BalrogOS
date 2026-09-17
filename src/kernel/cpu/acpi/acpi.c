@@ -160,6 +160,12 @@ void acpi_power_off()
         return;
     }
 
+    if(!acpi_is_up)
+    {
+        kernel_debug_output(KDB_LVL_CRITICAL, "acpi : no namespace, we cannot power off");
+        return;
+    }
+
     // Send shutdown command _S5_
     lai_enter_sleep(5);
 }
@@ -194,6 +200,8 @@ int init_acpi()
     lai_set_acpi_revision(rsdp->revision);
     lai_create_namespace();
     lai_enable_acpi(1);
+
+    acpi_is_up = 1;
 
     acpi_is_up = 1;
 

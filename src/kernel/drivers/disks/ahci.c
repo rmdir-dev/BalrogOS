@@ -49,19 +49,30 @@ static void __ahci_set_addr(volatile uint32_t* reg, uintptr_t addr)
 /*
     AHCI 
 */
-
-static void __ahci_cmd_start(hba_port_t *port)
+static int __ahci_cmd_start(hba_port_t *port)
 {
 	// Wait until CR (bit15) is cleared
-	while (port->cmd & HBA_PORT_CMD_CR)
-	{}
+    int to_counter = 0;
+
+	while ((port->cmd & HBA_PORT_CMD_CR) && to_counter < AHCI_TIMEOUT)
+	{
+        to_counter++;
+    }
+
+    if(to_counter == AHCI_TIMEOUT)
+    {
+        KERNEL_LOG_FAIL("port will not stop running, we leave it alone.");
+        return -1;
+    }
  
 	// Set FRE (bit4) and ST (bit0)
     port->cmd |= HBA_PORT_CMD_FRE;
 	port->cmd |= HBA_PORT_CMD_ST; 
+
+    return 0;
 }
  
-static void __ahci_cmd_stop(hba_port_t *port)
+static int __ahci_cmd_stop(hba_port_t *port)
 {
 	// Clear ST (bit0)
     port->cmd &= ~HBA_PORT_CMD_ST;
@@ -70,8 +81,21 @@ static void __ahci_cmd_stop(hba_port_t *port)
 	port->cmd &= ~HBA_PORT_CMD_FRE;
  
 	// Wait until FR (bit14), CR (bit15) are cleared
-	while((port->cmd & HBA_PORT_CMD_FR) || (port->cmd & HBA_PORT_CMD_CR))
-	{}
+    int to_counter = 0;
+
+	while(((port->cmd & HBA_PORT_CMD_FR) || (port->cmd & HBA_PORT_CMD_CR))
+        && to_counter < AHCI_TIMEOUT)
+	{
+        to_counter++;
+    }
+
+    if(to_counter == AHCI_TIMEOUT)
+    {
+        KERNEL_LOG_FAIL("port will not stop, we do not touch its command list.");
+        return -1;
+    }
+
+    return 0;
 }
 
 static int __find_free_cmd_slot(ahci_device_t* dev)
@@ -302,7 +326,10 @@ static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
 {
     dev->port_no = port_no;
 
-    __ahci_cmd_stop(dev->port);
+    if(__ahci_cmd_stop(dev->port) != 0)
+    {
+        return -1;
+    }
 
     /*  the HBA wants the command list 1KiB aligned, the received FIS 256
         bytes aligned and every command table 128 bytes aligned. kmalloc
@@ -353,7 +380,10 @@ static int __ahci_port_rebase(ahci_device_t* dev, uint32_t port_no)
     // clear the error register before the port is started again.
     dev->port->serr = dev->port->serr;
 
-    __ahci_cmd_start(dev->port);
+    if(__ahci_cmd_start(dev->port) != 0)
+    {
+        return -1;
+    }
 
     return __ahci_sata_ident(dev);
 }

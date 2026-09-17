@@ -13,7 +13,7 @@
 /**
  * @brief Initialize the serial
  *
- * @return status 0 ok, -1 error
+ * @return status 0 ok, 1 when there is no chip answering on COM1.
  */
 int serial_init();
 
@@ -22,6 +22,11 @@ int serial_init();
  * @return
  */
 void serial_irq_init();
+
+/**
+ * @brief Log what COM1 answered.
+ */
+void serial_log_info();
 
 /**
  * @brief Read a single char from serial

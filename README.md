@@ -46,6 +46,23 @@ First build & run qemu in debug
 make debug run_debug
 ```
 
+# Export UEFI ESP & create bootable uefi_usb
+
+```shell
+make kernel esp
+```
+
+```shell
+lsblk
+printf 'label: gpt\n,,U\n' | sudo sfdisk $(DEV)
+sudo mkfs.vfat -F 32 -n BALROGOS $(DEV)1
+mkdir -p ./build/mnt
+sudo mount $(DEV)1 ./build/mnt
+sudo cp -r build/esp/. ./build/mnt
+sudo umount ./build/mnt
+sudo sync
+```
+
 Then connect the remote debugger with the following configuration :
 * remote target : localhost:1234
 * symbol file : build/os/kernel.elf

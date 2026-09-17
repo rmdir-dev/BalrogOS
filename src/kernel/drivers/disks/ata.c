@@ -25,6 +25,29 @@ static int __ata_wait_400ns(uint16_t bus)
     return in_byte(ATA_REG_R_STATUS(bus));
 }
 
+/*
+Wait for the busy bit to drop, and say whether it actually did.
+*/
+static int __ata_wait_busy(uint16_t bus)
+{
+    for(uint32_t i = 0; i < ATA_WAIT_LIMIT; i++)
+    {
+        uint8_t status = in_byte(ATA_REG_R_STATUS(bus));
+
+        if(status == ATA_FLOATING_BUS)
+        {
+            return 0;
+        }
+
+        if(!(status & ATA_STATUS_BSY))
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 static uint8_t __ata_send_command(ata_cmd* command)
 {
     // select the device
@@ -36,8 +59,10 @@ static uint8_t __ata_send_command(ata_cmd* command)
     out_byte(ATA_REG_W_LBA_M(command->bus), command->lba_sep[1]);
     out_byte(ATA_REG_W_LBA_H(command->bus), command->lba_sep[2]);
 
-    while(in_byte(ATA_REG_R_STATUS(command->bus)) & ATA_STATUS_BSY)
-    {}
+    if(!__ata_wait_busy(command->bus))
+    {
+        return 0;
+    }
 
     out_byte(ATA_REG_W_CMD(command->bus), command->command);
 
@@ -48,13 +73,24 @@ static uint8_t __ata_send_command(ata_cmd* command)
 
     command->status = __ata_wait_400ns(command->bus);
 
-    while((command->status = in_byte(ATA_REG_R_STATUS(command->bus))) & ATA_STATUS_BSY)
-    {}
+    if(!__ata_wait_busy(command->bus))
+    {
+        return 0;
+    }
+
+    command->status = in_byte(ATA_REG_R_STATUS(command->bus));
 
     if(command->wait_status)
     {
+        uint32_t spins = 0;
+
         while(!(command->status = in_byte(ATA_REG_R_STATUS(command->bus)) & (command->wait_status | ATA_STATUS_ERR)))
-        {}
+        {
+            if(++spins >= ATA_WAIT_LIMIT)
+            {
+                return 0;
+            }
+        }
     }
 
     command->error = in_byte(ATA_REG_R_ERROR(command->bus));
@@ -71,6 +107,12 @@ static uint8_t __ata_send_command(ata_cmd* command)
 static void __ata_init_drive(ata_drive* drive)
 {
     uint16_t io_bus = drive->io_bus;
+
+    /*  nothing decodes this port, so there is no controller on this bus. */
+    if(in_byte(ATA_REG_R_STATUS(io_bus)) == ATA_FLOATING_BUS)
+    {
+        return;
+    }
 
     /* select the drive */
     out_byte(ATA_REG_W_DEV(io_bus), 0xa0 | drive->master);

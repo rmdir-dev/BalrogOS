@@ -22,8 +22,10 @@ SECTIONS
   }
   .bss : AT(ADDR(.bss) - KERNEL_OFFSET)
   {
+    bss_start = .;
     *(.COMMON)
     *(.bss)
+    bss_end = .;
   }
   kernel_end = .;
 }

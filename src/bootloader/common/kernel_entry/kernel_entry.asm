@@ -79,6 +79,8 @@ _PrepareKernel:
 
 [bits 64]                       ; switching to 64bit
 [extern kernel_main]
+[extern bss_start]
+[extern bss_end]
 
 LongMode:
     mov eax, 0x0                ; clearing segment register
@@ -122,6 +124,20 @@ Upper_half:
     sti                         ; enable interrupt
     ret
 _KernelEntry:
+;   the .bss is a NOBITS section : it takes no room in kernel.bin and neither
+;   loader writes it, so every static that is supposed to start at zero starts
+;   on whatever was left in that ram. qemu hands out a machine full of zeroes
+;   and hides the whole thing, a real one does not. idt_ptr, int_handlers and
+;   the rest come up holding garbage.
+;   here is the place to do it : nothing has run yet, and the kernel stack sits
+;   in there too so there is nothing to lose by clearing it.
+    cld                         ; rep goes forward, we do not inherit a df
+    mov rdi, qword bss_start
+    mov rcx, qword bss_end
+    sub rcx, rdi                ; how many bytes the section covers
+    xor eax, eax
+    rep stosb
+
     mov rax, qword MEMORY_INFO
     movzx rdi, word [rax]       ; movzx and not a 16 bit mov : the bootloader
     mov rax, qword MEMORY_ENTRIES

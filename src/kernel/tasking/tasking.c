@@ -402,7 +402,8 @@ static int __copy_add_args_to_stack(process* proc, char** argv)
         return -1;
     }
 
-    vmm_set_page(proc->PML4T, PROCESS_START_DATA, phys, PAGE_PRESENT | PAGE_USER);
+    // hold errno so must be writable
+    vmm_set_page(proc->PML4T, PROCESS_START_DATA, phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     uint64_t* array = P2V(phys);
     char* data = P2V(phys) + 0x100;
     

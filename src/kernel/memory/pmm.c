@@ -167,12 +167,17 @@ int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
             if(!next_addr)
             {
                 next_addr = start;
-                top_32_addr = end;
-                pmm_top_addr = end;
-            } else 
-            {
-                pmm_top_addr = end;
             }
+
+            /*
+             * top_32_addr is the top of the highest usable region under 4GiB.
+             */
+            if(end <= (void*) 0x100000000)
+            {
+                top_32_addr = end;
+            }
+
+            pmm_top_addr = end;
         }
 
         /*
@@ -185,7 +190,7 @@ int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
          */
         if(i != *SMAPsize - 1 || SMAPinfo[i].Type == 1)
         {
-            for(void* p = start; (p + PAGE_SIZE) < end; p += PAGE_SIZE)
+            for(void* p = start; p < end; p += PAGE_SIZE)
             {
                 vmm_set_page(0, (void*)P2V(p), p, PAGE_PRESENT | PAGE_WRITE);
 

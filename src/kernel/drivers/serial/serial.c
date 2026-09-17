@@ -14,6 +14,10 @@ static char rx_buf[SERIAL_BUF];
 static volatile uint32_t rx_head;
 static volatile uint32_t rx_tail;
 
+static int serial_present = 0;
+
+static uint8_t serial_loopback = 0;
+
 static int __lsr_wait(uint8_t mask)
 {
     for (int i = 0; i < 100000; i++)
@@ -46,18 +50,39 @@ int serial_init()
     __lsr_wait(0x01);
 
     // Check if serial is faulty (i.e: not same byte as sent)
-    if(in_byte(COM1 + 0) != 0xAE) {
+    serial_loopback = in_byte(COM1 + 0);
+    if(serial_loopback != 0xAE) {
         ret = 1;
     }
 
     // If serial is not faulty set it in normal operation mode
     // (not-loopback with IRQs enabled and OUT#1 and OUT#2 bits enabled)
     out_byte(COM1 + 4, 0x0F);
+
+    serial_present = (ret == 0);
+
     return ret;
+}
+
+void serial_log_info()
+{
+    if(!serial_present)
+    {
+        kernel_debug_output(KDB_LVL_INFO, "serial : nothing on COM1 0%x, loopback read back 0%x",
+            COM1, serial_loopback);
+        return;
+    }
+
+    kernel_debug_output(KDB_LVL_INFO, "serial : COM1 0%x, 38400 baud, 8n1, fifo on", COM1);
 }
 
 char serial_read_char()
 {
+    if(!serial_present)
+    {
+        return 0;
+    }
+
     while(rx_head == rx_tail)
     {}
 
@@ -69,6 +94,11 @@ char serial_read_char()
 
 void serial_put_char(char c)
 {
+    if(!serial_present)
+    {
+        return;
+    }
+
     if (c == '\n')
     {
         serial_put_char('\r');
@@ -111,6 +141,13 @@ static interrupt_regs* __serial_int_handler(interrupt_regs *stack_frame)
 
 void serial_irq_init()
 {
+    // no need to initialize irq4 if serial is not present.
+    if(!serial_present)
+    {
+        return;
+    }
+
+    kernel_debug_output(KDB_LVL_INFO, "serial : irq %d unmasked, rx interrupts on", INT_IRQ_4);
     register_interrupt_handler(INT_IRQ_4, &__serial_int_handler);
     irq_pic_toggle_mask_bit(INT_IRQ_4);
     out_byte(COM1 + 1, IER_RX_AVAILABLE); // Enable interrupts

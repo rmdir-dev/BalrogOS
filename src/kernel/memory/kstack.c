@@ -55,7 +55,7 @@ void* kstack_alloc()
     for(size_t i = 511; i > 505; i--)
     {
         PT[i] = (uintptr_t)pmm_calloc();
-        PT[i] |= PAGE_PRESENT | PAGE_WRITE;
+        PT[i] |= PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL;
     }
 
     void* top = (void*)((KERNEL_OFFSET | vaddr) + (4096 * 511));
@@ -71,12 +71,16 @@ void kstack_free(uintptr_t* addr)
     page_table* PDT = (void*)P2V(STRIP_FLAGS(PDPT[PDPT_OFFSET(addr)]));
     page_table* PT = (void*)P2V(STRIP_FLAGS(PDT[PDT_OFFSET(addr)]));
 
+    // the PT covers the 2MiB this address falls in, and we walk all of it
+    uintptr_t base = (uintptr_t) addr & ~0x1FFFFFUL;
+
     for(size_t i = 0; i < 512; i++)
     {
         if(PT[i] != 0)
         {
             pmm_free((void*)STRIP_FLAGS(PT[i]));
             PT[i] = 0;
+            vmm_invalidate((void*) (base + (i * 0x1000)));
         }
     }
 

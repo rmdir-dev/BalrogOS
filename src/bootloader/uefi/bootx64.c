@@ -43,6 +43,7 @@ inside the 2MiB our tables map.
 
 #define PML4T_PHYS      0x1000
 #define PAGE_PRESENT_RW 0x003
+#define PAGE_GLOBAL_BIT 0x100   // ignored until the kernel raises CR4.PGE
 
 #define FB_PDPT_INDEX    511
 #define FB_VIRTUAL_BASE  0xFFFFFFFFC0000000
@@ -397,7 +398,7 @@ static void __build_page_tables(void)
 
     for(uint64_t i = 0; i < 512; i++)
     {
-        pt[i] = (i * 0x1000) | PAGE_PRESENT_RW;
+        pt[i] = (i * 0x1000) | PAGE_PRESENT_RW | PAGE_GLOBAL_BIT;
     }
 
     if(!framebuffer.magic)
@@ -425,7 +426,7 @@ static void __build_page_tables(void)
             break;
         }
 
-        fb_pdt[index] = (fb_start + offset) | PAGE_PRESENT_RW | 0x80 | 0x10;
+        fb_pdt[index] = (fb_start + offset) | PAGE_PRESENT_RW | 0x80 | 0x10 | PAGE_GLOBAL_BIT;;
     }
 }
 

@@ -37,7 +37,9 @@ _PrepareKernel:
     add edi, 0x1000             ; add 0x1000 to edi so now edi point to 0x4000
     
 
-    mov dword ebx, 0x00000003   ; ebx to 0x00000003 3 = present and writable
+    mov dword ebx, 0x00000103   ; 0x3 = present and writable, 0x100 is the global bit.
+                                ; It is ignored while CR4.PGE is 0, and PGE only goes
+                                ; up in Upper_half, once the identity map is gone.
     mov ecx, 512                ; ecx to 512 will be use as counter
     
 .SetEntry:
@@ -103,6 +105,20 @@ Upper_half:
 
     mov rax, cr3                ; update the cr3 register
     mov cr3, rax                ; to update paging informations
+
+    ; the kernel lives in PML4T[511] and every process points at the same pdpt,
+    ; so its translations are identical in every address space. PGE tells the cpu
+    ; that much -> a mov to cr3 stops flushing them and the kernel keeps its tlb
+    ; across a context switch.
+    ;
+    ; it belongs here and not next to PAE above ! while the identity map at
+    ; PML4T[0] was up, the low 2MiB went through the very same page tables as the
+    ; higher half. marking them global before dropping that entry would have left
+    ; the identity map alive in the tlb, where no cr3 reload can reach it.
+    ; source : intel sdm vol 3A, 4.10.2.4 global pages
+    mov rax, cr4
+    or rax, 1 << 7              ; PGE
+    mov cr4, rax
 
     mov rax, qword GDT64.Pointer ; update GDT
     lgdt [rax]

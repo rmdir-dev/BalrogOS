@@ -141,8 +141,12 @@ void* vmm_set_page(page_table* PML4T, void* virt_addr, void* phys_addr, uint32_t
                 flags & PAGE_NOCACHE ? " nocache" : "");
     }
 
-    PT[PT_OFFSET(virt_addr)] = ADD_FLAGS(phys_addr, flags);
+    if((uintptr_t) virt_addr >= KERNEL_OFFSET && !(flags & PAGE_USER))
+    {
+        flags |= PAGE_GLOBAL;
+    }
 
+    PT[PT_OFFSET(virt_addr)] = ADD_FLAGS(phys_addr, flags);
     return (void*)PT[PT_OFFSET(virt_addr)];
 }
 
@@ -164,6 +168,10 @@ void vmm_free_page(page_table* PML4T, void* virt_addr)
     {
         pmm_free((void*)STRIP_FLAGS(PT[PT_OFFSET(virt_addr)]));
         PT[PT_OFFSET(virt_addr)] = 0;
+
+        // a global entry is the one a cr3 reload does not flush! without this
+        // the page is still readable.
+        vmm_invalidate(virt_addr);
         return;
     }
 

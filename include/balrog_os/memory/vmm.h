@@ -51,3 +51,13 @@ void vmm_free_page(page_table* PML4T, void* virt_addr);
  * @return int 
  */
 int vmm_clean_page_table(page_table* PML4T);
+
+/**
+ * @brief drop one page out of the tlb
+ *
+ * @param virt_addr the address whose translation must go
+ */
+static inline void vmm_invalidate(void* virt_addr)
+{
+    asm volatile("invlpg (%0)" :: "r"(virt_addr) : "memory");
+}

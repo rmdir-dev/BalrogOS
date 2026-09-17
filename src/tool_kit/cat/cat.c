@@ -4,10 +4,10 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <balrog/fs/fs_struct.h>
 
-char buf[4096 * 100];
 char name[255];
 char cwd[100] = {};
 
@@ -20,10 +20,12 @@ int main(int argc, char** argv)
         int start_index = 0;
         int total_len = strlen(argv[1]);
         int argv_len = strlen(argv[1]);
-        if(argv[1][0] != '/') {
+        if(argv[1][0] != '/')
+        {
             int cwd_len = strlen(cwd);
             memcpy(tmp, cwd, cwd_len);
-            if(cwd_len > 1) {
+            if(cwd_len > 1)
+            {
                 tmp[cwd_len] = '/';
                 start_index = cwd_len + 1;
             }
@@ -36,7 +38,8 @@ int main(int argc, char** argv)
         
         if(fd == -1)
         {
-            switch (errno) {
+            switch(errno)
+            {
                 case ENOENT:
                     printf("cat: %s: No such file or directory\n", argv[1]);
                     break;
@@ -52,14 +55,21 @@ int main(int argc, char** argv)
 
         fs_file_stat stat = {};
         fstat(fd, &stat);
-        if(stat.size >= (4096 * 100))
+
+        char* buf = malloc(stat.size + 1);
+
+        if(buf == 0)
         {
-            printf("file is currently too large!\n");
+            printf("cat: %s: not enough memory for %d bytes\n", argv[1], stat.size);
+            close(fd);
             return -1;
         }
-        read(fd, &buf[0], stat.size);
+
+        read(fd, buf, stat.size);
         buf[stat.size] = 0;
-        printf(buf);
+        printf("%s", buf);
+
+        free(buf);
         close(fd);
     }
     printf("\n");

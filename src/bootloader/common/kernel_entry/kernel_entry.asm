@@ -51,6 +51,22 @@ _PrepareKernel:
                                 ; the map the first 2MB of memory
                                 ; so it will map the memory from 0x00000000 to 0x00200000
 
+    ; 2MiB up to 8MiB, as three 2MiB pages instead of three more tables.
+    ; the early kernel reaches the pages the pmm hands out through P2V, and
+    ; that happens before init_vmm has built anything of its own, so the
+    ; window has to be wider than the image.
+    ; bit 7 is PS, which makes the entry a 2MiB page rather than a pointer.
+    mov edi, 0x3000 - KERNEL_OFFSET + 8 ; pdt entry 1, the first one past the pt
+    mov dword ebx, 0x00200083   ; 0x200000, present, writable, and PS
+    mov ecx, 3                  ; three entries, so up to 0x800000
+
+.SetHugeEntry:
+    mov dword [edi], ebx        ; the high half stays zero, the rep stosd above
+                                ; cleared 0x1000 to 0x5000 before we got here
+    add ebx, 0x200000           ; walk one 2MiB page forward
+    add edi, 8                  ; and one entry forward
+    loop .SetHugeEntry
+
     mov eax, cr4                ; set the cr4 register to eax
     or eax, 1 << 5              ; set the PAE-bit to 1
                                 ; physical address extension

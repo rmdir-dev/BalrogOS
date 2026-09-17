@@ -401,6 +401,12 @@ static void __build_page_tables(void)
         pt[i] = (i * 0x1000) | PAGE_PRESENT_RW | PAGE_GLOBAL_BIT;
     }
 
+    /* 2MiB up to 8MiB, as three 2MiB pages instead of three more tables. bit 7 is PAGE_HUGE, */
+    for(uint64_t i = 1; i < 4; i++)
+    {
+        pdt[i] = (i * 0x200000) | PAGE_PRESENT_RW | 0x80;
+    }
+
     if(!framebuffer.magic)
     {
         return;

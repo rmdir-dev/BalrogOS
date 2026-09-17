@@ -76,6 +76,7 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_RESULT(vga_status,    "VGA driver : ",    "done", "not initialized");
     KERNEL_LOG_RESULT(serial_status, "Serial driver : ", "done", "not initialized");
 
+    fb_claim_memory();
     /*    GDT and TSS    */
     KERNEL_LOG_ASSERT(init_gdt(), "GDT and TSS : ", "done", "not initialized");
 

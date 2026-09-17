@@ -6,148 +6,164 @@
 #include <string.h>
 
 enum vga_color {
-	VGA_COLOR_BLACK = 0,
-	VGA_COLOR_BLUE = 1,
-	VGA_COLOR_GREEN = 2,
-	VGA_COLOR_CYAN = 3,
-	VGA_COLOR_RED = 4,
-	VGA_COLOR_MAGENTA = 5,
-	VGA_COLOR_BROWN = 6,
-	VGA_COLOR_LIGHT_GREY = 7,
-	VGA_COLOR_DARK_GREY = 8,
-	VGA_COLOR_LIGHT_BLUE = 9,
-	VGA_COLOR_LIGHT_GREEN = 10,
-	VGA_COLOR_LIGHT_CYAN = 11,
-	VGA_COLOR_LIGHT_RED = 12,
-	VGA_COLOR_LIGHT_MAGENTA = 13,
-	VGA_COLOR_LIGHT_BROWN = 14, // -> YELLOW
-	VGA_COLOR_WHITE = 15,
+    VGA_COLOR_BLACK = 0,
+    VGA_COLOR_BLUE = 1,
+    VGA_COLOR_GREEN = 2,
+    VGA_COLOR_CYAN = 3,
+    VGA_COLOR_RED = 4,
+    VGA_COLOR_MAGENTA = 5,
+    VGA_COLOR_BROWN = 6,
+    VGA_COLOR_LIGHT_GREY = 7,
+    VGA_COLOR_DARK_GREY = 8,
+    VGA_COLOR_LIGHT_BLUE = 9,
+    VGA_COLOR_LIGHT_GREEN = 10,
+    VGA_COLOR_LIGHT_CYAN = 11,
+    VGA_COLOR_LIGHT_RED = 12,
+    VGA_COLOR_LIGHT_MAGENTA = 13,
+    VGA_COLOR_LIGHT_BROWN = 14, // -> YELLOW
+    VGA_COLOR_WHITE = 15,
 };
 
 /**
  * @brief Change the background and foreground color
- * 		  Both color MUST be selected using the enum vga_color
- * 
+ * Both color MUST be selected using the enum vga_color
+ *
  * @param fg fore ground color
  * @param bg background color
  * @return uint8_t the foregroud and background color combined
  */
-static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) 
+static inline uint8_t __vga_entry_color(enum vga_color fg, enum vga_color bg)
 {
-	return fg | bg << 4;
+    return fg | bg << 4;
 }
 
 /**
  * @brief print a new character to the screen
- * 
+ *
  * @param uc the character to print
  * @param color the color it said character
  * @return uint16_t return the character and it's color to put into the screen buffer
  */
-static inline uint16_t vga_entry(unsigned char uc, uint8_t color) 
+static inline uint16_t __vga_entry(unsigned char uc, uint8_t color)
 {
-	return (uint16_t) uc | (uint16_t) color << 8;
+    return (uint16_t) uc | (uint16_t) color << 8;
 }
 
 size_t VGA_WIDTH = 80;
 size_t VGA_HEIGHT = 25;
- 
+
 size_t vga_row;
 size_t vga_column;
 uint8_t vga_color;
 uint16_t* vga_buffer;
 
-static void (*screen_put)(size_t index, unsigned char uc, uint8_t color);
+static screen_actions_t __screen_actions;
 
-static void vga_put(size_t index, unsigned char uc, uint8_t color)
+static void __vga_put(size_t index, unsigned char uc, uint8_t color)
 {
-	vga_buffer[index] = vga_entry(uc, color);
+    vga_buffer[index] = __vga_entry(uc, color);
+}
+
+static void __vga_clear(uint8_t color)
+{
+    for(size_t y = 0; y < VGA_HEIGHT; y++)
+    {
+        for(size_t x = 0; x < VGA_WIDTH; x++)
+        {
+            const size_t index = y * VGA_WIDTH + x;
+            __screen_actions.write(index, ' ', color);
+        }
+    }
+}
+
+static void __vga_clear_back()
+{
+    __screen_actions.clear_back(vga_color);
+    vga_row = 0;
+    vga_column = 0;
 }
 
 void vga_clear()
 {
-	for (size_t y = 0; y < VGA_HEIGHT; y++) {
-		for (size_t x = 0; x < VGA_WIDTH; x++) {
-			const size_t index = y * VGA_WIDTH + x;
-			screen_put(index, ' ', vga_color);
-		}
-	}
-	vga_row = 0;
-	vga_column = 0;
+    __screen_actions.clear(vga_color);
+    vga_row = 0;
+    vga_column = 0;
 }
 
 /**
  * @brief Set the new VGA char color
- * 
+ *
  * @param color new color
  */
-static inline void vga_setcolor(uint8_t color) 
+static inline void __vga_setcolor(uint8_t color)
 {
-	vga_color = color;
+    vga_color = color;
 }
 
 /**
  * @brief increase the row on the screen
- * 
+ *
  */
-static void increase_vga_row()
+static void __increase_vga_row()
 {
-	if (++vga_row == VGA_HEIGHT)
-	{
-		vga_row = 0;
-	}
+    if(++vga_row == VGA_HEIGHT)
+    {
+        vga_row = 0;
+    }
 }
 
 /**
  * @brief increase the screen column
- * 
+ *
  */
-static void increase_vga_column()
+static void __increase_vga_column()
 {
-	if (++vga_column == VGA_WIDTH) {
-		vga_column = 0;
-		increase_vga_row();
-	}
+    if(++vga_column == VGA_WIDTH)
+    {
+        vga_column = 0;
+        __increase_vga_row();
+    }
 }
 
 /**
  * @brief Set a new character color
- * 
+ *
  * @param high_intensity 1 if high intensity color
  * @param color color
  */
-static inline void vga_set_char_for_color(uint8_t high_intensity, uint8_t color) 
+static inline void __vga_set_char_for_color(uint8_t high_intensity, uint8_t color)
 {
-	uint8_t base_color = 0;
-	if(high_intensity == 1)
-	{
-		base_color = 8;
-	} else if(high_intensity == 2 || high_intensity == 3) // if background color
+    uint8_t base_color = 0;
+    if(high_intensity == 1)
     {
-        if(high_intensity == 3) {
+        base_color = 8;
+    } else if(high_intensity == 2 || high_intensity == 3) // if background color
+    {
+        if(high_intensity == 3)
+        {
             color += 8;
         }
         color = vga_color | color << 4;
     }
 
-	vga_setcolor(base_color + color);
+    __vga_setcolor(base_color + color);
 }
 
-static int vga_check_color(const char* data, size_t index)
+static int __vga_check_color(const char* data, size_t index)
 {
-	uint8_t high_intensity = -1;
-	switch (data[index])
-	{
-	case '3':
-		high_intensity = 0;
-		break;
+    uint8_t high_intensity = -1;
+    switch(data[index])
+    {
+    case '3':
+            high_intensity = 0;
+            break;
     case '4':
         high_intensity = 2;
         break;
 
-	case '9':
-		high_intensity = 1;
-		break;
+        case '9':
+                high_intensity = 1;
+                break;
     case '1':
         if(data[index + 1] == '0')
         {
@@ -155,170 +171,175 @@ static int vga_check_color(const char* data, size_t index)
             index++;
         }
         break;
-	
-	default:
-		break;
-	}
 
-	if(high_intensity != -1)
-	{
-		switch (data[index + 1])
-		{
-		case '0':
-			vga_set_char_for_color(high_intensity, 0);
-			break;
-		case '1':
-			vga_set_char_for_color(high_intensity, 1);
-			break;
-		case '2':
-			vga_set_char_for_color(high_intensity, 2);
-			break;
-		case '3':
-			vga_set_char_for_color(high_intensity, 3);
-			break;
-		case '4':
-			vga_set_char_for_color(high_intensity, 4);
-			break;
-		case '5':
-			vga_set_char_for_color(high_intensity, 5);
-			break;
-		case '6':
-			vga_set_char_for_color(high_intensity, 6);
-			break;
-		case '7':
-			vga_set_char_for_color(high_intensity, 7);
-			break;
-		
-		default:
-			break;
-		}
-	}
+    default:
+            break;
+    }
+
+    if(high_intensity != -1)
+    {
+        switch(data[index + 1])
+        {
+        case '0':
+            __vga_set_char_for_color(high_intensity, 0);
+            break;
+        case '1':
+            __vga_set_char_for_color(high_intensity, 1);
+            break;
+        case '2':
+            __vga_set_char_for_color(high_intensity, 2);
+            break;
+        case '3':
+            __vga_set_char_for_color(high_intensity, 3);
+            break;
+        case '4':
+            __vga_set_char_for_color(high_intensity, 4);
+            break;
+        case '5':
+            __vga_set_char_for_color(high_intensity, 5);
+            break;
+        case '6':
+            __vga_set_char_for_color(high_intensity, 6);
+            break;
+        case '7':
+            __vga_set_char_for_color(high_intensity, 7);
+            break;
+
+        default:
+            break;
+        }
+    }
 
     return high_intensity == 3 ? -1 : 0;
 }
 
-static size_t vga_check_text(const char* data, size_t start_index)
+static size_t __vga_check_text(const char* data, size_t start_index)
 {
-	start_index++;
-	size_t color_index = 0;
+    start_index++;
+    size_t color_index = 0;
 
-	if(data[start_index] == '[' && data[start_index + 2] == ';')
-	{
-		switch (data[start_index + 1])
-		{
-		case '0':
-			color_index = start_index + 3;
-			start_index += 4;
-			if(data[color_index + 2] == 'm' || (data[color_index] == '1' && data[color_index + 3] == 'm'))
-			{
-				start_index++;
-				int long_nbr = vga_check_color(data, color_index);
-                if(long_nbr == -1)
-                {
-                    start_index++;
-                }
-			}
-			break;
-		
-		case '1':
-			/* code */
-			break;
+    if(data[start_index] == '[' && data[start_index + 2] == ';')
+    {
+        switch(data[start_index + 1])
+        {
+        case '0':
+            color_index = start_index + 3;
+            start_index += 4;
+            if(data[color_index + 2] == 'm' || (data[color_index] == '1' && data[color_index + 3] == 'm'))
+            {
+                start_index++;
+                int long_nbr = __vga_check_color(data, color_index);
+                    if(long_nbr == -1)
+                    {
+                        start_index++;
+                    }
+            }
+            break;
 
-		case '4':
-			/* code */
-			break;
-		
-		default:
-			break;
-		}
-	} else if(data[start_index] == '[' && data[start_index + 1] == '0' && data[start_index + 2] == 'm')
-	{
-		vga_setcolor(VGA_COLOR_WHITE);
-		start_index += 2;
-	} else if(data[start_index] == '[' && data[start_index + 1] == '3' && data[start_index + 2] == 'j')
-	{
-		vga_clear();
-		start_index += 2;
-	} else if(data[start_index] == '[' && data[start_index + 1] == 'K')
-	{
-		for (size_t x = vga_column; x < VGA_WIDTH; x++)
-		{
-			screen_put(vga_row * VGA_WIDTH + x, ' ', vga_color);
-		}
-		start_index += 1;
-	}
+        case '1':
+            /* code */
+            break;
 
-	return start_index;
+        case '4':
+            /* code */
+            break;
+
+        default:
+            break;
+        }
+    } else if(data[start_index] == '[' && data[start_index + 1] == '0' && data[start_index + 2] == 'm')
+    {
+        __vga_setcolor(VGA_COLOR_WHITE);
+        start_index += 2;
+    } else if(data[start_index] == '[' && data[start_index + 1] == '3' && data[start_index + 2] == 'j')
+    {
+        __vga_clear_back();
+        start_index += 2;
+    } else if(data[start_index] == '[' && data[start_index + 1] == 'K')
+    {
+        for(size_t x = vga_column; x < VGA_WIDTH; x++)
+        {
+            __screen_actions.write(vga_row * VGA_WIDTH + x, ' ', vga_color);
+        }
+        start_index += 1;
+    }
+
+    return start_index;
 }
 
 int vga_init()
 {
     vga_row = 0;
-	vga_column = 0;
-	vga_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_column = 0;
+    vga_color = __vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
 
-	if(fb_init(&VGA_WIDTH, &VGA_HEIGHT) == 0)
-	{
-		screen_put = fb_put;
-	} else
-	{
-		vga_buffer = (uint16_t*) P2V(0xb8000);
-		screen_put = vga_put;
-	}
+    /*  init the framebuffer if there is no framebuffer then we're in vga  */
+    if(fb_init(&VGA_WIDTH, &VGA_HEIGHT, &__screen_actions) != 0)
+    {
+        vga_buffer = (uint16_t*) P2V(0xb8000);
+        __screen_actions.write = __vga_put;
+        __screen_actions.clear = __vga_clear;
+        __screen_actions.clear_back = __vga_clear;
+    }
 
-	vga_clear();
+    vga_clear();
 
-	// TODO: test vga
-	return 0;
+    // TODO: test vga
+    return 0;
 }
 
 void vga_write(const char* data, size_t size)
 {
-	if(vga_row == 0 && vga_column ==0)
-	{
-		vga_clear();
-	}
-	
-    for (size_t i = 0; i < size; i++)
-	{
-		switch (data[i])
-		{
-		case '\n':
-			increase_vga_row();
-			vga_column = 0;
-			if(vga_row ==0)
-			{
-				vga_clear();
-			}
-			break;
+    if(vga_row == 0 && vga_column ==0)
+    {
+        __vga_clear_back();
+    }
 
-		case '\r':
-			vga_column = 0;
-			break;
+    for(size_t i = 0; i < size; i++)
+    {
+        switch(data[i])
+        {
+        case '\n':
+            __increase_vga_row();
+            vga_column = 0;
+            if(vga_row ==0)
+            {
+                __vga_clear_back();
+            }
+            break;
 
-		case '\b':
-			vga_column--;
-			const size_t index = vga_row * VGA_WIDTH + vga_column;
-			screen_put(index, 0, vga_color);
-			break;
+        case '\r':
+            vga_column = 0;
+            break;
 
-		case '\t':
-			//TODO
-			break;
+        case '\b':
+            vga_column--;
+            const size_t index = vga_row * VGA_WIDTH + vga_column;
+            __screen_actions.write(index, 0, vga_color);
+            break;
 
-			// COLOR
-		case '\e':
-			i = vga_check_text(data, i);
-			break;
-		
-		default:
-		{
-			const size_t index = vga_row * VGA_WIDTH + vga_column;
-			screen_put(index, data[i], vga_color);
+        case '\t':
+                //TODO
+                break;
 
-			increase_vga_column();
-			break;
-		}
-		}
-	}
+                // COLOR
+        case '\e':
+            i = __vga_check_text(data, i);
+            break;
+
+        default:
+            {
+                const size_t index = vga_row * VGA_WIDTH + vga_column;
+                __screen_actions.write(index, data[i], vga_color);
+
+                __increase_vga_column();
+                break;
+            }
+        }
+    }
+
+    if (__screen_actions.flush)
+    {
+        __screen_actions.flush();
+    }
 }

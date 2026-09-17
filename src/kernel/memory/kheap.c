@@ -11,11 +11,19 @@ size_t kheap_size = 0;
 
 int init_kheap()
 {
-    /* Declared in linker script */
-    extern uintptr_t* kernel_end;
-    kheap_start = &kernel_end;
-    kheap_end = (void*)P2V(0x9fc00);
+    /*
+    from the linkerScript.
+    */
+    extern uintptr_t kheap_area;
+    extern uintptr_t kheap_area_end;
+    extern uintptr_t kheap_guard_end;
+
+    kheap_start = &kheap_area;
+    kheap_end = &kheap_area_end;
     kheap_max_size = kheap_end - kheap_start;
+
+    /* reservering the memory to make sure it is not allocated to something else. */
+    pmm_reserve((void*)V2P(kheap_start), (uintptr_t)&kheap_guard_end - (uintptr_t)kheap_start);
 
     block_info* first_block = kheap_start;
     first_block->_size = (kheap_end - kheap_start) - sizeof(block_info);

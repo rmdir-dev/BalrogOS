@@ -1,6 +1,15 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
+
+typedef struct __screen_actions_t
+{
+    void (*write)(size_t index, unsigned char uc, uint8_t color);
+    void (*clear)(uint8_t color);
+    void (*clear_back)(uint8_t color);
+    void (*flush)();
+} screen_actions_t;
 
 /**
  * @brief Initialize the VGA driver.

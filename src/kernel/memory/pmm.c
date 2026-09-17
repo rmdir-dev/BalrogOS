@@ -34,16 +34,29 @@ queue_t last_free_q;
 Physical range the bootloader already filled, that pmm_alloc must never hand
 out. Zero length means nothing is reserved.
 */
-void* reserved_start = 0;
-void* reserved_end = 0;
+/* maximum allowed reserved memory */
+#define PMM_MAX_RESERVED    4
+
+static void* reserved_start[PMM_MAX_RESERVED] = {};
+static void* reserved_end[PMM_MAX_RESERVED] = {};
+static size_t reserved_count = 0;
 
 void pmm_reserve(void* start, uint64_t size)
 {
-    reserved_start = (void*)((uintptr_t)start & ~(PAGE_SIZE - 1));
-    reserved_end = (void*)(((uintptr_t)start + size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1));
+    if(reserved_count == PMM_MAX_RESERVED)
+    {
+        kernel_debug_output(KDB_LVL_CRITICAL, "pmm : no slot left, 0%p is NOT reserved", start);
+        return;
+    }
 
-    KERNEL_LOG_INFO("pmm : reserved %p to %p, %d MiB", reserved_start, reserved_end,
-        BYTE_TO_MiB((uintptr_t)reserved_end - (uintptr_t)reserved_start));
+    reserved_start[reserved_count] = (void*)((uintptr_t)start & ~(PAGE_SIZE - 1));
+    reserved_end[reserved_count] = (void*)(((uintptr_t)start + size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1));
+
+    KERNEL_LOG_INFO("pmm : reserved %p to %p, %d KiB", reserved_start[reserved_count],
+        reserved_end[reserved_count],
+        BYTE_TO_KiB(((uintptr_t)reserved_end[reserved_count] - (uintptr_t)reserved_start[reserved_count])));
+
+    reserved_count++;
 }
 
 void pmm_free(void* addr)
@@ -102,17 +115,26 @@ void* pmm_alloc()
             }
         }
 
-        // step over the reserved range instead of handing it out.
-        // the walk is monotonic, so one comparison is enough : once next_addr
-        // is past the end it never comes back.
-        if(next_addr >= reserved_start && next_addr < reserved_end)
-        {
-            next_addr = reserved_end;
+        /* step over the reserved ranges. */
+        uint8_t moved = 1;
 
-            if(next_addr >= pmm_top_addr)
+        while(moved)
+        {
+            moved = 0;
+
+            for(size_t i = 0; i < reserved_count; i++)
             {
-                return 0x0;
+                if(next_addr >= reserved_start[i] && next_addr < reserved_end[i])
+                {
+                    next_addr = reserved_end[i];
+                    moved = 1;
+                }
             }
+        }
+
+        if(next_addr >= pmm_top_addr)
+        {
+            return 0x0;
         }
 
         p = (void*)next_addr;

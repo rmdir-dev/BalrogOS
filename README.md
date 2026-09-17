@@ -46,22 +46,41 @@ First build & run qemu in debug
 make debug run_debug
 ```
 
-# Export UEFI ESP & create bootable uefi_usb
+# Release for a bios machine
 
 ```shell
-make kernel esp
+make release
 ```
+
+Builds `build/release/balrog-bios.img`, and `balrog-bios.vdi` next to it when
+VBoxManage is installed.
 
 ```shell
 lsblk
-printf 'label: gpt\n,,U\n' | sudo sfdisk $(DEV)
-sudo mkfs.vfat -F 32 -n BALROGOS $(DEV)1
-mkdir -p ./build/mnt
-sudo mount $(DEV)1 ./build/mnt
-sudo cp -r build/esp/. ./build/mnt
-sudo umount ./build/mnt
+sudo dd if=build/release/balrog-bios.img of=$(DEV) bs=4M conv=fsync status=progress
 sudo sync
 ```
+
+For VirtualBox, attach the `.vdi` to a SATA port with EFI **off**. There is no
+usb mass storage controller in vbox, so a usb key is tested this way : the
+firmware sees a disk with a partition table either way.
+
+# Release for an uefi machine
+
+```shell
+make release_uefi
+```
+
+Builds `build/release/balrog-uefi.img`, a GPT disk holding one FAT32 ESP with
+`/EFI/BOOT/BOOTX64.EFI`, and `balrog-uefi.vdi` next to it.
+
+```shell
+lsblk
+sudo dd if=build/release/balrog-uefi.img of=$(DEV) bs=4M conv=fsync status=progress
+sudo sync
+```
+
+For VirtualBox, attach the `.vdi` to a SATA port with EFI **on**.
 
 Then connect the remote debugger with the following configuration :
 * remote target : localhost:1234

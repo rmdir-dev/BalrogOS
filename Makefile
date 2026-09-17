@@ -23,6 +23,7 @@ KERNEL_SECTORS 	= 768
 RAMFS_LBA 		= 2816
 PART1_SECTORS 	= 17152
 OS_IMAGE 		= build/os/os-image
+ISO_ROOT 		= build/isoroot
 
 ########################################################
 #	DIRECTORIES
@@ -248,6 +249,10 @@ MKE2FS = /sbin/mke2fs
 DUMPE2FS = /sbin/dumpe2fs
 DEBUGFS_BIN = /sbin/debugfs
 
+SFDISK = /sbin/sfdisk
+MKFS_VFAT = /sbin/mkfs.vfat
+MCOPY = /usr/bin/mcopy
+
 #	debugfs pages its own output whenever stdout is a terminal, and a make
 #	running in a terminal is one : the build stops on a (END) prompt and
 #	waits for a keypress. PAGER=cat turns the pager off.
@@ -305,6 +310,19 @@ TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS
 			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) \
 			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o) $(SLEEP_SRCS:.c=.o) $(SHUTDOWN_SRCS:.c=.o) \
 			$(TOUCH_SRCS:.c=.o) $(MKDIR_SRCS:.c=.o) $(RM_SRCS:.c=.o) $(RMDIR_SRCS:.c=.o)
+
+########################################################
+#	PHONY TARGETS
+########################################################
+#	none of the rules below creates a file named after itself, they all
+#	build through a side effect. without this make finds the build/
+#	directory and answers "'build' is up to date" instead of running the rule.
+.PHONY: install_toolbox check_toolbox clean_toolbox_src clean_toolbox \
+		bootloader kernel h_readble_kernel_asm os tools ramfs \
+		sync_rootfs mount mount_os_dd umount uefi esp iso \
+		run run_uefi run_debug run_debug_efi run_uefi_q35 \
+		release release_uefi debug log gdb clean \
+		build build_debug build_all build_all_debug
 
 install_toolbox: $(TOOLBOX_LD) $(TOOLBOX_CC) $(TOOLBOX_NASM)
 	@$(MAKE) --no-print-directory check_toolbox
@@ -377,6 +395,13 @@ check_toolbox:
 			echo "[  OK  ] $$tool (host)"; \
 		else \
 			echo "[ INFO ] $$tool (host) is missing, only needed by make ramfs"; \
+		fi; \
+	done; \
+	for tool in $(SFDISK) $(MKFS_VFAT) $(MCOPY); do \
+		if [ -x $$tool ]; then \
+			echo "[  OK  ] $$tool (host)"; \
+		else \
+			echo "[ INFO ] $$tool (host) is missing, only needed by make release_uefi"; \
 		fi; \
 	done; \
 	if [ $$missing -ne 0 ]; then \
@@ -617,6 +642,21 @@ run_uefi: esp
 		-drive file=fat:rw:$(ESP_DIR),format=raw \
 		-serial file:$(OS_BUILD_DIR)/kernel_uefi.log
 
+#	the same as run_uefi, only frozen at reset waiting for gdb on :1234.
+#	it depends on esp, so the kernel the firmware loads is always the one the
+#	symbols in kernel.elf describe | a stale esp debugs the previous build.
+#
+#	the firmware runs first here, which run_debug does not have to deal with :
+#	a breakpoint on kernel_main is reached only after OVMF has handed over, so
+#	setting one on efi_main needs BOOTX64.EFI and its own base address.
+run_debug_efi: esp
+	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars_debug.fd
+	qemu-system-x86_64 -s -S -monitor stdio -m 4096 -no-reboot -no-shutdown \
+		-drive if=pflash,format=raw,unit=0,readonly=on,file=$(OVMF_CODE) \
+		-drive if=pflash,format=raw,unit=1,file=$(OS_BUILD_DIR)/ovmf_vars_debug.fd \
+		-drive file=fat:rw:$(ESP_DIR),format=raw \
+		-serial file:$(OS_BUILD_DIR)/kernel_debug_uefi.log
+
 #	The same thing on a q35, which is the machine to reach for when something
 #	works here and not on the laptop.
 #
@@ -633,11 +673,101 @@ run_uefi_q35: esp
 		-serial file:$(OS_BUILD_DIR)/kernel_q35.log
 
 
+#	el torito, hard disk emulation : the bios emulates a disk out of the
+#	image and our int 0x13 reads work in 512 byte sectors like everywhere
+#	else. the no emulation mode would address the cd in 2048 byte sectors,
+#	which _DiskLoad does not know how to do.
+#	mkisofs warns that the partition does not start at chs 0/1/1, because
+#	ours starts at lba 2048 like every modern tool aligns it. seabios does
+#	not boot the result, so this is for a real cd drive or a vm, and the usb
+#	target below is the one to use on real hardware.
 iso:
-	cd ./build/os && mkdir -p files && cp os-image files/ && mkisofs -R -o balrog.iso -V BalrogOS -b Booloader files/
+	@if [ ! -f $(OS_IMAGE) ]; then \
+		echo "[FAILED] $(OS_IMAGE) is missing, run make os first"; \
+		exit 1; \
+	fi
+	$(REMOVE) $(ISO_ROOT)
+	mkdir -p $(ISO_ROOT)/boot
+	cp $(OS_IMAGE) $(ISO_ROOT)/boot/os-image
+	mkisofs -quiet -R -J -V BALROGOS \
+		-b boot/os-image -hard-disk-boot \
+		-o $(OS_BUILD_DIR)/balrog.iso $(ISO_ROOT)
+	@echo "[  OK  ] $(OS_BUILD_DIR)/balrog.iso"
 
-#	full rebuild with symbols. the objects are thrown away first,
-#	they were compiled without -g and make would keep them.
+########################################################
+#	RELEASE
+########################################################
+RELEASE_DIR = build/release
+
+#	the esp holds the ramfs, so it has to be bigger than it. 64MiB leaves room
+#	for the ramfs to grow without touching this.
+ESP_IMG_SIZE = 64
+
+#	the partition starts at the sector 2048, the same place grub leaves it and
+#	the same one src/Bootloader/common/layout.inc uses.
+ESP_IMG_LBA = 2048
+
+#	virtualbox has no usb mass storage controller of its own, so a usb key is
+#	tested by attaching the very same image to a sata port : the firmware sees a
+#	disk with a partition table either way, which is all our bootloaders read.
+#	vbox wants a vdi rather than a raw file, so we hand it one when VBoxManage
+#	is around.
+VBOXMANAGE = VBoxManage
+
+#	everything a bios machine needs. the raw image goes on a usb key with dd,
+#	the vdi gets attached to a virtualbox sata port.
+#
+#	no iso here. make iso still builds one, but el torito hard disk emulation
+#	never gets past our mbr : the bios hands stage 1 a geometry built from the
+#	partition entry, and ours says 0xffffff on purpose because we read in lba.
+release:
+	$(MAKE) ramfs
+	$(MAKE) bootloader
+	$(MAKE) kernel
+	$(MAKE) os
+	mkdir -p $(RELEASE_DIR)
+	cp $(OS_IMAGE) $(RELEASE_DIR)/balrog-bios.img
+	@echo "[  OK  ] $(RELEASE_DIR)/balrog-bios.img  -> dd on a usb key"
+	@if command -v $(VBOXMANAGE) > /dev/null; then \
+		$(REMOVE) $(RELEASE_DIR)/balrog-bios.vdi; \
+		$(VBOXMANAGE) convertfromraw $(RELEASE_DIR)/balrog-bios.img \
+			$(RELEASE_DIR)/balrog-bios.vdi --format VDI > /dev/null; \
+		echo "[  OK  ] $(RELEASE_DIR)/balrog-bios.vdi  -> a vbox sata port, EFI off"; \
+	else \
+		echo "[ INFO ] VBoxManage is missing, the raw image is still there"; \
+	fi
+
+#	the same thing for a machine that only boots uefi.
+#
+#	a bootable esp is a gpt disk carrying one fat32 partition with
+#	/EFI/BOOT/BOOTX64.EFI in it, so we build the whole disk and not just the
+#	tree : both a usb key and virtualbox want a partition table.
+#
+#	mkfs.vfat formats the partition in place with --offset, and mcopy fills it
+#	through the same offset. -s walks the tree and makes EFI/BOOT on its own.
+#	a loop mount would have needed root for what is an ordinary build step.
+release_uefi:
+	$(MAKE) ramfs
+	$(MAKE) kernel
+	$(MAKE) esp
+	mkdir -p $(RELEASE_DIR)
+	$(REMOVE) $(RELEASE_DIR)/balrog-uefi.img
+	truncate -s $(ESP_IMG_SIZE)M $(RELEASE_DIR)/balrog-uefi.img
+	printf 'label: gpt\n,,U\n' | $(SFDISK) $(RELEASE_DIR)/balrog-uefi.img > /dev/null
+	$(MKFS_VFAT) -F 32 --offset $(ESP_IMG_LBA) -n BALROGOS \
+		$(RELEASE_DIR)/balrog-uefi.img > /dev/null
+	$(MCOPY) -s -i $(RELEASE_DIR)/balrog-uefi.img@@$$(( $(ESP_IMG_LBA) * 512 )) \
+		$(ESP_DIR)/* ::/
+	@echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.img  -> dd on a usb key"
+	@if command -v $(VBOXMANAGE) > /dev/null; then \
+		$(REMOVE) $(RELEASE_DIR)/balrog-uefi.vdi; \
+		$(VBOXMANAGE) convertfromraw $(RELEASE_DIR)/balrog-uefi.img \
+			$(RELEASE_DIR)/balrog-uefi.vdi --format VDI > /dev/null; \
+		echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.vdi  -> a vbox sata port, EFI on"; \
+	else \
+		echo "[ INFO ] VBoxManage is missing, the raw image is still there"; \
+	fi
+
 debug:
 	$(MAKE) clean
 	$(MAKE) DEBUG=1 bootloader

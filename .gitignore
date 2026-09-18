@@ -5,6 +5,7 @@ files/dummy_image
 files/filesys.dd
 files/k_start_info.txt
 files/out_test.txt
+files/fs/etc/durinfs
 files/TEST_FS/filesys.dd
 files/TEST_FS/os-image
 files/TEST_FS/save.dd

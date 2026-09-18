@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include "klib/data_structure/list.h"
 
 #define BUCKETS     100

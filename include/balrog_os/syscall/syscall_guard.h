@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include "balrog_os/memory/memory.h"
 
 static inline int user_ptr_ok(uintptr_t ptr)

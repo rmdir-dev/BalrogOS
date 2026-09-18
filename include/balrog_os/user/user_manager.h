@@ -5,6 +5,8 @@
 #ifndef BALROGOS_USER_MANAGER_H
 #define BALROGOS_USER_MANAGER_H
 
+#include <stdint.h>
+
 typedef struct _user_data {
     char* name;
     uint32_t uid;

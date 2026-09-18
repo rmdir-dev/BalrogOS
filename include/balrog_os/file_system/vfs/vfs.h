@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include "balrog_os/file_system/filesystem.h"
 
 // Virtual File System (representation of mount points).

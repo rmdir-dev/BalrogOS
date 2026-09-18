@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include "klib/threading/kmutex.h"
 
 typedef struct __list_node_t

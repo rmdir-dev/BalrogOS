@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
 /**
  * Linux compatible pstore, use for debugging :

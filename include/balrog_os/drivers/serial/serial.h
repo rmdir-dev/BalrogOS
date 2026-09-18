@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define COM1 0x3f8
 #define SERIAL_BUF 256 // Serial buffer size

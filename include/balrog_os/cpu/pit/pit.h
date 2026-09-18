@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <stddef.h>
 #include "balrog/time/time.h"
 #include "balrog_os/cpu/interrupts/interrupt.h"
 

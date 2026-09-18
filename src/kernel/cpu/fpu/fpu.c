@@ -1,5 +1,6 @@
 #include "balrog_os/cpu/fpu/fpu.h"
 #include <stdint.h>
+#include <stddef.h>
 
 #include "balrog_os/cpu/cr/control_register.h"
 

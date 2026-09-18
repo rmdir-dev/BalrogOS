@@ -3,38 +3,6 @@
 #include <string.h>
 #include "balrog_os/memory/kheap.h"
 
-#define vfs_guard(call) \
-    { \
-        kmutex_lock(&vfs_root->lock); \
-        vfs_node_t* root = vfs_root->root; \
-        int ret = 0; \
-        call \
-        kmutex_unlock(&vfs_root->lock); \
-        return ret; \
-    }
-
-#define vfs_guard_sanitized(call) \
-    { \
-        kmutex_lock(&vfs_root->lock); \
-        vfs_node_t* root = vfs_root->root; \
-        size_t path_len = strlen(path); \
-        char* sanitized_path = vmalloc(sizeof(char) * (path_len + 1)); \
-        vfs_sanitize_path(path, sanitized_path, path_len); \
-        size_t sanitized_path_len = strlen(sanitized_path); \
-        vfs_node_t* node = __vfs_find_mount(root, sanitized_path); \
-        if(!node) \
-        { \
-            vmfree(sanitized_path); \
-            kmutex_unlock(&vfs_root->lock); \
-            return -1; \
-        } \
-        int ret = 0; \
-        call \
-        vmfree(sanitized_path); \
-        kmutex_unlock(&vfs_root->lock); \
-        return ret; \
-    }
-
 static size_t __vfs_get_next_path_part_len(const char* path, size_t max_path_len)
 {
     for (size_t i = 0; i < max_path_len; i++)
@@ -112,8 +80,63 @@ static vfs_node_t* __vfs_find_mount(vfs_node_t* root, const char* path)
     return device_node;
 }
 
+typedef struct __vfs_lookup_t
+{
+    char* sanitized_path;
+    size_t sanitized_path_len;
+    vfs_node_t* node;
+} vfs_lookup_t;
+
+static inline void __vfs_guard_init(vfs_root_t* vfs_root)
+{
+    kmutex_lock(&vfs_root->lock);
+}
+
+static inline void __vfs_guard_release(vfs_root_t* vfs_root)
+{
+    kmutex_unlock(&vfs_root->lock);
+}
+
+static inline int __vfs_guard_sanitized_init(vfs_root_t* vfs_root, const char* path, vfs_lookup_t* out)
+{
+    kmutex_lock(&vfs_root->lock);
+    vfs_node_t* root = vfs_root->root;
+    size_t path_len = strlen(path);
+    out->sanitized_path = vmalloc(sizeof(char) * (path_len + 1));
+    vfs_sanitize_path(path, out->sanitized_path, path_len);
+    out->sanitized_path_len = strlen(out->sanitized_path);
+    out->node = __vfs_find_mount(root, out->sanitized_path);
+
+    if(!out->node)
+    {
+        vmfree(out->sanitized_path);
+        kmutex_unlock(&vfs_root->lock);
+        return -1;
+    }
+
+    return 0;
+}
+
+static inline void __vfs_guard_sanitize_release(vfs_root_t* vfs_root, vfs_lookup_t* lookup)
+{
+    vmfree(lookup->sanitized_path);
+    kmutex_unlock(&vfs_root->lock);
+}
+
 static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* device)
-vfs_guard_sanitized({
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    vfs_node_t* node = lookup.node;
+    char* sanitized_path = lookup.sanitized_path;
+    size_t sanitized_path_len = lookup.sanitized_path_len;
+    size_t path_len = strlen(path);
+
     size_t depth = 0;
     size_t part_start = 0;
     size_t part_len = 0;
@@ -199,14 +222,40 @@ vfs_guard_sanitized({
     device->path = vmalloc(path_len + 1);
     memcpy(device->path, path, path_len);
     device->path[path_len] = 0;
-})
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return 0;
+}
 
 static int __vfs_umount(vfs_root_t* vfs_root, const char* path, fs_device_t* device)
-vfs_guard_sanitized({
-})
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return 0;
+}
 
 static int __vfs_open(vfs_root_t* vfs_root, const char* path, fs_fd* fd)
-vfs_guard_sanitized({
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    vfs_node_t* node = lookup.node;
+    char* sanitized_path = lookup.sanitized_path;
+    size_t sanitized_path_len = lookup.sanitized_path_len;
+    int ret = 0;
+
     size_t shift = 0;
 
     for (size_t i = 0; i < node->depth_from_root; i++)
@@ -227,52 +276,135 @@ vfs_guard_sanitized({
 
     ret = node->device->fs->open(node->device, sanitized_path + shift, fd);
     fd->device = node->device;
-})
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return ret;
+}
 
 static int __vfs_close(vfs_root_t* vfs_root, fs_fd* fd)
-vfs_guard({
-    ret = fd->device->fs->close(fd->device, fd);
-})
+{
+    __vfs_guard_init(vfs_root);
+
+    int ret = fd->device->fs->close(fd->device, fd);
+
+    __vfs_guard_release(vfs_root);
+
+    return ret;
+}
 
 static int __vfs_stat(vfs_root_t* vfs_root, fs_fd* fd, fs_file_stat* stat)
-vfs_guard({
-    ret = fd->device->fs->stat(fd->device, fd, stat);
-})
+{
+    __vfs_guard_init(vfs_root);
+
+    int ret = fd->device->fs->stat(fd->device, fd, stat);
+
+    __vfs_guard_release(vfs_root);
+
+    return ret;
+}
 
 static int __vfs_read(vfs_root_t* vfs_root, uint8_t* buffer, uint64_t len, fs_fd* fd)
-vfs_guard({
-    ret = fd->device->fs->read(fd->device, buffer, len, fd);
-})
+{
+    __vfs_guard_init(vfs_root);
+
+    int ret = fd->device->fs->read(fd->device, buffer, len, fd);
+
+    __vfs_guard_release(vfs_root);
+
+    return ret;
+}
 
 static int __vfs_write(vfs_root_t* vfs_root, uint8_t* buffer, uint64_t len, fs_fd* fd)
-vfs_guard({
-    ret = fd->device->fs->write(fd->device, buffer, len, fd);
-})
+{
+    __vfs_guard_init(vfs_root);
+
+    int ret = fd->device->fs->write(fd->device, buffer, len, fd);
+
+    __vfs_guard_release(vfs_root);
+
+    return ret;
+}
 
 static int __vfs_create(vfs_root_t* vfs_root, const char* path, uint64_t size)
-vfs_guard_sanitized({
-    ret = node->device->fs->create(node->device, sanitized_path, size);
-})
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    int ret = lookup.node->device->fs->create(lookup.node->device, lookup.sanitized_path, size);
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return ret;
+}
 
 static int __vfs_list(vfs_root_t* vfs_root, const char* path, uint8_t* buffer)
-vfs_guard_sanitized({
-    ret = node->device->fs->list(node->device, sanitized_path, buffer);
-})
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    int ret = lookup.node->device->fs->list(lookup.node->device, lookup.sanitized_path, buffer);
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return ret;
+}
 
 static int __vfs_mkdir(vfs_root_t* vfs_root, const char* path)
-vfs_guard_sanitized({
-    ret = node->device->fs->mkdir(node->device, sanitized_path);
-})
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    int ret = lookup.node->device->fs->mkdir(lookup.node->device, lookup.sanitized_path);
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return ret;
+}
 
 static int __vfs_unlink(vfs_root_t* vfs_root, const char* path)
-vfs_guard_sanitized({
-    ret = node->device->fs->unlink(node->device, sanitized_path);
-})
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    int ret = lookup.node->device->fs->unlink(lookup.node->device, lookup.sanitized_path);
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return ret;
+}
 
 static int __vfs_rmdir(vfs_root_t* vfs_root, const char* path)
-vfs_guard_sanitized({
-    ret = node->device->fs->rmdir(node->device, sanitized_path);
-})
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    int ret = lookup.node->device->fs->rmdir(lookup.node->device, lookup.sanitized_path);
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return ret;
+}
 
 int vfs_sanitize_path(const char* original_path, char* sanitized_path, size_t path_len)
 {

@@ -36,4 +36,14 @@ void* pmm_calloc();
  */
 void pmm_reserve(void* start, uint64_t size);
 
+/**
+ * @brief
+ */
+void pmm_disable_alloc_logs();
+
+/**
+ * @brief 
+ */
+void pmm_enable_alloc_logs();
+
 int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize);

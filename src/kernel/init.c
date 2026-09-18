@@ -24,6 +24,7 @@
 #include "balrog_os/cpu/fpu/fpu.h"
 #include "balrog_os/drivers/serial/serial.h"
 #include "balrog_os/cpu/acpi/acpi.h"
+#include "balrog_os/drivers/screen/fb_backend.h"
 
 /* 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -99,22 +100,29 @@ void initialize_kernel(void* SMAP, void* size)
 	uint16_t* SMAPsize = P2V(size);
 
     /*    Kernel Heap     */
-    KERNEL_LOG_ASSERT(init_kheap(), "Kernel logical heap : ", "done", "not initialized");
+    int ret_status = init_kheap();
+    KERNEL_LOG_ASSERT(ret_status, "Kernel logical heap : ", "done", "not initialized");
 
     /*    Virtual Memory  */
     KERNEL_LOG_ASSERT(init_vmm(), "Virtual memory : ", "done", "not initialized");
 
     /*    Physical Memory */
-    KERNEL_LOG_ASSERT(init_pmm(SMAPinfo, SMAPsize), "Physical memory : ", "done", "not initialized");
+    pmm_disable_alloc_logs();
+    ret_status = init_pmm(SMAPinfo, SMAPsize);
+    KERNEL_LOG_ASSERT(ret_status, "Physical memory : ", "done", "not initialized");
 
     /*    Kernel Heap    */
-    KERNEL_LOG_ASSERT(init_vmheap(), "Kernel virtual heap : ", "done", "not initialized");
+    ret_status = init_vmheap();
+    KERNEL_LOG_ASSERT(ret_status, "Kernel virtual heap : ", "done", "not initialized");
+    void pmm_enable_alloc_logs();
 
     /*    PCI BUS        */
-    KERNEL_LOG_ASSERT(init_pci(), "PCI bus : ", "done", "not initialized");
+    ret_status = init_pci();
+    KERNEL_LOG_ASSERT(ret_status, "PCI bus : ", "done", "not initialized");
 
     /*    SCHEDULER      */
-    KERNEL_LOG_ASSERT(init_scheduler(), "CPU scheduler : ", "done", "not initialized");
+    ret_status = init_scheduler();
+    KERNEL_LOG_ASSERT(ret_status, "CPU scheduler : ", "done", "not initialized");
 
     /*    PROCESS        */
     KERNEL_LOG_ASSERT(init_process(), "Process table : ", "done", "not initialized");
@@ -123,13 +131,15 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_ASSERT(init_acpi(), "ACPI : ", "done", "not available");
 
     /*    USB           */
-    KERNEL_LOG_ASSERT(init_xhci(), "XHCI controller : ", "done", "not found");
+    ret_status = init_xhci();
+    KERNEL_LOG_ASSERT(ret_status, "XHCI controller : ", "done", "not found");
 
     /*    KEYBOARD       */
     KERNEL_LOG_ASSERT(init_keyboard(), "Keyboard : ", "done", "not initialized");
 
     /*    FILE SYSTEM    */
-    KERNEL_LOG_ASSERT(init_file_system(), "File system : ", "done", "not mounted");
+    ret_status = init_file_system();
+    KERNEL_LOG_ASSERT(ret_status, "File system : ", "done", "not mounted");
 
     /*    USER MANAGER   */
     KERNEL_LOG_ASSERT(init_user_manager(), "User manager : ", "done", "not initialized");

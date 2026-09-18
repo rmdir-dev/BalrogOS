@@ -40,6 +40,17 @@ out. Zero length means nothing is reserved.
 static void* reserved_start[PMM_MAX_RESERVED] = {};
 static void* reserved_end[PMM_MAX_RESERVED] = {};
 static size_t reserved_count = 0;
+static uint8_t disable_pmm_calloc_debuging = 0;
+
+void pmm_disable_alloc_logs()
+{
+    disable_pmm_calloc_debuging = 1;
+}
+
+void pmm_enable_alloc_logs()
+{
+    disable_pmm_calloc_debuging = 0;
+}
 
 void pmm_reserve(void* start, uint64_t size)
 {
@@ -157,7 +168,11 @@ void* pmm_calloc()
         return 0x0;
     }
 
-    kernel_debug_output(KDB_LVL_VERBOSE, "pmm alloc %p", p);
+    if (disable_pmm_calloc_debuging == 0)
+    {
+        kernel_debug_output(KDB_LVL_VERBOSE, "pmm alloc 0%p", p);
+    }
+
     // set the bits inside the page to 0.
     memset((void*)P2V(p), 0, PAGE_SIZE);
     
@@ -167,7 +182,7 @@ void* pmm_calloc()
 int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize)
 {
     queue_init(&last_free_q);
-    
+
     for(uint16_t i = 0; i < *SMAPsize; i++)
     {
         total_memory += SMAPinfo[i].Length;

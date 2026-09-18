@@ -786,11 +786,12 @@ run:
 #	the vars file has to be writable, so we copy it.
 run_uefi: esp
 	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars.fd
+	mv $(OS_LOG_DIR)/kernel_uefi.log $(OS_LOG_DIR)/kernel_uefi.log.bak | true
 	qemu-system-x86_64 -monitor stdio -m 4096 -no-reboot -no-shutdown \
 		-drive if=pflash,format=raw,unit=0,readonly=on,file=$(OVMF_CODE) \
 		-drive if=pflash,format=raw,unit=1,file=$(OS_BUILD_DIR)/ovmf_vars.fd \
 		-drive file=fat:rw:$(ESP_DIR),format=raw \
-		-serial file:$(OS_BUILD_DIR)/kernel_uefi.log
+		-serial file:$(OS_LOG_DIR)/kernel_uefi.log
 
 #	the same as run_uefi, only frozen at reset waiting for gdb on :1234.
 #	it depends on esp, so the kernel the firmware loads is always the one the
@@ -801,11 +802,12 @@ run_uefi: esp
 #	setting one on efi_main needs BOOTX64.EFI and its own base address.
 run_debug_efi: esp
 	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars_debug.fd
+	mv $(OS_LOG_DIR)/kernel_debug_uefi.log $(OS_LOG_DIR)/kernel_debug_uefi.log.bak | true
 	qemu-system-x86_64 -s -S -monitor stdio -m 4096 -no-reboot -no-shutdown \
 		-drive if=pflash,format=raw,unit=0,readonly=on,file=$(OVMF_CODE) \
 		-drive if=pflash,format=raw,unit=1,file=$(OS_BUILD_DIR)/ovmf_vars_debug.fd \
 		-drive file=fat:rw:$(ESP_DIR),format=raw \
-		-serial file:$(OS_BUILD_DIR)/kernel_debug_uefi.log
+		-serial file:$(OS_LOG_DIR)/kernel_debug_uefi.log
 
 #	The same thing on a q35, which is the machine to reach for when something
 #	works here and not on the laptop.
@@ -816,11 +818,12 @@ run_debug_efi: esp
 #	reproduced here exactly as it did on the hardware.
 run_uefi_q35: esp
 	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars_q35.fd
+	mv $(OS_LOG_DIR)/kernel_q35.log $(OS_LOG_DIR)/kernel_q35.log.bak | true
 	qemu-system-x86_64 -machine q35 -monitor stdio -m 4096 -no-reboot -no-shutdown \
 		-drive if=pflash,format=raw,unit=0,readonly=on,file=$(OVMF_CODE) \
 		-drive if=pflash,format=raw,unit=1,file=$(OS_BUILD_DIR)/ovmf_vars_q35.fd \
 		-drive file=fat:rw:$(ESP_DIR),format=raw \
-		-serial file:$(OS_BUILD_DIR)/kernel_q35.log
+		-serial file:$(OS_LOG_DIR)/kernel_q35.log
 
 debug:
 	$(MAKE) clean

@@ -15,6 +15,7 @@
 #include "balrog_os/memory/pmm.h"
 #include <string.h>
 
+#include "errno.h"
 #include "balrog_os/file_system/gpt/gpt.h"
 #include "klib/io/kprint.h"
 
@@ -70,11 +71,49 @@ int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
     return 0;
 }
 
-int fs_mount(const char* path, uint8_t* uuid)
+static int __fs_device_partuuid_lookup(list_node_t* node, const void* key)
 {
-    // TODO search disk
-    fs_device_t* device = vmalloc(sizeof(fs_device_t));
-    return vfs_root.mount(&vfs_root, path, device);
+    fs_device_t* device = node->value;
+
+    if (!device->gpt_partition)
+    {
+        return -1;
+    }
+
+    char uuid[GPT_GUID_TEXT_LEN];
+    gpt_read_guid(device->gpt_partition->unique_guid, uuid);
+    int ret = strcmp(uuid, (const char*) key);
+
+    return ret;
+}
+
+int fs_mount(const char* mount_path, const char* name_or_uuid)
+{
+    list_node_t* node;
+    size_t len = strlen(name_or_uuid);
+
+    // must pass /dev/ or uuid
+    if (len < 5)
+    {
+        return ENOENT;
+    }
+
+    if (memcmp(name_or_uuid, "/dev/", 5) == 0)
+    {
+        node = list_str_lookup(&devices,  (const char*) name_or_uuid + 5);
+    } else
+    {
+        node = list_custom_lookup(&devices, name_or_uuid, &__fs_device_partuuid_lookup);
+    }
+
+    if (!node)
+    {
+        return ENODEV;
+    }
+
+    fs_device_t* device = (fs_device_t*) node->value;
+    // TODO search device.
+    return vfs_root.mount(&vfs_root, mount_path, device);
 }
 
 int fs_open(char* name, fs_fd* fd)

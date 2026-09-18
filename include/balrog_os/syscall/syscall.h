@@ -34,6 +34,10 @@
     wait for a process with pid to exit.
 62	    sys_kill	        pid_t pid	        int sig
     send a signal to a process
+165	    sys_mount	            char *dev_name	    char *dir_name	        char *type	        unsigned long flags	void *data
+    mount device
+166	    sys_umount2	            const char *target	int flags
+    umount device
 169      sys_reboot        	int magic1          int magic2              unsigned int cmd    void *arg
     shutdown the system.
 202     sys_park            uint64 pid
@@ -66,6 +70,8 @@
 #define SYS_GETUID      102
 #define SYS_SETUID      105
 #define SYS_GETPPID     110
+#define SYS_MOUNT       165
+#define SYS_UMOUNT      166
 #define SYS_REBOOT      169
 #define SYS_FUTEX       202
 #define SYS_PARK        202 // TODO switch to futex

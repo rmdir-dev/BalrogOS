@@ -16,6 +16,8 @@ typedef struct __list_t
     size_t size;
 } list_t;
 
+typedef int (compare_callback_t) (list_node_t* a, const void* b);
+
 /**
  * @brief 
  * 
@@ -40,3 +42,14 @@ list_node_t* list_insert(list_t* list, size_t key, void* value);
  * @return list_node_t* 
  */
 list_node_t* list_lookup(list_t* list, size_t key);
+
+/**
+ *  @brief
+ *
+ * @param list
+ * @param key
+ * @return
+ */
+list_node_t* list_str_lookup(list_t* list, const char* key);
+
+list_node_t* list_custom_lookup(list_t* list, const void* key, compare_callback_t compare);

@@ -178,6 +178,14 @@ int sleep(size_t ms);
  */
 int reboot(int option);
 
+/**
+ * @brief
+ * @param source
+ * @param target
+ * @return
+ */
+int mount(const char *source, const char *target);
+
 #ifdef __cplusplus
 }
 #endif

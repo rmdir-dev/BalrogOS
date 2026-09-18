@@ -28,6 +28,8 @@ extern int sys_chdir(interrupt_regs* stack_frame);
 extern int sys_getuid(interrupt_regs* stack_frame);
 extern void sys_setuid(interrupt_regs* stack_frame);
 extern int sys_getppid(interrupt_regs* stack_frame);
+extern int sys_mount(interrupt_regs* stack_frame);
+extern int sys_umount(interrupt_regs* stack_frame);
 extern void sys_reboot(interrupt_regs* stack_frame);
 extern void sys_park(interrupt_regs* stack_frame);
 extern void sys_setpark(interrupt_regs* stack_frame);
@@ -57,6 +59,8 @@ static int (*syscall[SYSCALL_MAX])(interrupt_regs*) =
     [SYS_GETUID] &sys_getuid,
     [SYS_SETUID] &sys_setuid,
     [SYS_GETPPID] &sys_getppid,
+    [SYS_MOUNT] &sys_mount,
+    [SYS_UMOUNT] &sys_umount,
     [SYS_REBOOT] &sys_reboot,
     [SYS_PARK] &sys_park,
     [SYS_SETPARK] &sys_setpark,

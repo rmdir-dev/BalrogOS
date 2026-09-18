@@ -87,6 +87,15 @@ int init_file_system();
 int fs_get_file(const char* name, fs_file* file, fs_fd* fd);
 
 /**
+ * @brief
+ *
+ * @param mount_path
+ * @param name_or_uuid
+ * @return
+ */
+int fs_mount(const char* mount_path, const char* name_or_uuid);
+
+/**
  * @brief 
  * 
  * @param name 

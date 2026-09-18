@@ -16,6 +16,8 @@
 #include <string.h>
 
 #include "errno.h"
+#include "balrog_os/boot/boot_config.h"
+#include "balrog/uuid/uuid.h"
 #include "balrog_os/file_system/gpt/gpt.h"
 #include "klib/io/kprint.h"
 
@@ -80,7 +82,7 @@ int fs_get_file(const char* name, fs_file* file, fs_fd* fd)
     return 0;
 }
 
-static int __fs_device_partuuid_lookup(list_node_t* node, const void* key)
+static int __fs_device_partuuid_lookup(list_node_t* node, const void* searched_key)
 {
     fs_device_t* device = node->value;
 
@@ -89,9 +91,7 @@ static int __fs_device_partuuid_lookup(list_node_t* node, const void* key)
         return -1;
     }
 
-    char uuid[GPT_GUID_TEXT_LEN];
-    gpt_read_guid(device->gpt_partition->unique_guid, uuid);
-    int ret = strcmp(uuid, (const char*) key);
+    int ret = memcmp(device->gpt_partition->unique_guid, searched_key, GPT_GUID_LEN);
 
     return ret;
 }
@@ -112,7 +112,9 @@ int fs_mount(const char* mount_path, const char* name_or_uuid)
         node = list_str_lookup(&devices,  (const char*) name_or_uuid + 5);
     } else
     {
-        node = list_custom_lookup(&devices, name_or_uuid, &__fs_device_partuuid_lookup);
+        uint8_t part_guid[BOOT_GUID_BYTE_LEN];
+        str_to_uuid(part_guid, name_or_uuid);
+        node = list_custom_lookup(&devices, part_guid, &__fs_device_partuuid_lookup);
     }
 
     if (!node)
@@ -189,7 +191,7 @@ void fs_device_init(fs_device_t* device)
     device->gpt_partition = NULL;
 }
 
-int __fs_add_to_dev_vfs(fs_device_t* device)
+int __fs_add_to_devfs(fs_device_t* device)
 {
     size_t name_len = strlen(device->name);
     char* absolute_path = vmalloc(5 + name_len + 1);
@@ -206,7 +208,7 @@ void fs_add_device(fs_device_t* device)
     kernel_debug_output(KDB_LVL_INFO, "file system : adding device uuid: %d", device->unique_id);
     list_insert(&devices, (size_t) device->name, device);
     uint8_t part_count = 1;
-    __fs_add_to_dev_vfs(device);
+    __fs_add_to_devfs(device);
 
     if (gpt_init(device) == 0)
     {
@@ -251,7 +253,7 @@ void fs_add_device(fs_device_t* device)
 
             list_insert(&devices, (size_t) part_device->name, part_device);
             ext2_probe(part_device);
-            __fs_add_to_dev_vfs(part_device);
+            __fs_add_to_devfs(part_device);
 
             part_count++;
         }
@@ -315,6 +317,30 @@ void __init_virtual_fs()
     __try_mount_virtual_fs(&virtual_fs->proc, "/proc");
 }
 
+int __load_boot_config()
+{
+    boot_config_t* cfg = (boot_config_t*) P2V(BOOT_CONFIG_PHYS);
+
+    if(memcmp(&cfg->magic, BOOT_CONFIG_MAGIC, BOOT_CONFIG_MAGIC_LEN) != 0)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "file system : BALROG.CFG bad magic number!");
+        return -1;
+    }
+
+    list_node_t* node = list_custom_lookup(&devices, cfg->root_guid, &__fs_device_partuuid_lookup);
+
+    if (!node)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "file system : no root device found!");
+        return -1;
+    }
+
+    fs_device_t* root_device = (fs_device_t*) node->value;
+    vfs_root.mount(&vfs_root, "/", root_device);
+
+    return 0;
+}
+
 int init_file_system()
 {
     list_init(&devices);
@@ -335,6 +361,12 @@ int init_file_system()
         kmutex_unlock(&boot_dev.lock);
         KERNEL_LOG_FAIL("file system : No suitable drive found!");
         while(1){}
+    }
+
+    kernel_debug_output(KDB_LVL_INFO, "file system : loading boot device from configuration");
+    if(__load_boot_config() == 0)
+    {
+        kernel_debug_output(KDB_LVL_INFO, "file system : rootfs loaded successfully!");
     }
 
     kmutex_unlock(&boot_dev.lock);

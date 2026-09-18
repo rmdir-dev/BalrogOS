@@ -13,7 +13,10 @@ the spec   : https://uefi.org/specifications
 #include "balrog_os/boot/uefi_boot_services.h"
 #include "balrog_os/boot/uefi_system.h"
 #include "balrog_os/boot/boot_framebuffer.h"
+#include "balrog_os/boot/boot_config.h"
+#include "balrog/uuid/uuid.h"
 #include "uefi_layout.h"
+#include <string.h>
 
 static EFI_SYSTEM_TABLE* system_table = 0;
 static EFI_BOOT_SERVICES* boot = 0;
@@ -196,6 +199,49 @@ static void* __read_file(EFI_FILE_PROTOCOL* root, CHAR16* name, uint64_t* out_si
     *out_size = size;
 
     return (void*) buffer;
+}
+
+static void __config_value(const char* text, uint64_t size, const char* key, char* out, uint64_t out_size)
+{
+    uint64_t key_len = 0;
+
+    while(key[key_len])
+    {
+        key_len++;
+    }
+
+    for(uint64_t i = 0; i < size; i++)
+    {
+        /*  a key only counts at the start of a line, or a comment mentioning
+            it would be read as one  */
+        if(i != 0 && text[i - 1] != '\n')
+        {
+            continue;
+        }
+
+        if(i + key_len + 1 > size || text[i + key_len] != '=')
+        {
+            continue;
+        }
+
+        if(memcmp(text + i, key, key_len) != 0)
+        {
+            continue;
+        }
+
+        uint64_t v = i + key_len + 1;
+        uint64_t n = 0;
+
+        while(v + n < size && text[v + n] != '\n' && text[v + n] != '\r'
+                && n < out_size - 1)
+        {
+            out[n] = text[v + n];
+            n++;
+        }
+
+        out[n] = 0;
+        return;
+    }
 }
 
 /*
@@ -469,10 +515,7 @@ static EFI_PHYSICAL_ADDRESS __prepare_trampoline(void)
 
     uint8_t* code = (uint8_t*) trampoline;
 
-    for(uint64_t i = 0; i < sizeof(trampoline_code); i++)
-    {
-        code[i] = trampoline_code[i];
-    }
+    memcpy(code, trampoline_code, sizeof(trampoline_code));
 
     /*  the kernel is at KERNEL_PHYS and LongMode is at a fixed offset in it,
         which the makefile reads out of kernel.elf with nm.  */
@@ -538,6 +581,37 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* table)
 
     void* ramfs = __read_file(root, ramfs_name, &ramfs_size);
     __print("ramfs read\r\n");
+
+    boot_config_t* cfg = (boot_config_t*) BOOT_CONFIG_PHYS;
+
+    for(uint64_t i = 0; i < sizeof(boot_config_t); i++)
+    {
+        ((uint8_t*) cfg)[i] = 0;
+    }
+
+    CHAR16 config_name[] = { 'B','A','L','R','O','G','.','C','F','G', 0 };
+    uint64_t config_size = 0;
+    char* config_text = __read_file(root, config_name, &config_size);
+    if(memcmp(BOOT_CONFIG_MAGIC, config_text, BOOT_CONFIG_MAGIC_LEN) == 0)
+    {
+        memcpy(&cfg->magic, config_text, BOOT_CONFIG_MAGIC_LEN);
+        if(config_text)
+        {
+            char text[BOOT_GUID_TEXT_LEN] = {};
+
+            __config_value(config_text, config_size, "root_guid", text, BOOT_GUID_TEXT_LEN);
+
+            if(str_to_uuid(cfg->root_guid, text) != 0)
+            {
+                __print("BALROG.CFG has no usable root_guid\r\n");
+            }
+
+            __print("BALROG.CFG read\r\n");
+        }
+    } else
+    {
+        __print("BALROG.CFG wrong magic number!\r\n");
+    }
 
     __find_framebuffer();
 
@@ -653,10 +727,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* table)
         uint8_t* rsdp_destination = (uint8_t*) RSDP_PHYS;
         uint8_t* rsdp_source = rsdp;
 
-        for(uint64_t i = 0; i < rsdp_size; i++)
-        {
-            rsdp_destination[i] = rsdp_source[i];
-        }
+        memcpy(rsdp_destination, rsdp_source, rsdp_size);
 
         *(uint16_t*) (uint64_t) BDA_EBDA_PHYS = RSDP_PHYS / 16;
     }
@@ -665,18 +736,12 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* table)
     uint8_t* destination = (uint8_t*) KERNEL_PHYS;
     uint8_t* source = kernel;
 
-    for(uint64_t i = 0; i < kernel_size; i++)
-    {
-        destination[i] = source[i];
-    }
+    memcpy(destination, source, kernel_size);
 
     destination = (uint8_t*) RAMFS_PHYS;
     source = ramfs;
 
-    for(uint64_t i = 0; i < ramfs_size; i++)
-    {
-        destination[i] = source[i];
-    }
+    memcpy(destination, source, ramfs_size);
 
     /*  _PrepareKernel writes these two out of ax and bx, we write them where
         it would have. the kernel reads them back in _KernelEntry and never

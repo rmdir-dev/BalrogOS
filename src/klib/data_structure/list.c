@@ -57,7 +57,7 @@ int __int_compare(list_node_t* node, const void* b)
 {
     int val_a = (int) node->key;
     int val_b = *(int*)b;
-    return val_a == val_b;
+    return val_a == val_b ? 0 : -1;
 }
 
 list_node_t* list_lookup(list_t* list, size_t key)

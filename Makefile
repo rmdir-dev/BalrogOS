@@ -19,9 +19,9 @@ DEFINES 		= -DKDB_DEBUG -DKDB_DEFAULT_LVL=3 -DKDB_START_SEQ=0 -D__BALROG_VERSION
 STAGE2_LBA 		= 1
 PART1_LBA 		= 2048
 KERNEL_LBA 		= 2048
-KERNEL_SECTORS 	= 768
-RAMFS_LBA 		= 2816
-PART1_SECTORS 	= 17152
+KERNEL_SECTORS 	= 896
+RAMFS_LBA 		= 2944
+PART1_SECTORS 	= 17280
 OS_IMAGE 		= build/os/os-image
 ISO_ROOT 		= build/isoroot
 
@@ -325,7 +325,8 @@ TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS
 		run_vbox_debug run_vbox_uefi_debug \
 		run_vbox_usb_uefi run_vbox_usb_uefi_debug \
 		release release_uefi debug log gdb clean \
-		build build_debug build_all build_all_debug
+		build build_debug build_all build_all_debug \
+		rootfs_img run_rootfs
 
 install_toolbox: $(TOOLBOX_LD) $(TOOLBOX_CC) $(TOOLBOX_NASM)
 	@$(MAKE) --no-print-directory check_toolbox
@@ -579,18 +580,32 @@ print('*/'); \
 #	-fno-ident drops the .comment section, which the pe linker refuses to
 #	place. -mno-red-zone because the firmware can interrupt us and the red
 #	zone is a sysv idea it does not know about.
-UEFI_CFLAGS = -I./include -I$(TEMP_DIR) -ffreestanding -fno-stack-protector \
-	-fno-ident -fshort-wchar -mno-red-zone -std=gnu17 -Wall -Wextra
+UEFI_CFLAGS = -I./include -I./include/libc -I$(TEMP_DIR) -ffreestanding \
+	-fno-stack-protector -fno-ident -fshort-wchar -mno-red-zone -std=gnu17 \
+	-Wall -Wextra
+
+#	what the loader takes out of Shared. It is linked on its own, without the
+#	kernel and without the libc, so what it needs is compiled here with its own
+#	flags | the point is that there is one copy of the code, not one build of it.
+UEFI_SHARED_SRCS = $(SHARED_SRC)/string/memcpy.c \
+	$(SHARED_SRC)/string/memcmp.c \
+	$(SHARED_SRC)/uuid/uuid.c
+
+UEFI_SHARED_OBJS = $(UEFI_SHARED_SRCS:%.c=$(TEMP_DIR)/uefi/%.o)
+
+$(TEMP_DIR)/uefi/%.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) $(UEFI_CFLAGS) -c $< -o $@
 
 #	ld -mi386pep takes our elf objects and writes a PE32+ out of them, which
 #	is why we do not need gnu-efi, clang or mingw | binutils is built with
 #	--enable-targets=x86_64-pep, see install_toolbox.
 #	subsystem 10 is EFI_APPLICATION.
-uefi: $(TEMP_DIR)/uefi_layout.h
+uefi: $(TEMP_DIR)/uefi_layout.h $(UEFI_SHARED_OBJS)
 	mkdir -p $(OS_BUILD_DIR)
 	$(CC) $(UEFI_CFLAGS) -c $(UEFI_SRC)/bootx64.c -o $(TEMP_DIR)/bootx64.o
 	$(LD) -mi386pep --subsystem=10 -e efi_main --image-base=0x400000 -s \
-		-o $(OS_BUILD_DIR)/BOOTX64.EFI $(TEMP_DIR)/bootx64.o
+		-o $(OS_BUILD_DIR)/BOOTX64.EFI $(TEMP_DIR)/bootx64.o $(UEFI_SHARED_OBJS)
 	@echo "[  OK  ] $(OS_BUILD_DIR)/BOOTX64.EFI"
 
 #	the esp is a plain directory here. qemu serves it as a fat partition with
@@ -602,6 +617,7 @@ esp: uefi
 	cp $(OS_BUILD_DIR)/BOOTX64.EFI $(ESP_DIR)/EFI/BOOT/
 	cp $(OS_BUILD_DIR)/kernel.bin $(ESP_DIR)/
 	cp $(RAMFS_IMG) $(ESP_DIR)/
+	cp files/esp/BALROG.CFG $(ESP_DIR)/
 	@echo "[  OK  ] $(ESP_DIR)"
 
 #	el torito, hard disk emulation : the bios emulates a disk out of the
@@ -681,6 +697,20 @@ ESP_IMG_LBA = 2048
 #	second partition | this kernel has no fat driver at all and mounts the
 #	second one, so a key with only an esp has nowhere to persist anything.
 ROOT_IMG_SIZE = 96
+
+#	a disk that is nothing but a balrog root, for run_rootfs. it carries no esp
+#	and no loader : the machine still boots on the ramfs the uefi loader hands
+#	over, and this one is only there to be found and mounted afterwards.
+#	the two guids are fixed so the image and BALROG.CFG can be written in
+#	the same recipe without drawing anything at random, which is what makes the
+#	test reproducible from one run to the next.
+ROOTFS_TEST_IMG = $(OS_BUILD_DIR)/rootfs-test.img
+ROOTFS_TEST_SIZE = 64
+#	GPT_TYPE_BALROG_ROOT in include/balrog_os/file_system/gpt/gpt_guid.h
+ROOTFS_TEST_TYPE = 42414C52-0001-4F53-BA10-1B2619BD897F
+#	the unique guid of that one partition, what BALROG.CFG carries and
+#	what __fs_device_partuuid_lookup matches on.
+ROOTFS_TEST_GUID = 42414C52-0002-4F53-BA10-000000000001
 
 #	vbox wants a vdi rather than a raw file, so we hand it one when VBoxManage
 #	is around. it goes on a sata port, or on a usb one :
@@ -791,6 +821,13 @@ QEMU_AHCI = -drive id=disk,file=$(OS_BUILD_DIR)/os-image,format=raw,if=none \
 		-device ahci,id=ahci \
 		-device ide-hd,drive=disk,bus=ahci.0
 
+#	the same controller, carrying the rootfs test image instead of the bios
+#	one. os-image has no partition table at all, so it can never be found by
+#	guid | this one is a gpt disk with a single balrog root on it.
+QEMU_AHCI_ROOTFS = -drive id=rootfs,file=$(ROOTFS_TEST_IMG),format=raw,if=none \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=rootfs,bus=ahci.0
+
 #	qemu-xhci and not nec-xhci! that second name does not exist here, and qemu
 #	refuses the whole command line rather than that one option, which looks
 #	exactly like a machine that boots to nothing.
@@ -871,6 +908,49 @@ run_debug:
 		-device ahci,id=ahci \
 		-device ide-hd,drive=disk,bus=ahci.0 \
 		-serial file:$(OS_LOG_DIR)/kernel_debug.log
+
+########################################################
+#	ROOTFS TEST
+########################################################
+#	the path this exercises, end to end :
+#	  the firmware reads the esp and starts the loader
+#	  the loader hands the kernel its ramfs and the guid from BALROG.CFG
+#	  the kernel comes up on the ramfs, then enumerates the ahci disk
+#	  fs_add_device walks its gpt and registers sd01
+#	  the root is mounted from that partition and replaces the ramdisk
+#	until the last line is written, this still shows the four before it.
+rootfs_img: ramfs
+	mkdir -p $(OS_BUILD_DIR)
+	$(REMOVE) $(ROOTFS_TEST_IMG)
+	truncate -s $(ROOTFS_TEST_SIZE)M $(ROOTFS_TEST_IMG)
+#	one partition and nothing else. type= and uuid= are written out in full :
+#	sfdisk has shorthands for the historic types, not for ours.
+	printf 'label: gpt\ntype=$(ROOTFS_TEST_TYPE), uuid=$(ROOTFS_TEST_GUID), name="BALROG ROOT"\n' \
+		| $(SFDISK) $(ROOTFS_TEST_IMG) > /dev/null
+#	-b 4096 and -I 128 for the same reason as release_uefi : they are what this
+#	ext2 driver assumes, and mke2fs picks 256 inodes on its own otherwise.
+#	-d fills it from the staging tree, so the disk holds the same files as the
+#	ramfs and a wrong mount shows up as identical content, not as an error.
+	$(MKE2FS) -q -F -t ext2 -b 4096 -I 128 -d $(RAMFS_STAGE) \
+		-E offset=$$(( $(ESP_IMG_LBA) * 512 )) \
+		$(ROOTFS_TEST_IMG) \
+		$$(( $(ROOTFS_TEST_SIZE) * 2048 - $(ESP_IMG_LBA) ))s > /dev/null
+	@echo "[  OK  ] $(ROOTFS_TEST_IMG)  gpt, one balrog root at lba $(ESP_IMG_LBA)"
+
+run_rootfs: esp rootfs_img
+#	the esp target copies the default BALROG.CFG, the one with an all zero
+#	guid. it is overwritten here so the loader hands the kernel the guid this
+#	image was actually written with.
+	printf '# 1980TA\n# written by make run_rootfs, not by hand\nroot_guid=$(ROOTFS_TEST_GUID)\n' \
+		> $(ESP_DIR)/BALROG.CFG
+	-@mv $(OS_LOG_DIR)/kernel_rootfs.log $(OS_LOG_DIR)/kernel_rootfs.log.bak 2> /dev/null
+	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars.fd
+	qemu-system-x86_64 -monitor stdio -m 4096 -no-reboot -no-shutdown \
+		-drive if=pflash,format=raw,unit=0,readonly=on,file=$(OVMF_CODE) \
+		-drive if=pflash,format=raw,unit=1,file=$(OS_BUILD_DIR)/ovmf_vars.fd \
+		-drive file=fat:rw:$(ESP_DIR),format=raw,index=0 \
+		$(QEMU_AHCI_ROOTFS) \
+		-serial file:$(OS_LOG_DIR)/kernel_rootfs.log
 
 ########################################################
 #	VIRTUALBOX

@@ -19,11 +19,12 @@ STAGE2_SECTORS  equ 16          ; 16 * 512B = 8KiB
 PART1_LBA       equ 2048        ; the first partition, 1MiB into the disk
 
 KERNEL_LBA      equ PART1_LBA   ; the kernel sits at the head of the partition
-KERNEL_SECTORS  equ 768         ; 768 * 512B = 384KiB
-                                ; kernel.bin is 558 sectors since we added lai.
+KERNEL_SECTORS  equ 896         ; 896 * 512B = 448KiB
+                                ; kernel.bin is 762 sectors since the gpt, the
+                                ; vfs and the devfs landed.
                                 ; it has to be a multiple of CHUNK_SECTORS, that
                                 ; is the step _LoadKernel reads with.
-                                ; the kernel ends at 0x58000, so far below the
+                                ; the kernel ends at 0x78000, so still below the
                                 ; buffer at 0x90000.
 
 RAMFS_LBA       equ KERNEL_LBA + KERNEL_SECTORS; right behind the kernel

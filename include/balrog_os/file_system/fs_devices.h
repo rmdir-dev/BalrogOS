@@ -15,6 +15,7 @@ typedef struct _fs_device_t
     gpt_header_t *gpt_header;
     gpt_partition_t *gpt_partition;
     uint8_t* partition_table;
+    int mountable;
     int (*read)(struct _fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
     int (*write)(struct _fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
     struct _file_system_t* fs;

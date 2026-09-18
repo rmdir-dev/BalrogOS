@@ -19,8 +19,17 @@
 #include "balrog_os/file_system/gpt/gpt.h"
 #include "klib/io/kprint.h"
 
+
+typedef struct __virtual_fs_t
+{
+    vfs_node_t* tmp;
+    vfs_node_t* dev;
+    vfs_node_t* proc;
+} virtual_fs_t;
+
 fs_device_t boot_dev;
 static vfs_root_t vfs_root;
+static virtual_fs_t* virtual_fs;
 list_t devices;
 
 static const size_t fs_devices_lookout_len = 3;
@@ -112,7 +121,12 @@ int fs_mount(const char* mount_path, const char* name_or_uuid)
     }
 
     fs_device_t* device = (fs_device_t*) node->value;
-    // TODO search device.
+
+    if (!device->mountable)
+    {
+        return -1;
+    }
+
     return vfs_root.mount(&vfs_root, mount_path, device);
 }
 
@@ -169,9 +183,22 @@ int fs_fstat(fs_fd* fd, fs_file_stat* stat)
 void fs_device_init(fs_device_t* device)
 {
     kmutex_init(&device->lock);
+    device->mountable = 0;
     device->partition_table = NULL;
     device->gpt_header = NULL;
     device->gpt_partition = NULL;
+}
+
+int __fs_add_to_dev_vfs(fs_device_t* device)
+{
+    size_t name_len = strlen(device->name);
+    char* absolute_path = vmalloc(5 + name_len + 1);
+    memcpy(absolute_path, "/dev/", 5);
+    memcpy(absolute_path + 5, device->name, name_len);
+    absolute_path[5 + name_len] = 0;
+    int ret = vfs_root.add_vfs(&vfs_root, absolute_path, VFS_NODE_TYPE_FILE) != 0;
+    vmfree(absolute_path);
+    return ret;
 }
 
 void fs_add_device(fs_device_t* device)
@@ -179,6 +206,7 @@ void fs_add_device(fs_device_t* device)
     kernel_debug_output(KDB_LVL_INFO, "file system : adding device uuid: %d", device->unique_id);
     list_insert(&devices, (size_t) device->name, device);
     uint8_t part_count = 1;
+    __fs_add_to_dev_vfs(device);
 
     if (gpt_init(device) == 0)
     {
@@ -193,6 +221,7 @@ void fs_add_device(fs_device_t* device)
             fs_device_t* part_device = vmalloc(sizeof(fs_device_t));
             memcpy(part_device, device, sizeof(fs_device_t));
             kmutex_init(&part_device->lock);
+            part_device->mountable = 0;
 
             if (gpt_find_by_index(part_device, i) != 0)
             {
@@ -221,6 +250,8 @@ void fs_add_device(fs_device_t* device)
             part_device->name[name_len + shift] = 0;
 
             list_insert(&devices, (size_t) part_device->name, part_device);
+            ext2_probe(part_device);
+            __fs_add_to_dev_vfs(part_device);
 
             part_count++;
         }
@@ -264,10 +295,32 @@ uint64_t get_first_lba(fs_device_t* device)
     return first_lba;
 }
 
+void __try_mount_virtual_fs(vfs_node_t** vfs, const char* mount_point)
+{
+    *vfs = vfs_root.add_vfs(&vfs_root, mount_point, VFS_NODE_TYPE_DIRECTORY);
+    if (!*vfs)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "file system : could not mount %s", mount_point);
+        return;
+    }
+    kernel_debug_output(KDB_LVL_INFO, "file system : virtual fs mounted %s", mount_point);
+}
+
+void __init_virtual_fs()
+{
+    virtual_fs = vmalloc(sizeof(virtual_fs_t));
+
+    __try_mount_virtual_fs(&virtual_fs->dev, "/dev");
+    __try_mount_virtual_fs(&virtual_fs->tmp, "/tmp");
+    __try_mount_virtual_fs(&virtual_fs->proc, "/proc");
+}
+
 int init_file_system()
 {
     list_init(&devices);
     ramdisk_init((void*)P2V(RAMFS_PHYS), RAMFS_SIZE);
+    vfs_init(&vfs_root, &boot_dev);
+    __init_virtual_fs();
 
     kmutex_init(&boot_dev.lock);
     kmutex_lock(&boot_dev.lock);
@@ -283,8 +336,6 @@ int init_file_system()
         KERNEL_LOG_FAIL("file system : No suitable drive found!");
         while(1){}
     }
-
-    vfs_init(&vfs_root, &boot_dev);
 
     kmutex_unlock(&boot_dev.lock);
 

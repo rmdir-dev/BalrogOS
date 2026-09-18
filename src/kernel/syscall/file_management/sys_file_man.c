@@ -244,3 +244,35 @@ void sys_write(interrupt_regs* stack_frame)
         serial_write(str, count);
     });
 }
+
+// %rax     System call             %rdi                %rsi                        %rdx                %r10                    %r8             %r9
+// 165	    sys_mount	            char *dev_name	    char *dir_name	        char *type	        unsigned long flags	void *data
+int sys_mount(interrupt_regs* stack_frame)
+{
+    if(current_running)
+    {
+        char dev_name[256] = {};
+        char dir_name[256] = {};
+        if(__copy_user_path(stack_frame->rdi, dev_name, sizeof(dev_name)) != 0)
+        {
+            return -1;
+        }
+
+        if(__copy_user_path(stack_frame->rsi, dir_name, sizeof(dir_name)) != 0)
+        {
+            return -1;
+        }
+
+        kernel_debug_output(KDB_LVL_VERBOSE, "mount : %s on %s", dev_name, dir_name);
+        return fs_mount(dir_name, dev_name);
+    }
+
+    kernel_debug_output(KDB_LVL_ERROR, "mount called with no running process");
+    return -1;
+}
+
+
+int sys_umount(interrupt_regs* stack_frame)
+{
+    return 0;
+}

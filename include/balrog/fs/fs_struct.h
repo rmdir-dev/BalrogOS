@@ -11,8 +11,8 @@ typedef struct _fs_dir_entry
     uint8_t name_len;
     // type (dir, regular file, link)
     uint8_t type;
-    // file name
-    char* name;
+    // file name : array inline
+    char name;
 } fs_dir_entry;
 
 typedef struct _fs_file_stat

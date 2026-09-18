@@ -1,7 +1,18 @@
 #include "balrog_os/file_system/vfs/vfs.h"
 #include "balrog_os/file_system/filesystem.h"
 #include <string.h>
+
+#include "balrog_os/debug/debug_output.h"
+#include "balrog_os/file_system/ext2/ext2.h"
 #include "balrog_os/memory/kheap.h"
+
+typedef struct __vfs_insert_node_out_t
+{
+    vfs_node_t* last_search_node;
+    vfs_node_t* last_device_node;
+} vfs_find_node_out_t;
+
+fs_device_t vfs_device;
 
 static size_t __vfs_get_next_path_part_len(const char* path, size_t max_path_len)
 {
@@ -16,8 +27,11 @@ static size_t __vfs_get_next_path_part_len(const char* path, size_t max_path_len
     return max_path_len;
 }
 
-static vfs_node_t* __vfs_find_mount(vfs_node_t* root, const char* path)
+static vfs_node_t* __vfs_find_mount(vfs_node_t* root, const char* path, vfs_find_node_out_t* out)
 {
+    out->last_search_node = root;
+    out->last_device_node = root;
+
     if (root->children_size == 0)
     {
         return root;
@@ -40,8 +54,6 @@ static vfs_node_t* __vfs_find_mount(vfs_node_t* root, const char* path)
         start++;
     }
 
-    vfs_node_t* device_node = root;
-    vfs_node_t* search_node = root;
     int searching = 1;
 
     while (searching)
@@ -49,18 +61,18 @@ static vfs_node_t* __vfs_find_mount(vfs_node_t* root, const char* path)
         size_t sub_path_len = __vfs_get_next_path_part_len(path + start, path_len - start);
 
         searching = 0;
-        for (size_t i = 0; i < search_node->children_size; i++)
+        for (size_t i = 0; i < out->last_search_node->children_size; i++)
         {
-            size_t name_len = strlen(search_node->children[i].name);
-            if(name_len == sub_path_len && memcmp(path + start, search_node->children[i].name, sub_path_len) == 0)
+            size_t name_len = strlen(out->last_search_node->children[i].name);
+            if(name_len == sub_path_len && memcmp(path + start, out->last_search_node->children[i].name, sub_path_len) == 0)
             {
                 searching = 1;
-                if (search_node->children[i].device)
+                if (out->last_search_node->children[i].device)
                 {
-                    device_node = &search_node->children[i];
+                    out->last_device_node = &out->last_search_node->children[i];
                 }
 
-                search_node = &search_node->children[i];
+                out->last_search_node = &out->last_search_node->children[i];
 
                 start += sub_path_len;
                 if (path[start] == '/')
@@ -71,13 +83,13 @@ static vfs_node_t* __vfs_find_mount(vfs_node_t* root, const char* path)
             }
         }
 
-        if (search_node->children_size == 0)
+        if (out->last_search_node->children_size == 0)
         {
             break;
         }
     }
 
-    return device_node;
+    return out->last_device_node;
 }
 
 typedef struct __vfs_lookup_t
@@ -85,6 +97,7 @@ typedef struct __vfs_lookup_t
     char* sanitized_path;
     size_t sanitized_path_len;
     vfs_node_t* node;
+    vfs_find_node_out_t vfs_find_node;
 } vfs_lookup_t;
 
 static inline void __vfs_guard_init(vfs_root_t* vfs_root)
@@ -105,7 +118,7 @@ static inline int __vfs_guard_sanitized_init(vfs_root_t* vfs_root, const char* p
     out->sanitized_path = vmalloc(sizeof(char) * (path_len + 1));
     vfs_sanitize_path(path, out->sanitized_path, path_len);
     out->sanitized_path_len = strlen(out->sanitized_path);
-    out->node = __vfs_find_mount(root, out->sanitized_path);
+    out->node = __vfs_find_mount(root, out->sanitized_path, &out->vfs_find_node);
 
     if(!out->node)
     {
@@ -123,23 +136,16 @@ static inline void __vfs_guard_sanitize_release(vfs_root_t* vfs_root, vfs_lookup
     kmutex_unlock(&vfs_root->lock);
 }
 
-static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* device)
+static vfs_node_t* __vfs_insert_nodes(vfs_lookup_t* lookup)
 {
-    vfs_lookup_t lookup;
-
-    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
-    {
-        return -1;
-    }
-
-    vfs_node_t* node = lookup.node;
-    char* sanitized_path = lookup.sanitized_path;
-    size_t sanitized_path_len = lookup.sanitized_path_len;
-    size_t path_len = strlen(path);
+    vfs_node_t* node = lookup->node;
+    char* sanitized_path = lookup->sanitized_path;
+    size_t sanitized_path_len = lookup->sanitized_path_len;
 
     size_t depth = 0;
     size_t part_start = 0;
     size_t part_len = 0;
+    int created = 0;
 
     while (part_start < sanitized_path_len)
     {
@@ -172,6 +178,11 @@ static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* devi
 
             if (child_node)
             {
+                if (child_node->type != VFS_NODE_TYPE_DIRECTORY)
+                {
+                    return 0;
+                }
+
                 node = child_node;
                 part_start += part_len;
                 continue;
@@ -183,6 +194,7 @@ static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* devi
                 for (size_t i = 0; i < node->children_size; i++)
                 {
                     new_children_ptr[i].name = node->children[i].name;
+                    new_children_ptr[i].type = node->children[i].type;
                     new_children_ptr[i].device = node->children[i].device;
                     new_children_ptr[i].depth_from_root = node->children[i].depth_from_root;
                     new_children_ptr[i].parent = node->children[i].parent;
@@ -202,6 +214,7 @@ static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* devi
             vfs_node_t* new_node = &node->children[node->children_size];
 
             new_node->name = vmalloc(part_len + 1);
+            new_node->type = VFS_NODE_TYPE_DIRECTORY;
             memcpy(new_node->name, sanitized_path + part_start, part_len);
             new_node->name[part_len] = 0;
             new_node->depth_from_root = depth;
@@ -211,6 +224,7 @@ static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* devi
             new_node->children = vmalloc(sizeof(vfs_node_t) * VFS_CHILDREN_GROWTH);
             new_node->device = 0;
             node->children_size++;
+            created = 1;
 
             node = new_node;
         }
@@ -218,6 +232,39 @@ static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* devi
         part_start += part_len;
     }
 
+    if (created)
+    {
+        node->type = 0;
+    }
+
+    return node;
+}
+
+static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* device)
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return -1;
+    }
+
+    size_t path_len = strlen(path);
+    vfs_node_t* node = __vfs_insert_nodes(&lookup);
+
+    if (!node)
+    {
+        __vfs_guard_sanitize_release(vfs_root, &lookup);
+        return -1;
+    }
+
+    if (node->type != 0 && node->type != VFS_NODE_TYPE_DIRECTORY)
+    {
+        __vfs_guard_sanitize_release(vfs_root, &lookup);
+        return -1;
+    }
+
+    node->type = VFS_NODE_TYPE_DIRECTORY;
     node->device = device;
     device->path = vmalloc(path_len + 1);
     memcpy(device->path, path, path_len);
@@ -226,6 +273,64 @@ static int __vfs_mount(vfs_root_t* vfs_root, const char* path, fs_device_t* devi
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 
     return 0;
+}
+
+static vfs_node_t* __vfs_add_vfs_node(vfs_root_t* vfs_root, const char* path, uint8_t type)
+{
+    vfs_lookup_t lookup;
+
+    if(__vfs_guard_sanitized_init(vfs_root, path, &lookup) != 0)
+    {
+        return 0;
+    }
+
+    if (lookup.sanitized_path_len > 0 && lookup.sanitized_path[lookup.sanitized_path_len - 1 ] == '/')
+    {
+        if (type != VFS_NODE_TYPE_DIRECTORY)
+        {
+            __vfs_guard_sanitize_release(vfs_root, &lookup);
+            return 0;
+        }
+
+        lookup.sanitized_path_len--;
+    }
+
+    size_t depth = 1;
+    // vfs should always receive absolute path
+    for (size_t i = 1; i < lookup.sanitized_path_len; i++)
+    {
+        if (lookup.sanitized_path[i] == '/')
+        {
+            depth++;
+        }
+    }
+
+    if (depth == lookup.vfs_find_node.last_search_node->depth_from_root)
+    {
+        vfs_node_t* ret = lookup.vfs_find_node.last_search_node;
+        if (lookup.vfs_find_node.last_search_node->type != type)
+        {
+            kernel_debug_output(KDB_LVL_ERROR, "vfs : trying to assign a new type to an existing node");
+            ret = 0;
+        }
+
+        __vfs_guard_sanitize_release(vfs_root, &lookup);
+        return ret;
+    }
+
+    vfs_node_t* node = __vfs_insert_nodes(&lookup);
+
+    if (!node)
+    {
+        __vfs_guard_sanitize_release(vfs_root, &lookup);
+        return 0;
+    }
+    node->type = type;
+    node->device = &vfs_device;
+
+    __vfs_guard_sanitize_release(vfs_root, &lookup);
+
+    return node;
 }
 
 static int __vfs_umount(vfs_root_t* vfs_root, const char* path, fs_device_t* device)
@@ -276,6 +381,10 @@ static int __vfs_open(vfs_root_t* vfs_root, const char* path, fs_fd* fd)
 
     ret = node->device->fs->open(node->device, sanitized_path + shift, fd);
     fd->device = node->device;
+    fd->vfs_node = node;
+    fd->absolute_path = vmalloc(lookup.sanitized_path_len + 1);
+    memcpy(fd->absolute_path, sanitized_path, lookup.sanitized_path_len);
+    fd->absolute_path[lookup.sanitized_path_len] = 0;
 
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 
@@ -436,6 +545,8 @@ int vfs_sanitize_path(const char* original_path, char* sanitized_path, size_t pa
     return 0;
 }
 
+extern int __init_vfs_device(fs_device_t* vfs_device);
+
 int vfs_init(vfs_root_t* vfs_root, fs_device_t* device)
 {
     vfs_node_t* root_node = vmalloc(sizeof(vfs_node_t));
@@ -443,6 +554,7 @@ int vfs_init(vfs_root_t* vfs_root, fs_device_t* device)
     kmutex_lock(&vfs_root->lock);
 
     root_node->device = device;
+    root_node->type = VFS_NODE_TYPE_DIRECTORY;
     root_node->name = "/";
     root_node->parent = NULL;
     root_node->depth_from_root = 0;
@@ -450,6 +562,7 @@ int vfs_init(vfs_root_t* vfs_root, fs_device_t* device)
     root_node->children = vmalloc(sizeof(vfs_node_t) * VFS_CHILDREN_GROWTH);
     root_node->children_buffer_size = VFS_CHILDREN_GROWTH;
     vfs_root->root = root_node;
+    vfs_root->add_vfs = __vfs_add_vfs_node;
     vfs_root->mount = __vfs_mount;
     vfs_root->umount = __vfs_umount;
     vfs_root->open = __vfs_open;
@@ -462,6 +575,7 @@ int vfs_init(vfs_root_t* vfs_root, fs_device_t* device)
     vfs_root->mkdir = __vfs_mkdir;
     vfs_root->unlink = __vfs_unlink;
     vfs_root->rmdir = __vfs_rmdir;
+    __init_vfs_device(&vfs_device);
 
     kmutex_unlock(&vfs_root->lock);
 

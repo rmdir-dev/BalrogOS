@@ -1515,6 +1515,7 @@ int ext2_probe(fs_device_t* dev)
     dev->fs->unlink = ext2_unlink;
     dev->fs->rmdir = ext2_rmdir;
     dev->fs->fs_data = fs_data;
+    dev->mountable = 1;
 
     return 0;
 }

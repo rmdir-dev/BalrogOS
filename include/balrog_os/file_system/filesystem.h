@@ -34,6 +34,8 @@ typedef struct _fs_file
     uint32_t inode_nbr;
 } __attribute__((packed)) fs_file;
 
+struct __vfs_node_t;
+
 typedef struct _fs_fd
 {
     // index in the file table
@@ -44,6 +46,10 @@ typedef struct _fs_fd
     uint8_t* offset;
     // linked device :
     fs_device_t* device;
+    // linked vfs_node
+    struct __vfs_node_t* vfs_node;
+    // absolute path
+    char* absolute_path;
 } __attribute__((packed)) fs_fd;
 
 #define fs_probe_callback(ROOT_TYPE_T) int (*probe)(ROOT_TYPE_T* device);

@@ -3,6 +3,7 @@
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include "balrog_os/cpu/interrupts/irq.h"
 #include "balrog_os/debug/debug_output.h"
+#include "balrog_os/debug/klog.h"
 
 /*
 Serial port driver, 16550 UART on COM1
@@ -60,6 +61,8 @@ int serial_init()
     out_byte(COM1 + 4, 0x0F);
 
     serial_present = (ret == 0);
+
+    klog_set_default_handler(&serial_write, KLOG_SERIAL_LOG);
 
     return ret;
 }

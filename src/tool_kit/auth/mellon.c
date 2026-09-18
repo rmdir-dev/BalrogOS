@@ -196,8 +196,9 @@ void login()
 }
 
 void start_login() {
+    printf(TERM_CLEAR);
     printf("BalrogOS %s\n",  __BALROG_VERSION__);
-    printf("\nspeak friend and enter.");
+    printf("\nspeak friend and enter.\n");
     login();
 }
 

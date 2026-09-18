@@ -24,6 +24,7 @@
 #include "balrog_os/cpu/fpu/fpu.h"
 #include "balrog_os/drivers/serial/serial.h"
 #include "balrog_os/cpu/acpi/acpi.h"
+#include "balrog_os/debug/klog.h"
 #include "balrog_os/drivers/disk/ahci/ahci.h"
 #include "balrog_os/drivers/disk/ata/ata.h"
 #include "balrog_os/file_system/pstore/pstore.h"
@@ -77,6 +78,9 @@ void initialize_kernel(void* SMAP, void* size)
     /*      SCREEN        */
     int vga_status = vga_init();
 
+    /*      SCREEN        */
+    klog_claim_buffer();
+
     KERNEL_LOG_OK("Kernel loading :");
     KERNEL_LOG_RESULT(vga_status,    "VGA driver : ",    "done", "not initialized");
     KERNEL_LOG_RESULT(serial_status, "Serial driver : ", "done", "not initialized");
@@ -117,16 +121,14 @@ void initialize_kernel(void* SMAP, void* size)
     /*    Kernel Heap    */
     ret_status = init_vmheap();
     KERNEL_LOG_ASSERT(ret_status, "Kernel virtual heap : ", "done", "not initialized");
-    void pmm_enable_alloc_logs();
+    pmm_enable_alloc_logs();
+
+    /*    KLOG           */
+    KERNEL_LOG_ASSERT(init_klog(), "klog : ", "done", "not initialized");
 
     /*    PSTORE        */
     int pstore_ret = init_pstore();
     KERNEL_LOG_ASSERT(pstore_ret, "PSTORE : ", "done", "not initialized");
-    for (int i = 0; i < 5; i++)
-    {
-        for (size_t i = 0; i < 1000000000; i++)
-        {}
-    }
 
     /*    PCI BUS        */
     ret_status = init_pci();

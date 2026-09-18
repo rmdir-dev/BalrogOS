@@ -55,4 +55,17 @@ SECTIONS
     . = . + 256K;
     screen_buffers_end = .;
   }
+
+  /* kernel  logs space */
+  .klog (NOLOAD) : AT(ADDR(.klog) - KERNEL_OFFSET)
+  {
+    klog_area = .;
+    /* 1MiB Kheap */
+    . = . + 1024K;
+    klog_area_end = .;
+
+    /* 4KiB buffer */
+    . = . + 4K;
+    klog_guard_end = .;
+  }
 }

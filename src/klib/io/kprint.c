@@ -5,6 +5,7 @@
 #include "balrog_os/drivers/screen/vga_driver.h"
 #include "klib/io/kprint.h"
 #include "balrog_os/debug/debug_output.h"
+#include "balrog_os/debug/klog.h"
 #include "balrog_os/drivers/serial/serial.h"
 
 static size_t __int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
@@ -57,9 +58,7 @@ static int __print_string(const char* str, size_t size, int debug_only)
         vga_write(str, size);
     }
 
-    KERNEL_DEBUG_EXEC({
-        serial_write(str, size);
-    });
+    klog_write(str, size);
     return 1;
 }
 

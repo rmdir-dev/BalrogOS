@@ -12,9 +12,9 @@ void* memmove(void* dest, const void* source, size_t size)
         }
     } else
     {
-        for(size_t i = size - 1; i >= 0; i--)
+        for(size_t i = size; i > 0; i--)
         {
-            dst[i] = src[i];
+            dst[i - 1] = src[i - 1];
         }
     }
     return dest;

@@ -30,6 +30,12 @@ set(C_LIB_SRC		src/libc)
 set(C_POSIX_SRC		src/posix)
 set(SHARED_SRC		src/shared)
 set(TOOLKIT_SRC		src/tool_kit)
+set(UEFI_SRC		src/bootloader/uefi)
+
+#	the Makefile writes uefi_layout.h in there and the loader includes it.
+#	the file only shows up after a make uefi, the directory is in the include
+#	path either way so the include resolves as soon as it has run.
+set(TEMP_DIR		build/temp)
 
 #	lai is a git submodule, the AML interpreter we evaluate _PTS with.
 #	the directory is empty until git submodule update --init has run.
@@ -40,6 +46,7 @@ include_directories(
 	${CMAKE_SOURCE_DIR}/include/libc
 	${CMAKE_SOURCE_DIR}/include/posix
 	${CMAKE_SOURCE_DIR}/${LAI_SRC}/include
+	${CMAKE_SOURCE_DIR}/${TEMP_DIR}
 )
 
 ########################################################
@@ -98,17 +105,33 @@ file(GLOB_RECURSE ALL_HEADERS	CONFIGURE_DEPENDS include/*.h)
 ########################################################
 #	INDEXING TARGETS
 ########################################################
-add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS})
+#	the headers are listed here and nowhere else. a header that no source
+#	includes yet has no translation unit to take its flags from, listing it
+#	gives it one | listing it in two targets only makes CLion pick one of
+#	them at random, so kernel owns them all, the flags are the same anyway.
+add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS}
+		src/klib/data_structure/vector.c)
 
 #	its own target, so we don't mix its warnings with ours. CLion still
 #	indexes lai_enter_sleep and the rest of it.
 if(LAI_SRCS)
 	add_library(lai		OBJECT ${LAI_SRCS})
 endif()
-add_library(libc		OBJECT ${LIBC_SRCS} ${SHARED_SRCS} ${ALL_HEADERS}
-		src/libc/unistd/reboot.c)
+add_library(libc		OBJECT ${LIBC_SRCS} ${SHARED_SRCS})
 add_library(libpthread	OBJECT ${PTHREADC_SRCS})
 add_library(tools		OBJECT ${TOOLS_SRCS})
+
+#	the loader is built on its own by the Makefile, with its own flags, so it
+#	needs its own target here too | without it bootx64.c belongs to nothing
+#	and the boot/ headers have no context at all.
+#	the shared sources it links are left out on purpose, they are already
+#	indexed in kernel and a file in two targets is a file CLion has to guess.
+add_library(uefi		OBJECT ${UEFI_SRC}/bootx64.c)
+target_compile_options(uefi PRIVATE
+	-fshort-wchar
+	-fno-stack-protector
+	-mno-red-zone
+)
 
 ########################################################
 #	BUILD (delegates to the Makefile)

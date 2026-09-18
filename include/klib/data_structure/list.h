@@ -30,7 +30,7 @@ void list_init(list_t* list);
  * @param key 
  * @return list_node_t* 
  */
-list_node_t* list_insert(list_t* list, int key);
+list_node_t* list_insert(list_t* list, int key, void* value);
 
 /**
  * @brief 

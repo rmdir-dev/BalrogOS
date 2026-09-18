@@ -45,8 +45,8 @@ static void __pci_check_function(pci_t bus)
     // get the class index, PCI_CLASS_CO_PROCESSOR = 0x40
     // So it'll be at index 20 to keep the array shorter.
     uint8_t class_hash_index = device->class < PCI_MAX_CLASS ? device->class : 20;
-    list_node_t* node = list_insert(&pci_devices[class_hash_index], device->key);
-    node->value = device;
+    list_insert(&pci_devices[class_hash_index], device->key, device);
+
     KERNEL_LOG_OK("PCI device: %x vendor: %x class: %x subclass: %x progif: %x",
         device->device_id, device->vendor_id, device->class, device->subclass, device->prog_if);
 

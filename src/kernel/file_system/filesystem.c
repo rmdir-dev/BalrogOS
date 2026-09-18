@@ -128,8 +128,7 @@ int fs_fstat(fs_fd* fd, fs_file_stat* stat)
 void fs_add_device(fs_device_t* device)
 {
     kernel_debug_output(KDB_LVL_INFO, "file system : adding device uuid: %d", device->unique_id);
-    list_node_t* node = list_insert(&devices, (int) device->unique_id);
-    node->value = device;
+    list_insert(&devices, (int) device->unique_id, device);
 }
 
 static int __scan_devices_and_initramdisk()

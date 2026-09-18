@@ -65,6 +65,8 @@
 #define ATA_CMD_WRITE_STREAM        0x3b    // write stream
 #define ATA_CMD_WRITE_VERIFY        0x3c    // write verify
 #define ATA_CMD_WRITE_LOG_EXT       0x3f    // write log ext
+#define ATA_CMD_CACHE_FLUSH         0xe7    // Flush cache
+#define ATA_CMD_CACHE_FLUSH_EXT     0xea    //
 
 #define ATA_CMD_WRITE_UNCORRECTABLE_EXT 0x45    // write uncorrectable ext
 

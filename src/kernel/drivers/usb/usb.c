@@ -107,8 +107,7 @@ static const char* __usb_enumerate_stage(uint8_t port, uint8_t* out_slot, list_t
         return "read capacity";
     }
 
-    list_node_t* node = list_insert(usb_devices, port);
-    node->value = disk;
+    list_insert(usb_devices, port, disk);
 
     return 0;
 }
@@ -367,12 +366,12 @@ void __usb_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
 
     /* same units as the AHCI driver : 512 byte sectors, so ext2.c cannot
         tell the difference. convert here if the device uses 4096. */
-    __scsi_rw10(disk, lba, len, buffer, USB_READ);
+    __scsi_rw10(disk, dev->part_lba_start + lba, len, buffer, USB_READ);
 }
 
 void __usb_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
     usb_disk_t* disk = dev->drive;
 
-    __scsi_rw10(disk, lba, len, buffer, USB_WRITE);
+    __scsi_rw10(disk, dev->part_lba_start + lba, len, buffer, USB_WRITE);
 }

@@ -23,7 +23,7 @@ void hash_init(hash_t* hash);
  * @param key 
  * @return list_node_t* 
  */
-list_node_t* hash_insert(hash_t* hash, int key);
+list_node_t* hash_insert(hash_t* hash, int key, void *value);
 
 /**
  * @brief 

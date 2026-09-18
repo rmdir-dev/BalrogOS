@@ -799,8 +799,7 @@ int init_xhci()
             continue;
         }
 
-        list_node_t* device_node = list_insert(&xhci_devices, dev->key);
-        device_node->value = dev;
+        list_insert(&xhci_devices, dev->key, dev);
         devices_found++;
     }
 
@@ -895,23 +894,22 @@ int xhci_scan_devices()
 
         KERNEL_LOG_INFO("searching boot device. slot %d port %d", xhci_disk->slot, xhci_disk->port);
 
-        if(__scsi_rw10(xhci_disk, 2, 1, buffer, USB_READ) == 0)
+        if(__scsi_rw10(xhci_disk, 0, 1, buffer, USB_READ) == 0)
         {
             fs_device_t* device = vmalloc(sizeof(fs_device_t));
             device->name = vmalloc(5 + 1); // usba 4 char + nullbyte + buffer
             memcpy(device->name, "usb", 3);
-            device->type = FS_DEVICE_TYPE_XHCI;
             device->name[3] = usb_device_id++;
             device->name[4] = 0;
+            device->type = FS_DEVICE_TYPE_XHCI;
             device->unique_id = xhci_disk->slot;
             device->read = __usb_read;
             device->write = __usb_write;
             device->drive = xhci_disk;
+            device->part_lba_start = 0;
             fs_add_device(device);
         }
 
-        kernel_debug_output(KDB_LVL_ERROR, "xhci : lba %d holds 0%x, not the ext2 0%x, no boot device",
-                2, buffer[28], EXT2_SIGNATURE);
         vmfree(buffer);
     }
 

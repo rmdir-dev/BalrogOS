@@ -471,8 +471,7 @@ static int __ahci_probe_ports(pci_device_t* dev, hba_mem_t* hba)
                     // __ahci_port_rebase() returns 0 when the device answered.
                     if(__ahci_port_rebase(device, i) == 0)
                     {
-                        list_node_t* node = list_insert(&ahci_devices, device->key);
-                        node->value = device;
+                        list_insert(&ahci_devices, device->key, device);
                         return 0;
                     }
 
@@ -567,12 +566,12 @@ static int __ahci_probe_device(pci_device_t* dev)
 
 void ahci_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
-    __ahci_read_sata(device->drive, buffer, lba, len);
+    __ahci_read_sata(device->drive, buffer, device->part_lba_start + lba, len);
 }
 
 void ahci_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
-    __ahci_write_sata(device->drive, buffer, lba, len);
+    __ahci_write_sata(device->drive, buffer, device->part_lba_start + lba, len);
 }
 
 int init_ahci()
@@ -611,17 +610,18 @@ int ahci_scan_devices()
 
         if(!__ahci_read_sata(drive, (void*)buffer, 0, 1))
         {
-            fs_device_t* dev = vmalloc(sizeof(fs_device_t));
-            dev->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
-            dev->type = FS_DEVICE_TYPE_AHCI;
-            memcpy(dev->name, "sd", 2);
-            dev->name[2] = ata_disk_id++;
-            dev->name[3] = 0; // nullbyte
-            dev->unique_id = drive->key;
-            dev->read = ahci_read;
-            dev->write = ahci_write;
-            dev->drive = drive;
-            fs_add_device(dev);
+            fs_device_t* device = vmalloc(sizeof(fs_device_t));
+            device->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
+            device->type = FS_DEVICE_TYPE_AHCI;
+            memcpy(device->name, "sd", 2);
+            device->name[2] = ata_disk_id++;
+            device->name[3] = 0; // nullbyte
+            device->part_lba_start = 0;
+            device->unique_id = drive->key;
+            device->read = ahci_read;
+            device->write = ahci_write;
+            device->drive = drive;
+            fs_add_device(device);
         }
     }
 

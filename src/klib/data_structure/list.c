@@ -12,20 +12,21 @@ void list_init(list_t* list)
     kmutex_init(&list->lock);
 }
 
-list_node_t* list_insert(list_t* list, int key)
+list_node_t* list_insert(list_t* list, int key, void* value)
 {
     list_node_t* node = vmalloc(sizeof(list_node_t));
 
     if(!node)
     {
-        KERNEL_LOG_FAIL("Unable to create a new list link! 0%x", key);
+        kernel_debug_output(KDB_LVL_ERROR, "Unable to create a new list link! 0%x", key);
         return NULL;
     }
 
     node->key = key;
-    list->size++;
+    node->value = value;
 
     kmutex_lock(&list->lock);
+    list->size++;
     node->next = list->head;
     list->head = node;
     kmutex_unlock(&list->lock);

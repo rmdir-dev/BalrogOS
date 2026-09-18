@@ -10,11 +10,19 @@
 char ata_disk_id = 'a';
 ata_drive drives[4];
 
-static inline void __ata_fill_buffer(uint16_t io_bus, uint16_t* buf)
+static inline void __ata_read_buffer(uint16_t io_bus, uint16_t* buf)
 {
     for(size_t i = 0; i < 256; i++)
     {
         buf[i] = in_word(ATA_REG_R_DATA(io_bus));
+    }
+}
+
+static inline void __ata_write_buffer(uint16_t io_bus, uint16_t* buf)
+{
+    for(size_t i = 0; i < 256; i++)
+    {
+        out_word(ATA_REG_W_DATA(io_bus), buf[i]);
     }
 }
 
@@ -48,6 +56,15 @@ static int __ata_wait_busy(uint16_t bus)
     }
 
     return 0;
+}
+
+static int __ata_flush_cache(ata_drive* drive)
+{
+    out_byte(ATA_REG_W_CMD(drive->io_bus), 0xe0 | drive->master);
+    __ata_wait_400ns(drive->io_bus);
+    out_byte(ATA_REG_W_CMD(drive->io_bus), ATA_CMD_CACHE_FLUSH);
+
+    return __ata_wait_busy(drive->io_bus) ? 0 : -1;
 }
 
 static uint8_t __ata_send_command(ata_cmd* command)
@@ -168,7 +185,7 @@ static void __ata_init_drive(ata_drive* drive)
     }
 
     // fill the buffer with the content asked by the previous command.
-    __ata_fill_buffer(io_bus, (void*) &drive->id);
+    __ata_read_buffer(io_bus, (void*) &drive->id);
 
     KERNEL_LOG_OK("drive 0%x %s load successfully.", io_bus, drive->master == 0x10 ? "slave" : "master");
 
@@ -200,7 +217,7 @@ static inline int __ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_
         }
         
         // fill the buffer
-        __ata_fill_buffer(device->io_bus, buffer);
+        __ata_read_buffer(device->io_bus, buffer);
         return 0;
     }
     return -1;
@@ -211,19 +228,71 @@ void ata_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
     ata_drive* drive = &drives[device->unique_id];
     for(size_t i = 0; i < len; i++)
     {
-        __ata_read_sector(drive, (uint16_t*)buffer, lba + i);
+        __ata_read_sector(drive, (uint16_t*)buffer, device->part_lba_start + lba + i);
         buffer += 512;
     }
 }
 
-static inline void __ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
+static inline int __ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
 {
+    // number of tries.
+    int retries = 5;
 
+    while(retries--)
+    {
+        // create a command
+        ata_cmd command = {
+            .bus = device->io_bus,
+            .count = 1,
+            .lba = lba & 0xffffff,
+            .device = 0xe0 | device->master | ((lba >> 24) & 0xf),
+            .command = ATA_CMD_WRITE_SEC_RETRY,
+        };
+
+        // send the command
+        int status = __ata_send_command(&command);
+
+        // if the command failed to read then retry
+        if(status & (ATA_STATUS_DF | ATA_STATUS_ERR) || !(status & ATA_STATUS_DRQ))
+        {
+            continue;
+        }
+
+        // fill the buffer
+        __ata_write_buffer(device->io_bus, buffer);
+
+        if (!__ata_wait_busy(device->io_bus))
+        {
+            continue;
+        }
+
+        if(in_byte(ATA_REG_R_STATUS(device->io_bus)) & (ATA_STATUS_DF | ATA_STATUS_ERR))
+        {
+            continue;
+        }
+
+        return 0;
+    }
+    return -1;
 }
 
 void ata_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
+    ata_drive* drive = &drives[device->unique_id];
 
+    for(size_t i = 0; i < len; i++)
+    {
+        if(__ata_write_sector(drive, (uint16_t*) buffer, device->part_lba_start + lba + i) != 0)
+        {
+            kernel_debug_output(KDB_LVL_ERROR, "ata : write failed at lba %d",
+                    device->part_lba_start + lba + i);
+            return;
+        }
+
+        buffer += 512;
+    }
+
+    __ata_flush_cache(drive);
 }
 
 
@@ -242,17 +311,18 @@ int ata_scan_devices()
         }
         if(!__ata_read_sector(&drives[i], buffer, 0))
         {
-            fs_device_t* dev = vmalloc(sizeof(fs_device_t));
-            dev->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
-            memcpy(dev->name, "sd", 2);
-            dev->type = FS_DEVICE_TYPE_ATA;
-            dev->name[2] = ata_disk_id++;
-            dev->name[3] = 0; // nullbyte
-            dev->unique_id = i;
-            dev->read = ata_read;
-            dev->write = ata_write;
-            dev->drive = &drives[i];
-            fs_add_device(dev);
+            fs_device_t* device = vmalloc(sizeof(fs_device_t));
+            device->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
+            memcpy(device->name, "sd", 2);
+            device->type = FS_DEVICE_TYPE_ATA;
+            device->name[2] = ata_disk_id++;
+            device->name[3] = 0; // nullbyte
+            device->part_lba_start = 0;
+            device->unique_id = i;
+            device->read = ata_read;
+            device->write = ata_write;
+            device->drive = &drives[i];
+            fs_add_device(device);
         }
     }
 

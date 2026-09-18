@@ -35,7 +35,7 @@ Physical range the bootloader already filled, that pmm_alloc must never hand
 out. Zero length means nothing is reserved.
 */
 /* maximum allowed reserved memory */
-#define PMM_MAX_RESERVED    4
+#define PMM_MAX_RESERVED    8
 
 static void* reserved_start[PMM_MAX_RESERVED] = {};
 static void* reserved_end[PMM_MAX_RESERVED] = {};

@@ -114,6 +114,11 @@ void serial_put_char(char c)
 
 void serial_write(const char *str, size_t size)
 {
+    if(!serial_present)
+    {
+        return;
+    }
+
     for (size_t i = 0; i < size; i++)
     {
         serial_put_char(str[i]);

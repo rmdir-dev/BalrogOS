@@ -26,6 +26,7 @@
 #include "balrog_os/cpu/acpi/acpi.h"
 #include "balrog_os/drivers/disk/ahci/ahci.h"
 #include "balrog_os/drivers/disk/ata/ata.h"
+#include "balrog_os/file_system/pstore/pstore.h"
 #include "balrog_os/drivers/screen/fb_backend.h"
 
 /* 
@@ -117,6 +118,14 @@ void initialize_kernel(void* SMAP, void* size)
     ret_status = init_vmheap();
     KERNEL_LOG_ASSERT(ret_status, "Kernel virtual heap : ", "done", "not initialized");
     void pmm_enable_alloc_logs();
+
+    /*    PSTORE        */
+    KERNEL_LOG_ASSERT(init_pstore(), "PSTORE : ", "done", "not initialized");
+    for (int i = 0; i < 5; i++)
+    {
+        for (size_t i = 0; i < 1000000000; i++)
+        {}
+    }
 
     /*    PCI BUS        */
     ret_status = init_pci();

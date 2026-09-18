@@ -7,7 +7,7 @@
 
 static ramdisk_t ramfs;
 
-void ramdisk_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __ramdisk_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
     ramdisk_t* ramdisk = dev->drive;
     uint64_t offset = lba * 512;
@@ -15,13 +15,15 @@ void ramdisk_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
     if (offset + len * 512 > ramdisk->size)
     {
         kernel_debug_output(KDB_LVL_CRITICAL, "ramdisk : read past the end, lba 0%x len 0%x", lba, len);
-        return;
+        return -1;
     }
 
     memcpy(buffer, ramdisk->base + offset, len * 512);
+
+    return 0;
 }
 
-void ramdisk_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __ramdisk_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
     ramdisk_t* ramdisk = dev->drive;
     uint64_t offset = lba * 512;
@@ -29,10 +31,12 @@ void ramdisk_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len
     if (offset + len * 512 > ramdisk->size)
     {
         kernel_debug_output(KDB_LVL_CRITICAL, "ramdisk : write past the end, lba 0%x len 0%x", lba, len);
-        return;
+        return -1;
     }
 
     memcpy(ramdisk->base + offset, buffer, len * 512);
+
+    return 0;
 }
 
 int ramdisk_init(void* base, uint64_t size)
@@ -66,10 +70,12 @@ int ramdisk_get_boot_device(fs_device_t* device)
     }
 
     device->name = "ramfs";
-    device->read = ramdisk_read;
-    device->write = ramdisk_write;
+    device->read = __ramdisk_read;
+    device->write = __ramdisk_write;
     device->type = FS_DEVICE_TYPE_RAMFS;
     device->drive = &ramfs;
+    device->gpt_header = NULL;
+    device->gpt_partition = NULL;
     fs_add_device(device);
 
     KERNEL_LOG_OK("ramdisk : ext2 image at %p, %d MiB", ramfs.base, ramfs.size / (1024 * 1024));

@@ -58,23 +58,3 @@ int ahci_get_boot_device(fs_device_t* device);
  * 
  */
 int init_ahci();
-
-/**
- * @brief read sectors from an AHCI drive.
- * 
- * @param device 
- * @param buffer where the sectors are copied
- * @param lba first sector to read
- * @param len number of sectors
- */
-void ahci_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
-
-/**
- * @brief write sectors to an AHCI drive.
- * 
- * @param device 
- * @param buffer the sectors to write
- * @param lba first sector to write
- * @param len number of sectors
- */
-void ahci_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);

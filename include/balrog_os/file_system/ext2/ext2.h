@@ -94,7 +94,58 @@ typedef struct _ext2_superblock
     uint32_t major_version;                     // Major portion of version (combine with Minor portion above to construct full version field)
     uint16_t user_id;                           // User ID that can use reserved blocks
     uint16_t group_id;                          // Group ID that can use reserved blocks
-    uint8_t unused[940];                        // Use with Extended Superblock Fields (Major version >= 1)
+    // Extended superblock fields
+    uint32_t first_inode;                       // First non-reserved inode in file system. (In versions < 1.0, this is fixed as 11)
+    uint16_t inode_size;                        // Size of each inode structure in bytes. (In versions < 1.0, this is fixed as 128)
+    uint16_t superblock_group;                  // Block group that this superblock is part of (if backup copy)
+    /*
+    Optional Feature Flags
+    These are optional features for an implementation to support, but offer performance or reliability gains to implementations that do support them.
+
+    Flag Value	Description
+    0x0001	Preallocate some number of (contiguous?) blocks (see byte 205 in the superblock) to a directory when creating a new one (to reduce fragmentation?)
+    0x0002	AFS server inodes exist
+    0x0004	File system has a journal (Ext3)
+    0x0008	Inodes have extended attributes
+    0x0010	File system can resize itself for larger partitions
+    0x0020	Directories use hash index
+    */
+    uint32_t feature_compat;                    // Optional features present (features that are not required to read or write, but usually result in a performance increase. see above
+    /*
+    These features if present on a file system are required to be supported by an implementation in order to correctly read from or write to the file system.
+
+    Flag Value	Description
+    0x0001	Compression is used
+    0x0002	Directory entries contain a type field
+    0x0004	File system needs to replay its journal
+    0x0008	File system uses a journal device
+    */
+    uint32_t feature_incompat;                  // Required features present (features that are required to be supported to read or write. see above)
+    /*
+    These features, if present on a file system, are required in order for an implementation to write to the file system, but are not required to read from the file system.
+
+    Flag Value	Description
+    0x0001	Sparse superblocks and group descriptor tables
+    0x0002	File system uses a 64-bit file size
+    0x0004	Directory contents are stored in the form of a Binary Tree
+    */
+    uint32_t feature_ro_compat;                 // Features that if not supported, the volume must be mounted read-only see above)
+    uint8_t  uuid[16];                          // File system ID (what is output by blkid)
+    char     volume_name[16];                   // Volume name (C-style string: characters terminated by a 0 byte)
+    char     last_mounted[64];                  // Path volume was last mounted to (C-style string: characters terminated by a 0 byte)
+    /*
+    start   end     size    description
+    200	    203	    4	    Compression algorithms used (see Required features above)
+    204	    204	    1	    Number of blocks to preallocate for files
+    205	    205	    1	    Number of blocks to preallocate for directories
+    206	    207	    2	    (Unused)
+    208	    223	    16	    Journal ID (same style as the File system ID above)
+    224	    227	    4	    Journal inode
+    228	    231	    4	    Journal device
+    232	    235	    4	    Head of orphan inode list
+    236	    1023	X	    (Unused)
+    */
+    uint8_t  unused[824];                       // what is left of the 1024
 } __attribute__((packed)) ext2_superblock;
 
 typedef struct __ext2_block_group_descriptor

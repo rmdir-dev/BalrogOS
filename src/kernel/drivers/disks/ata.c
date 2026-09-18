@@ -6,6 +6,7 @@
 #include "balrog_os/memory/kheap.h"
 
 #include "balrog_os/debug/debug_output.h"
+#include "balrog_os/file_system/gpt/gpt.h"
 
 char ata_disk_id = 'a';
 ata_drive drives[4];
@@ -223,14 +224,18 @@ static inline int __ata_read_sector(ata_drive* device, uint16_t* buffer, uint64_
     return -1;
 }
 
-void ata_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __ata_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
     ata_drive* drive = &drives[device->unique_id];
     for(size_t i = 0; i < len; i++)
     {
-        __ata_read_sector(drive, (uint16_t*)buffer, device->part_lba_start + lba + i);
+        if(__ata_read_sector(drive, (uint16_t*)buffer, get_first_lba(device) + lba + i) != 0)
+        {
+            return -1;
+        }
         buffer += 512;
     }
+    return 0;
 }
 
 static inline int __ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_t lba)
@@ -276,23 +281,25 @@ static inline int __ata_write_sector(ata_drive* device, uint8_t* buffer, uint64_
     return -1;
 }
 
-void ata_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __ata_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
     ata_drive* drive = &drives[device->unique_id];
 
     for(size_t i = 0; i < len; i++)
     {
-        if(__ata_write_sector(drive, (uint16_t*) buffer, device->part_lba_start + lba + i) != 0)
+        if(__ata_write_sector(drive, (uint16_t*) buffer, get_first_lba(device) + lba + i) != 0)
         {
             kernel_debug_output(KDB_LVL_ERROR, "ata : write failed at lba %d",
-                    device->part_lba_start + lba + i);
-            return;
+                    get_first_lba(device) + lba + i);
+            return -1;
         }
 
         buffer += 512;
     }
 
     __ata_flush_cache(drive);
+
+    return 0;
 }
 
 
@@ -312,15 +319,17 @@ int ata_scan_devices()
         if(!__ata_read_sector(&drives[i], buffer, 0))
         {
             fs_device_t* device = vmalloc(sizeof(fs_device_t));
+
+            fs_device_init(device);
             device->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
             memcpy(device->name, "sd", 2);
             device->type = FS_DEVICE_TYPE_ATA;
             device->name[2] = ata_disk_id++;
             device->name[3] = 0; // nullbyte
-            device->part_lba_start = 0;
+            device->first_lba = 0;
             device->unique_id = i;
-            device->read = ata_read;
-            device->write = ata_write;
+            device->read = __ata_read;
+            device->write = __ata_write;
             device->drive = &drives[i];
             fs_add_device(device);
         }

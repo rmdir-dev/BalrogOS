@@ -4,7 +4,7 @@
 
 typedef struct __list_node_t
 {
-    int key;
+    size_t key;
     void* value;
     struct __list_node_t* next;
 } list_node_t;
@@ -30,7 +30,7 @@ void list_init(list_t* list);
  * @param key 
  * @return list_node_t* 
  */
-list_node_t* list_insert(list_t* list, int key, void* value);
+list_node_t* list_insert(list_t* list, size_t key, void* value);
 
 /**
  * @brief 
@@ -39,4 +39,4 @@ list_node_t* list_insert(list_t* list, int key, void* value);
  * @param key 
  * @return list_node_t* 
  */
-list_node_t* list_lookup(list_t* list, int key);
+list_node_t* list_lookup(list_t* list, size_t key);

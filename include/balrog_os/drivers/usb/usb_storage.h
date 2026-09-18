@@ -169,6 +169,8 @@ typedef struct __scsi_sense_t
 #define SCSI_SENSE_ILLEGAL_REQUEST  0x05
 #define SCSI_SENSE_UNIT_ATTENTION   0x06    // the medium changed, retry once
 
+#define USB_BOUNCE_SIZE             8192
+
 typedef struct __usb_disk_t
 {
     uint8_t slot;               // what Enable Slot handed us, 1 based

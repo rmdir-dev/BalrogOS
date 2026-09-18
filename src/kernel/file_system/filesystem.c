@@ -14,6 +14,8 @@
 #include "balrog_os/memory/vmm.h"
 #include "balrog_os/memory/pmm.h"
 #include <string.h>
+
+#include "balrog_os/file_system/gpt/gpt.h"
 #include "klib/io/kprint.h"
 
 fs_device_t boot_dev;
@@ -125,10 +127,65 @@ int fs_fstat(fs_fd* fd, fs_file_stat* stat)
     return vfs_root.stat(&vfs_root, fd, stat);
 }
 
+void fs_device_init(fs_device_t* device)
+{
+    kmutex_init(&device->lock);
+    device->partition_table = NULL;
+    device->gpt_header = NULL;
+    device->gpt_partition = NULL;
+}
+
 void fs_add_device(fs_device_t* device)
 {
     kernel_debug_output(KDB_LVL_INFO, "file system : adding device uuid: %d", device->unique_id);
-    list_insert(&devices, (int) device->unique_id, device);
+    list_insert(&devices, (size_t) device->name, device);
+    uint8_t part_count = 1;
+
+    if (gpt_init(device) == 0)
+    {
+        kernel_debug_output(KDB_LVL_VERBOSE, "found gpt table");
+        for (uint32_t i = 0; i < device->gpt_header->entry_count; i++)
+        {
+            if (part_count > 99)
+            {
+                kernel_debug_output(KDB_LVL_ERROR, "partition found > 99 entries");
+                break;
+            }
+            fs_device_t* part_device = vmalloc(sizeof(fs_device_t));
+            memcpy(part_device, device, sizeof(fs_device_t));
+            kmutex_init(&part_device->lock);
+
+            if (gpt_find_by_index(part_device, i) != 0)
+            {
+                vmfree(part_device);
+                continue;
+            }
+
+            kernel_debug_output(KDB_LVL_INFO, "fs : partition found & initialized");
+            part_device->partition_table = NULL;
+
+            // GPT values
+            part_device->gpt_header = vmalloc(sizeof(gpt_header_t));
+            memcpy(part_device->gpt_header, device->gpt_header, sizeof(gpt_header_t));
+
+            // Name
+            size_t name_len = strlen(device->name);
+            part_device->name = vmalloc(name_len + 3); // name_len + nullbyte + 2 byte buffer
+            memcpy(part_device->name, device->name, name_len);
+            size_t shift = 0;
+            if (part_count >= 10)
+            {
+                shift++;
+                part_device->name[name_len] = '0' + ((part_count / 10) % 10);
+            }
+            part_device->name[name_len + shift++] = '0' + part_count % 10;
+            part_device->name[name_len + shift] = 0;
+
+            list_insert(&devices, (size_t) part_device->name, part_device);
+
+            part_count++;
+        }
+    }
 }
 
 static int __scan_devices_and_initramdisk()
@@ -156,6 +213,16 @@ static int __scan_devices_and_initramdisk()
     }
 
     return 0;
+}
+
+uint64_t get_first_lba(fs_device_t* device)
+{
+    uint64_t first_lba = device->first_lba;
+    if (device->gpt_partition)
+    {
+        first_lba = device->gpt_partition->first_lba;
+    }
+    return first_lba;
 }
 
 int init_file_system()

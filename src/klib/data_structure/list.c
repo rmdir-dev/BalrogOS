@@ -12,7 +12,7 @@ void list_init(list_t* list)
     kmutex_init(&list->lock);
 }
 
-list_node_t* list_insert(list_t* list, int key, void* value)
+list_node_t* list_insert(list_t* list, size_t key, void* value)
 {
     list_node_t* node = vmalloc(sizeof(list_node_t));
 
@@ -33,7 +33,7 @@ list_node_t* list_insert(list_t* list, int key, void* value)
     return node;
 }
 
-list_node_t* list_lookup(list_t* list, int key)
+list_node_t* list_lookup(list_t* list, size_t key)
 {
     kmutex_lock(&list->lock);
     list_node_t* node = list->head;

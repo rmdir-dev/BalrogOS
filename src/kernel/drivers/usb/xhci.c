@@ -48,8 +48,8 @@ static volatile uint32_t* xhci_db = 0;
 static uint64_t* xhci_dcbaa = 0;
 
 extern int __scsi_rw10(usb_disk_t* disk, uint64_t lba, uint16_t blocks, void* buffer, uint8_t write);
-extern void __usb_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
-extern void __usb_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
+extern int __usb_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
+extern int __usb_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
 
 /*
 How many bytes the controller gives each context, from HCCPARAMS1.CSZ.
@@ -60,8 +60,6 @@ static uint32_t xhci_ctx_size = 32;
 static xhci_ring_t xhci_cmd;
 static xhci_ring_t xhci_event;
 static xhci_erst_entry_t* xhci_erst = 0;
-
-#define USB_BOUNCE_SIZE     8192
 
 static uint8_t usb_bounce[USB_BOUNCE_SIZE] __attribute__((aligned(PAGE_SIZE)));
 
@@ -898,6 +896,7 @@ int xhci_scan_devices()
         {
             fs_device_t* device = vmalloc(sizeof(fs_device_t));
             device->name = vmalloc(5 + 1); // usba 4 char + nullbyte + buffer
+            fs_device_init(device);
             memcpy(device->name, "usb", 3);
             device->name[3] = usb_device_id++;
             device->name[4] = 0;
@@ -906,7 +905,7 @@ int xhci_scan_devices()
             device->read = __usb_read;
             device->write = __usb_write;
             device->drive = xhci_disk;
-            device->part_lba_start = 0;
+            device->first_lba = 0;
             fs_add_device(device);
         }
 

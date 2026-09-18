@@ -19,26 +19,6 @@ typedef struct __ramdisk_t
 /**
  * @brief
  *
- * @param dev
- * @param buffer
- * @param lba
- * @param len
- */
-void ramdisk_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
-
-/**
- * @brief
- *
- * @param dev
- * @param buffer
- * @param lba
- * @param len
- */
-void ramdisk_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
-
-/**
- * @brief
- *
  * @param base
  * @param size
  *

@@ -564,14 +564,14 @@ static int __ahci_probe_device(pci_device_t* dev)
     return 0;
 }
 
-void ahci_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __ahci_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
-    __ahci_read_sata(device->drive, buffer, device->part_lba_start + lba, len);
+    return __ahci_read_sata(device->drive, buffer, get_first_lba(device) + lba, len);
 }
 
-void ahci_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __ahci_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
-    __ahci_write_sata(device->drive, buffer, device->part_lba_start + lba, len);
+    return __ahci_write_sata(device->drive, buffer, get_first_lba(device) + lba, len);
 }
 
 int init_ahci()
@@ -611,15 +611,16 @@ int ahci_scan_devices()
         if(!__ahci_read_sata(drive, (void*)buffer, 0, 1))
         {
             fs_device_t* device = vmalloc(sizeof(fs_device_t));
+            fs_device_init(device);
             device->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
             device->type = FS_DEVICE_TYPE_AHCI;
             memcpy(device->name, "sd", 2);
             device->name[2] = ata_disk_id++;
             device->name[3] = 0; // nullbyte
-            device->part_lba_start = 0;
+            device->first_lba = 0;
             device->unique_id = drive->key;
-            device->read = ahci_read;
-            device->write = ahci_write;
+            device->read = __ahci_read;
+            device->write = __ahci_write;
             device->drive = drive;
             fs_add_device(device);
         }

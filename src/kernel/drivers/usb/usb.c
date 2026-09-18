@@ -2,6 +2,7 @@
 #include "balrog_os/drivers/usb/usb_storage.h"
 #include "balrog_os/drivers/usb/xhci/xhci.h"
 #include "balrog_os/drivers/usb/xhci/xhci_structures.h"
+#include "balrog_os/drivers/disk/ata/ata_device.h"
 #include "balrog_os/file_system/filesystem.h"
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/cpu/tsc/tsc.h"
@@ -360,18 +361,48 @@ int __usb_bot_command(usb_disk_t* disk, uint8_t* cdb, uint8_t cdb_len,
 ext2.c addresses its partition from zero, so the offset lives here. Everything
 above this line thinks the stick starts at the superblock.
 */
-void __usb_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __usb_read(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
-    usb_disk_t* disk = dev->drive;
+    usb_disk_t* disk = device->drive;
 
     /* same units as the AHCI driver : 512 byte sectors, so ext2.c cannot
         tell the difference. convert here if the device uses 4096. */
-    __scsi_rw10(disk, dev->part_lba_start + lba, len, buffer, USB_READ);
+    while (len)
+    {
+        uint64_t count = (len * ATA_SECTOR_SIZE) > USB_BOUNCE_SIZE ? USB_BOUNCE_SIZE / disk->block_size : len;
+
+
+        if(__scsi_rw10(disk, get_first_lba(device) + lba, count, buffer, USB_READ) != 0)
+        {
+            return -1;
+        }
+
+        buffer += count * ATA_SECTOR_SIZE;
+        lba += count;
+        len -= count;
+    }
+
+    return 0;
 }
 
-void __usb_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len)
+int __usb_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 {
-    usb_disk_t* disk = dev->drive;
+    usb_disk_t* disk = device->drive;
 
-    __scsi_rw10(disk, dev->part_lba_start + lba, len, buffer, USB_WRITE);
+    while (len)
+    {
+        uint64_t count = (len * ATA_SECTOR_SIZE) > USB_BOUNCE_SIZE ? USB_BOUNCE_SIZE / disk->block_size : len;
+
+
+        if(__scsi_rw10(disk, get_first_lba(device) + lba, count, buffer, USB_WRITE) != 0)
+        {
+            return -1;
+        }
+
+        buffer += USB_BOUNCE_SIZE;
+        lba += count;
+        len -= count;
+    }
+
+    return 0;
 }

@@ -120,7 +120,8 @@ void initialize_kernel(void* SMAP, void* size)
     void pmm_enable_alloc_logs();
 
     /*    PSTORE        */
-    KERNEL_LOG_ASSERT(init_pstore(), "PSTORE : ", "done", "not initialized");
+    int pstore_ret = init_pstore();
+    KERNEL_LOG_ASSERT(pstore_ret, "PSTORE : ", "done", "not initialized");
     for (int i = 0; i < 5; i++)
     {
         for (size_t i = 0; i < 1000000000; i++)

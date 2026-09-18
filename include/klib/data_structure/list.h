@@ -13,6 +13,7 @@ typedef struct __list_t
 {
     list_node_t* head;
     kmutex_t lock;
+    size_t size;
 } list_t;
 
 /**

@@ -2,11 +2,14 @@
 
 #include <stdint.h>
 #include "balrog/fs/fs_struct.h"
+#include "balrog_os/file_system/fs_devices.h"
+#include "klib/data_structure/list.h"
 #include "klib/threading/kmutex.h"
 
 #define FS_DEVICE_TYPE_RAMFS    0
 #define FS_DEVICE_TYPE_ATA      1
 #define FS_DEVICE_TYPE_AHCI     2
+#define FS_DEVICE_TYPE_XHCI     3
 
 struct _file_system_t;
 
@@ -39,34 +42,36 @@ typedef struct _fs_fd
     uint32_t inode_nbr;
     // Current offset pointer
     uint8_t* offset;
+    // linked device :
+    fs_device_t* device;
 } __attribute__((packed)) fs_fd;
 
-typedef struct _fs_device_t
-{
-    char* name;
-    kmutex_t lock;
-    uint32_t unique_id;
-    uint8_t type;
-    void (*read)(struct _fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
-    void (*write)(struct _fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len);
-    struct _file_system_t* fs;
-    void* drive;
-} __attribute__((packed)) fs_device_t;
+#define fs_probe_callback(ROOT_TYPE_T) int (*probe)(ROOT_TYPE_T* device);
+#define fs_open_callback(ROOT_TYPE_T) int (*open)(ROOT_TYPE_T* root, const char* filename, fs_fd* fd);
+#define fs_close_callback(ROOT_TYPE_T) int (*close)(ROOT_TYPE_T* root, fs_fd* fd);
+#define fs_stat_callback(ROOT_TYPE_T) int (*stat)(ROOT_TYPE_T* root, fs_fd* fd, fs_file_stat* stat);
+#define fs_read_callback(ROOT_TYPE_T) int (*read)(ROOT_TYPE_T* root, uint8_t* buffer, uint64_t len, fs_fd* fd);
+#define fs_write_callback(ROOT_TYPE_T) int (*write)(ROOT_TYPE_T* root, uint8_t* buffer, uint64_t len, fs_fd* fd);
+#define fs_create_callback(ROOT_TYPE_T) int (*create)(ROOT_TYPE_T* root, const char* filename, uint64_t size);
+#define fs_list_callback(ROOT_TYPE_T) int (*list)(ROOT_TYPE_T* root, const char* dirname, uint8_t* buffer);
+#define fs_mkdir_callback(ROOT_TYPE_T) int (*mkdir)(ROOT_TYPE_T* root, const char* dirname);
+#define fs_unlink_callback(ROOT_TYPE_T) int (*unlink)(ROOT_TYPE_T* root, const char* filename);
+#define fs_rmdir_callback(ROOT_TYPE_T) int (*rmdir)(ROOT_TYPE_T* root, const char* dirname);
 
 typedef struct _file_system_t
 {
     char* name;
-    int (*probe)(fs_device_t* device);
-    int (*open)(fs_device_t* dev, char* filename, fs_fd* fd);
-    int (*close)(fs_device_t* dev, fs_fd* fd);
-    int (*stat)(fs_device_t* dev, fs_fd* fd, fs_file_stat* stat);
-    int (*read)(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
-    int (*write)(fs_device_t* dev, uint8_t* buffer, uint64_t len, fs_fd* fd);
-    int (*create)(fs_device_t* dev, char* filename, uint64_t size);
-    int (*list)(fs_device_t* dev, char* dirname, uint8_t* buffer);
-    int (*mkdir)(fs_device_t* dev, char* dirname);
-    int (*unlink)(fs_device_t* dev, char* filename);
-    int (*rmdir)(fs_device_t* dev, char* dirname);
+    fs_probe_callback(fs_device_t);
+    fs_open_callback(fs_device_t);
+    fs_close_callback(fs_device_t);
+    fs_stat_callback(fs_device_t);
+    fs_read_callback(fs_device_t);
+    fs_write_callback(fs_device_t);
+    fs_create_callback(fs_device_t);
+    fs_list_callback(fs_device_t);
+    fs_mkdir_callback(fs_device_t);
+    fs_unlink_callback(fs_device_t);
+    fs_rmdir_callback(fs_device_t);
     void* fs_data;
 } __attribute__((packed)) file_system_t;
 

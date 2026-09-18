@@ -5,7 +5,10 @@
 #include "balrog_os/file_system/filesystem.h"
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/cpu/tsc/tsc.h"
+#include "klib/data_structure/list.h"
 #include <string.h>
+
+#include "balrog_os/memory/kheap.h"
 
 extern int __xhci_control_transfer(uint8_t slot, usb_setup_packet_t* setup, void* buffer, uint16_t len);
 extern int __xhci_configure_endpoints(usb_disk_t* disk);
@@ -23,15 +26,13 @@ extern int __scsi_rw10(usb_disk_t* disk, uint64_t lba, uint16_t blocks, void* bu
 int __usb_get_descriptor(uint8_t slot, uint8_t type, uint8_t index, void* buffer, uint16_t len);
 int __usb_configure(usb_disk_t* disk);
 
-usb_disk_t xhci_disk;
-
 static uint32_t usb_bot_tag = 0;
 
 
 /*
 Walks a port up to a working disk and names the step it stopped on.
 */
-static const char* __usb_enumerate_stage(uint8_t port, uint8_t* out_slot)
+static const char* __usb_enumerate_stage(uint8_t port, uint8_t* out_slot, list_t* usb_devices)
 {
     usb_device_descriptor_t desc = {};
     uint8_t slot = 0;
@@ -88,24 +89,26 @@ static const char* __usb_enumerate_stage(uint8_t port, uint8_t* out_slot)
     }
 
 
-    /* Store locally first to avoid override global if fail */
-    usb_disk_t disk = {};
+    usb_disk_t* disk = vmalloc(sizeof(usb_disk_t));
 
-    disk.slot = slot;
-    disk.port = port;
-    disk.lun = 0;
+    disk->slot = slot;
+    disk->port = port;
+    disk->lun = 0;
 
-    if(__usb_configure(&disk) != 0)
+    if(__usb_configure(disk) != 0)
     {
+        vmfree(disk);
         return "configure";
     }
 
-    if(__scsi_read_capacity(&disk) != 0)
+    if(__scsi_read_capacity(disk) != 0)
     {
+        vmfree(disk);
         return "read capacity";
     }
 
-    xhci_disk = disk;
+    list_node_t* node = list_insert(usb_devices, port);
+    node->value = disk;
 
     return 0;
 }
@@ -297,10 +300,10 @@ int __usb_configure(usb_disk_t* disk)
     return __usb_transfer_result(__xhci_control_transfer(disk->slot, &setup, 0, 0));
 }
 
-int __usb_enumerate(uint8_t port)
+int __usb_enumerate(uint8_t port, list_t* usb_devices)
 {
     uint8_t slot = 0;
-    const char* stage = __usb_enumerate_stage(port, &slot);
+    const char* stage = __usb_enumerate_stage(port, &slot, usb_devices);
 
     if(stage)
     {

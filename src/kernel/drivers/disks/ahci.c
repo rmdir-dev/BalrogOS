@@ -10,9 +10,11 @@
 #include "balrog_os/memory/pmm.h"
 #include "balrog_os/memory/memory.h"
 #include "balrog_os/cpu/interrupts/interrupt.h"
+#include "balrog_os/file_system/fs_devices.h"
 #include <string.h>
 
 static list_t ahci_devices;
+extern char ata_disk_id;
 
 /*
     INTERRUPT HANDLING
@@ -573,7 +575,7 @@ void ahci_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len
     __ahci_write_sata(device->drive, buffer, lba, len);
 }
 
-void init_ahci()
+int init_ahci()
 {
     KERNEL_LOG_INFO("Looking for AHCI devices");
     
@@ -588,9 +590,11 @@ void init_ahci()
         __ahci_probe_device(dev);
         node = node->next;
     }
+
+    return 0;
 }
 
-int ahci_get_boot_device(fs_device_t* device)
+int ahci_scan_devices()
 {
     uint16_t* buffer = vmalloc(ATA_SECTOR_SIZE);
 
@@ -607,21 +611,20 @@ int ahci_get_boot_device(fs_device_t* device)
 
         if(!__ahci_read_sata(drive, (void*)buffer, 0, 1))
         {
-            // the boot sector ends with the MBR signature.
-            if(buffer[255] == 0xaa55)
-            {
-                KERNEL_LOG_INFO("boot device found!");
-                device->unique_id = drive->key;
-                device->read = ahci_read;
-                device->write = ahci_write;
-                device->drive = drive;
-                vmfree(buffer);
-                return 0;
-            }
+            fs_device_t* dev = vmalloc(sizeof(fs_device_t));
+            dev->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
+            dev->type = FS_DEVICE_TYPE_AHCI;
+            memcpy(dev->name, "sd", 2);
+            dev->name[2] = ata_disk_id++;
+            dev->name[3] = 0; // nullbyte
+            dev->unique_id = drive->key;
+            dev->read = ahci_read;
+            dev->write = ahci_write;
+            dev->drive = drive;
+            fs_add_device(dev);
         }
     }
 
-    kernel_debug_output(KDB_LVL_ERROR, "ahci : no drive answered with an mbr signature, no boot device");
     vmfree(buffer);
-    return -1;
+    return 0;
 }

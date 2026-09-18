@@ -8,6 +8,7 @@ void list_init(list_t* list)
 {
     // set the head to NULL so the end of the list is always equals to NULL.
     list->head = NULL;
+    list->size = 0;
     kmutex_init(&list->lock);
 }
 
@@ -22,6 +23,7 @@ list_node_t* list_insert(list_t* list, int key)
     }
 
     node->key = key;
+    list->size++;
 
     kmutex_lock(&list->lock);
     node->next = list->head;

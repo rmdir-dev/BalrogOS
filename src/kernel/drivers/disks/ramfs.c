@@ -70,6 +70,7 @@ int ramdisk_get_boot_device(fs_device_t* device)
     device->write = ramdisk_write;
     device->type = FS_DEVICE_TYPE_RAMFS;
     device->drive = &ramfs;
+    fs_add_device(device);
 
     KERNEL_LOG_OK("ramdisk : ext2 image at %p, %d MiB", ramfs.base, ramfs.size / (1024 * 1024));
 

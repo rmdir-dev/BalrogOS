@@ -57,7 +57,7 @@ int ahci_get_boot_device(fs_device_t* device);
  * @brief initialize AHCI drives if they exist.
  * 
  */
-void init_ahci();
+int init_ahci();
 
 /**
  * @brief read sectors from an AHCI drive.

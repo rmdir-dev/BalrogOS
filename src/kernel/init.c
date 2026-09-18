@@ -24,6 +24,8 @@
 #include "balrog_os/cpu/fpu/fpu.h"
 #include "balrog_os/drivers/serial/serial.h"
 #include "balrog_os/cpu/acpi/acpi.h"
+#include "balrog_os/drivers/disk/ahci/ahci.h"
+#include "balrog_os/drivers/disk/ata/ata.h"
 #include "balrog_os/drivers/screen/fb_backend.h"
 
 /* 
@@ -129,6 +131,13 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    ACPI          */
     KERNEL_LOG_ASSERT(init_acpi(), "ACPI : ", "done", "not available");
+
+
+    /*    ATA           */
+    KERNEL_LOG_ASSERT(init_ata(), "ATA controller : ", "done", "not found");
+
+    /*    AHCI          */
+    KERNEL_LOG_ASSERT(init_ahci(), "AHCI controller : ", "done", "not found");
 
     /*    USB           */
     ret_status = init_xhci();

@@ -782,15 +782,41 @@ run:
 		-device ide-hd,drive=disk,bus=ahci.0 \
 		-serial file:$(OS_LOG_DIR)/kernel.log
 
+#	the two disks these targets hand the kernel, written once because the two
+#	targets differ only by the gdb stub and had drifted apart.
+#
+#	ahci first : the device scan asks ahci, then ata, then xhci, so having both
+#	on the machine is what exercises the order rather than one branch.
+QEMU_AHCI = -drive id=disk,file=$(OS_BUILD_DIR)/os-image,format=raw,if=none \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=disk,bus=ahci.0
+
+#	qemu-xhci and not nec-xhci! that second name does not exist here, and qemu
+#	refuses the whole command line rather than that one option, which looks
+#	exactly like a machine that boots to nothing.
+#
+#	the stick is the release image because its layout is the one the xhci
+#	driver expects. Neither target builds it : release_uefi starts with
+#	clean_kernel_obj and would throw away the esp the dependency above just
+#	made.
+USB_STICK_IMG = $(RELEASE_DIR)/balrog-uefi.img
+
+QEMU_USB = -device qemu-xhci,id=xhci \
+		-drive if=none,id=stick,file=$(USB_STICK_IMG),format=raw \
+		-device usb-storage,bus=xhci.0,drive=stick
+
 #	OVMF is the free uefi firmware, we need it to test without hardware.
 #	the vars file has to be writable, so we copy it.
 run_uefi: esp
+	@test -f $(USB_STICK_IMG) || { echo "[FAILED] $(USB_STICK_IMG) is missing, run make release_uefi first"; exit 1; }
 	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars.fd
-	mv $(OS_LOG_DIR)/kernel_uefi.log $(OS_LOG_DIR)/kernel_uefi.log.bak | true
+	-@mv $(OS_LOG_DIR)/kernel_uefi.log $(OS_LOG_DIR)/kernel_uefi.log.bak 2> /dev/null
 	qemu-system-x86_64 -monitor stdio -m 4096 -no-reboot -no-shutdown \
 		-drive if=pflash,format=raw,unit=0,readonly=on,file=$(OVMF_CODE) \
 		-drive if=pflash,format=raw,unit=1,file=$(OS_BUILD_DIR)/ovmf_vars.fd \
-		-drive file=fat:rw:$(ESP_DIR),format=raw \
+		-drive file=fat:rw:$(ESP_DIR),format=raw,index=0 \
+		$(QEMU_AHCI) \
+		$(QEMU_USB) \
 		-serial file:$(OS_LOG_DIR)/kernel_uefi.log
 
 #	the same as run_uefi, only frozen at reset waiting for gdb on :1234.
@@ -801,12 +827,15 @@ run_uefi: esp
 #	a breakpoint on kernel_main is reached only after OVMF has handed over, so
 #	setting one on efi_main needs BOOTX64.EFI and its own base address.
 run_debug_efi: esp
+	@test -f $(USB_STICK_IMG) || { echo "[FAILED] $(USB_STICK_IMG) is missing, run make release_uefi first"; exit 1; }
 	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars_debug.fd
-	mv $(OS_LOG_DIR)/kernel_debug_uefi.log $(OS_LOG_DIR)/kernel_debug_uefi.log.bak | true
+	-@mv $(OS_LOG_DIR)/kernel_debug_uefi.log $(OS_LOG_DIR)/kernel_debug_uefi.log.bak 2> /dev/null
 	qemu-system-x86_64 -s -S -monitor stdio -m 4096 -no-reboot -no-shutdown \
 		-drive if=pflash,format=raw,unit=0,readonly=on,file=$(OVMF_CODE) \
 		-drive if=pflash,format=raw,unit=1,file=$(OS_BUILD_DIR)/ovmf_vars_debug.fd \
-		-drive file=fat:rw:$(ESP_DIR),format=raw \
+		-drive file=fat:rw:$(ESP_DIR),format=raw,index=0 \
+		$(QEMU_AHCI) \
+		$(QEMU_USB) \
 		-serial file:$(OS_LOG_DIR)/kernel_debug_uefi.log
 
 #	The same thing on a q35, which is the machine to reach for when something

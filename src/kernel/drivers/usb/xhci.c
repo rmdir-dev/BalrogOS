@@ -19,6 +19,7 @@
 #include "balrog_os/drivers/usb/usb_spec.h"
 #include "balrog_os/drivers/usb/usb_storage.h"
 #include "balrog_os/file_system/filesystem.h"
+#include "balrog_os/file_system/fs_devices.h"
 #include "balrog_os/file_system/fs_config.h"
 #include "balrog_os/file_system/ext2/ext2.h"
 #include "balrog_os/file_system/filesystem.h"
@@ -33,8 +34,10 @@ control endpoint takes 0.
 static xhci_ring_t xhci_ep_ring[XHCI_MAX_SLOTS][XHCI_MAX_DCI];
 
 static list_t xhci_devices;
+list_t usb_devices;
+char usb_device_id = 'a';
 
-int __usb_enumerate(uint8_t port);
+int __usb_enumerate(uint8_t port, list_t* usb_devices);
 int __scsi_read_capacity(usb_disk_t* disk);
 
 static volatile uint8_t* xhci_cap = 0;
@@ -43,9 +46,6 @@ static volatile uint8_t* xhci_rt = 0;
 static volatile uint32_t* xhci_db = 0;
 
 static uint64_t* xhci_dcbaa = 0;
-
-/* the disk __usb_enumerate found, if it found one */
-extern usb_disk_t xhci_disk;
 
 extern int __scsi_rw10(usb_disk_t* disk, uint64_t lba, uint16_t blocks, void* buffer, uint8_t write);
 extern void __usb_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
@@ -409,7 +409,7 @@ static int __xhci_start()
             connected++;
             kernel_debug_output(KDB_LVL_INFO, "xhci : port %d has something, portsc 0%x", i, sc);
 
-            if(__usb_enumerate(i) == 0)
+            if(__usb_enumerate(i, &usb_devices) == 0)
             {
                 break;
             }
@@ -784,6 +784,7 @@ int init_xhci()
     KERNEL_LOG_INFO("Looking for XHCI devices");
 
     list_init(&xhci_devices);
+    list_init(&usb_devices);
 
     // Get all pci MASS STORAGES devices
     list_t* list = pci_get_devices(PCI_CLASS_SERIAL_BUS_CONTROLLER);
@@ -801,11 +802,6 @@ int init_xhci()
         list_node_t* device_node = list_insert(&xhci_devices, dev->key);
         device_node->value = dev;
         devices_found++;
-
-        if(xhci_disk.block_size)
-        {
-            break;
-        }
     }
 
     if (devices_found == 0)
@@ -883,36 +879,41 @@ int __xhci_bulk_in(usb_disk_t* disk, void* buffer, uint32_t len)
     return __xhci_bulk(disk, disk->bulk_in_dci, buffer, len);
 }
 
-int xhci_get_boot_device(fs_device_t* device)
+int xhci_scan_devices()
 {
     uint16_t* buffer = vmalloc(ATA_SECTOR_SIZE);
 
-    if(!xhci_disk.block_size)
+    for(list_node_t* node = usb_devices.head; node; node = node->next)
     {
-        kernel_debug_output(KDB_LVL_ERROR, "xhci : no disk enumerated, no boot device");
-        vmfree(buffer);
-        return -1;
-    }
-
-    KERNEL_LOG_INFO("searching boot device. slot %d port %d", xhci_disk.slot, xhci_disk.port);
-
-    if(__scsi_rw10(&xhci_disk, 2, 1, buffer, USB_READ) == 0)
-    {
-        if(buffer[28] == EXT2_SIGNATURE)
+        usb_disk_t* xhci_disk = (usb_disk_t*) node->value;
+        if(!xhci_disk->block_size)
         {
-            KERNEL_LOG_INFO("boot device found!");
-            device->name = "usb";
-            device->unique_id = xhci_disk.slot;
+            kernel_debug_output(KDB_LVL_ERROR, "xhci : no disk enumerated, no usb device");
+            vmfree(buffer);
+            return -1;
+        }
+
+        KERNEL_LOG_INFO("searching boot device. slot %d port %d", xhci_disk->slot, xhci_disk->port);
+
+        if(__scsi_rw10(xhci_disk, 2, 1, buffer, USB_READ) == 0)
+        {
+            fs_device_t* device = vmalloc(sizeof(fs_device_t));
+            device->name = vmalloc(5 + 1); // usba 4 char + nullbyte + buffer
+            memcpy(device->name, "usb", 3);
+            device->type = FS_DEVICE_TYPE_XHCI;
+            device->name[3] = usb_device_id++;
+            device->name[4] = 0;
+            device->unique_id = xhci_disk->slot;
             device->read = __usb_read;
             device->write = __usb_write;
-            device->drive = &xhci_disk;
-            vmfree(buffer);
-            return 0;
+            device->drive = xhci_disk;
+            fs_add_device(device);
         }
+
+        kernel_debug_output(KDB_LVL_ERROR, "xhci : lba %d holds 0%x, not the ext2 0%x, no boot device",
+                2, buffer[28], EXT2_SIGNATURE);
+        vmfree(buffer);
     }
 
-    kernel_debug_output(KDB_LVL_ERROR, "xhci : lba %d holds 0%x, not the ext2 0%x, no boot device",
-            2, buffer[28], EXT2_SIGNATURE);
-    vmfree(buffer);
     return -1;
 }

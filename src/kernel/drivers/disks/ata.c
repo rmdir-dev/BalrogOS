@@ -1,11 +1,13 @@
 #include "balrog_os/drivers/disk/ata/ata.h"
 #include "balrog_os/drivers/disk/ata/ata_device.h"
 #include "balrog_os/drivers/disk/ata/ata_command.h"
+#include "balrog_os/file_system/fs_devices.h"
 #include "balrog_os/cpu/ports/ports.h"
 #include "balrog_os/memory/kheap.h"
 
 #include "balrog_os/debug/debug_output.h"
 
+char ata_disk_id = 'a';
 ata_drive drives[4];
 
 static inline void __ata_fill_buffer(uint16_t io_bus, uint16_t* buf)
@@ -225,8 +227,9 @@ void ata_write(fs_device_t* device, uint8_t* buffer, uint64_t lba, uint64_t len)
 }
 
 
-int ata_get_boot_device(fs_device_t* device)
+int ata_scan_devices()
 {
+    int boot_found = -1;
     uint16_t* buffer = vmalloc(512);
     for(size_t i = 0; i < 4; i++)
     {
@@ -239,25 +242,25 @@ int ata_get_boot_device(fs_device_t* device)
         }
         if(!__ata_read_sector(&drives[i], buffer, 0))
         {
-            if(buffer[255] == 0xaa55)
-            {
-                KERNEL_LOG_INFO("boot device found!");
-                device->unique_id = i;
-                device->read = ata_read;
-                device->write = ata_write;
-                device->drive = &drives[i];
-                vmfree(buffer);
-                return 0;
-            }
+            fs_device_t* dev = vmalloc(sizeof(fs_device_t));
+            dev->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
+            memcpy(dev->name, "sd", 2);
+            dev->type = FS_DEVICE_TYPE_ATA;
+            dev->name[2] = ata_disk_id++;
+            dev->name[3] = 0; // nullbyte
+            dev->unique_id = i;
+            dev->read = ata_read;
+            dev->write = ata_write;
+            dev->drive = &drives[i];
+            fs_add_device(dev);
         }
     }
 
-    kernel_debug_output(KDB_LVL_ERROR, "ata : none of the 4 drives answered with an mbr signature");
     vmfree(buffer);
-    return -1;
+    return boot_found;
 }
 
-void init_ata()
+int init_ata()
 {
     KERNEL_LOG_INFO("Looking for ATA devices.");
     drives[0].io_bus = ATA_DEV_IO_PREMARY;
@@ -283,4 +286,6 @@ void init_ata()
     drives[3].exist = 0;
     drives[3].master = ATA_SLAVE;
     __ata_init_drive(&drives[3]);
+
+    return 0;
 }

@@ -35,4 +35,4 @@ int ata_get_boot_device(fs_device_t* device);
  * @brief initialize ATA drives
  * 
  */
-void init_ata();
+int init_ata();

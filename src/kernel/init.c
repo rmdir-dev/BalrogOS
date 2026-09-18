@@ -158,7 +158,7 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    TEST PROCESS   */
     KERNEL_LOG_INFO("start process : waiting...");
-    char test_arg1[11] = "/sbin/auth";
+    char test_arg1[12] = "/sbin/durin";
     char test_arg2[9] = "/boot/";
     uintptr_t argv[5] = { &test_arg1, 0, 0, 0, 0 };
     exec_process(argv[0], &argv, 0);

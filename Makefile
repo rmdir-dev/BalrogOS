@@ -44,6 +44,7 @@ BESH_SRC = src/tool_kit/besh/
 ECHO_SRC = src/tool_kit/echo/
 CAT_SRC = src/tool_kit/cat/
 AUTH_SRC = src/tool_kit/auth/
+DURIN_SRC = src/tool_kit/durin/
 CLEAR_SRC = src/tool_kit/clear/
 SL_SRC = src/tool_kit/sl/
 PWD_SRC = src/tool_kit/pwd/
@@ -110,6 +111,7 @@ HELLO_SRCS = $(shell find $(HELLO_SRC) -name *.c)
 ECHO_SRCS = $(shell find $(ECHO_SRC) -name *.c)
 CAT_SRCS = $(shell find $(CAT_SRC) -name *.c)
 AUTH_SRCS = $(shell find $(AUTH_SRC) -name *.c)
+DURIN_SRCS = $(shell find $(DURIN_SRC) -name *.c)
 CLEAR_SRCS = $(shell find $(CLEAR_SRC) -name *.c)
 SL_SRCS = $(shell find $(SL_SRC) -name *.c)
 WHOAMI_SRCS = $(shell find $(WHOAMI_SRC) -name *.c)
@@ -152,6 +154,7 @@ ALL_HELLO_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(HELLO_SRCS))
 ALL_ECHO_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(ECHO_SRCS))
 ALL_CAT_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CAT_SRCS))
 ALL_AUTH_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(AUTH_SRCS))
+ALL_DURIN_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(DURIN_SRCS))
 ALL_CLEAR_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(CLEAR_SRCS))
 ALL_SL_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(SL_SRCS))
 ALL_WHOAMI_OBJECT64 := $(patsubst %.c, $(TEMP_DIR)/obj64/%.o, $(WHOAMI_SRCS))
@@ -309,7 +312,8 @@ LIBPTH_OBJECTS = $(PTHREADC_SRCS:.c=.o)
 TOOLS_OBJECT = $(LS_SRCS:.c=.o) $(SH_SRCS:.c=.o) $(HELLO_SRCS:.c=.o) $(ECHO_SRCS:.c=.o) $(CAT_SRCS:.c=.o) \
 			$(AUTH_SRCS:.c=.o) $(CLEAR_SRCS:.c=.o) $(SL_SRCS:.c=.o) $(BESH_SRCS:.c=.o) $(PWD_SRCS:.c=.o) $(TLIB_SRCS:.c=.o) \
 			$(WHOAMI_SRCS:.c=.o) $(DONUT_SRCS:.c=.o) $(SETDEBUG_SRCS:.c=.o) $(SLEEP_SRCS:.c=.o) $(SHUTDOWN_SRCS:.c=.o) \
-			$(TOUCH_SRCS:.c=.o) $(MKDIR_SRCS:.c=.o) $(RM_SRCS:.c=.o) $(RMDIR_SRCS:.c=.o)
+			$(TOUCH_SRCS:.c=.o) $(MKDIR_SRCS:.c=.o) $(RM_SRCS:.c=.o) $(RMDIR_SRCS:.c=.o) \
+			$(DURIN_SRCS:.c=.o)
 
 ########################################################
 #	PHONY TARGETS
@@ -492,7 +496,8 @@ tools: $(TOOLS_OBJECT) $(LIBC_OBJECTS) $(LIBPTH_OBJECTS)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/hello $(ALL_HELLO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/echo $(ALL_ECHO_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/cat $(ALL_CAT_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
-	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(SBIN_BUILD_DIR)/auth $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(SBIN_BUILD_DIR)/mellon $(ALL_AUTH_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
+	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(SBIN_BUILD_DIR)/durin $(ALL_DURIN_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/clear $(ALL_CLEAR_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/sl $(ALL_SL_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
 	$(LD) -m elf_x86_64 -N -e _start -Ttext 0x4000 -z max-page-size=0x1000 -o $(BIN_BUILD_DIR)/pwd $(ALL_PWD_OBJECT64) $(LIBC_OBJECTS64) $(PSXC_OBJECTS64) $(ALL_TLIB_OBJECT64)
@@ -650,6 +655,7 @@ build_all:
 	$(MAKE) ramfs
 	$(MAKE) bootloader
 	$(MAKE) kernel
+	$(MAKE) esp
 	$(MAKE) os
 	@echo "[  OK  ] build os with tools"
 

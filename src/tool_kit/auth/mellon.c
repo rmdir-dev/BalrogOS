@@ -13,6 +13,14 @@
 #define USERNAME_MODE   1
 #define PASSWORD_MODE   0
 
+/**
+ * Name :
+ *
+ * Mellon, is the word you need to speak to enter the Moria through the Door of Durin.
+ *
+ * "Speak friend and enter."
+ */
+
 char file_buf[4096 * 100];
 static char buffer[255] = {};
 static int buf_idx = 0;
@@ -181,14 +189,15 @@ void try_log_user()
 
 void login()
 {
-    printf("\nbalrog os login: ");
+    printf("\nlogin: ");
     manage_input(USERNAME_MODE);
     
     try_log_user();
 }
 
 void start_login() {
-    printf("BalrogOS apha\n");
+    printf("BalrogOS %s\n",  __BALROG_VERSION__);
+    printf("\nspeak friend and enter.");
     login();
 }
 

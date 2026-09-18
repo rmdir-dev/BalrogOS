@@ -93,8 +93,8 @@ Then connect the remote debugger with the following configuration :
 * RAMFS : done
 * shutdown : done
   * should be ISO exportable to run on real hardware after this. (done BIOS TODO : UEFI -currently not working on test laptop 2-)
-* USB driver
-* USB persistance
+* USB driver : done
+* USB persistance : wip need to finish pstore fully to debug on real hardware
 * signal
 * improve shell (besh add pipe/redirect/signal)
 * proper shutdown

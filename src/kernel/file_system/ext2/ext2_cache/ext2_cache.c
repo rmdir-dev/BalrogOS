@@ -5,16 +5,11 @@
 #include "balrog_os/memory/kheap.h"
 #include "balrog_os/debug/debug_output.h"
 
-struct _ext2_cache
+void ext2_cache_init(fs_device_t* dev)
 {
-    uint8_t* block_bitmap;
-    uint8_t* inode_bitmap;
-    rbt_tree inode_tree;
-} ext2_cache;
-
-void ext2_cache_init()
-{
-    rbt_init(&ext2_cache.inode_tree);
+    ext2_cache_t* cache = vmalloc(sizeof(ext2_cache_t));
+    rbt_init(&cache->inode_tree);
+    dev->fs->cache = cache;
 }
 
 uint32_t ext2_cache_search_bitmaps(fs_device_t* dev, uint8_t type)
@@ -26,7 +21,8 @@ extern ext2_inode ext2_get_inode(fs_device_t* dev, uint32_t inode_idx);
 
 ext2_idata* ext2_cache_search_inode(fs_device_t* dev, uint32_t inode_nbr)
 {
-    rbt_node* node = rbt_search(&ext2_cache.inode_tree, inode_nbr);
+    ext2_cache_t* ext2_cache = dev->fs->cache;
+    rbt_node* node = rbt_search(&ext2_cache->inode_tree, inode_nbr);
 
     if(!node)
     {
@@ -43,20 +39,21 @@ ext2_idata* ext2_cache_search_inode(fs_device_t* dev, uint32_t inode_nbr)
         file_data->file_id = 0;
         file_data->inode = ext2_get_inode(dev, inode_nbr);
 
-        node = rbt_insert(&ext2_cache.inode_tree, inode_nbr);
+        node = rbt_insert(&ext2_cache->inode_tree, inode_nbr);
         node->value = file_data;
     }
     
     return node->value;
 }
 
-int ext2_cache_delete_inode(uint32_t inode_nbr)
+int ext2_cache_delete_inode(fs_device_t* dev, uint32_t inode_nbr)
 {
-    rbt_node* node = rbt_search(&ext2_cache.inode_tree, inode_nbr);
+    ext2_cache_t* ext2_cache = dev->fs->cache;
+    rbt_node* node = rbt_search(&ext2_cache->inode_tree, inode_nbr);
     if(node != 0)
     {
         vmfree(node->value);
-        rbt_delete(&ext2_cache.inode_tree, node);
+        rbt_delete(&ext2_cache->inode_tree, node);
     }
     return 0;
 }
@@ -88,8 +85,9 @@ int ext2_close_file_from_cache(ext2_idata* inode, fs_fd* fd)
     return 0;
 }
 
-int ext2_clear_cache()
+int ext2_clear_cache(fs_device_t* dev)
 {
-    rbt_clear_tree(&ext2_cache.inode_tree);
+    ext2_cache_t* ext2_cache = dev->fs->cache;
+    rbt_clear_tree(&ext2_cache->inode_tree);
     return 0;
 }

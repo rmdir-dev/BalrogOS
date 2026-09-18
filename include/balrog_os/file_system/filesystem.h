@@ -79,6 +79,7 @@ typedef struct _file_system_t
     fs_unlink_callback(fs_device_t);
     fs_rmdir_callback(fs_device_t);
     void* fs_data;
+    void* cache;
 } __attribute__((packed)) file_system_t;
 
 int init_file_system();

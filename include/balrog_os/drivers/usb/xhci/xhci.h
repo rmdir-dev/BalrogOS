@@ -30,4 +30,6 @@ P2V only reaches the first 256GiB of physical memory.
 #define XHCI_LEGSUP_OSOWNED                 (1 << 24)
 
 int init_xhci();
+void xhci_select(void* controller);
+void* xhci_current();
 int xhci_scan_devices();

@@ -12,8 +12,15 @@ void init_irq();
 void irq_end(uint8_t id);
 
 /**
- * @brief Enable/Disable a bit into the master/slave PIC mask
+ * @brief Set the bit of an IRQ into the master/slave PIC mask
  * 
- * @param irq_id IRQ interrupt number
+ * @param irq_id interrupt vector, INT_IRQ_0 based
  */
-void irq_pic_toggle_mask_bit(uint8_t irq_id);
+void irq_pic_mask(uint8_t irq_id);
+
+/**
+ * @brief Clear the bit of an IRQ into the master/slave PIC mask
+ * 
+ * @param irq_id interrupt vector, INT_IRQ_0 based
+ */
+void irq_pic_unmask(uint8_t irq_id);

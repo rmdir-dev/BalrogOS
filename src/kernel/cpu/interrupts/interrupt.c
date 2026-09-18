@@ -1,4 +1,5 @@
 #include "balrog_os/cpu/interrupts/interrupt.h"
+#include "balrog_os/cpu/interrupts/irq.h"
 #include "balrog_os/cpu/ports/ports.h"
 #include <string.h>
 #include "klib/io/kprint.h"
@@ -122,6 +123,12 @@ interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
         kernel_debug_output(KDB_LVL_CRITICAL, "RFLAGS 0%x \n", stack_frame->rflags);
         kernel_debug_output(KDB_LVL_CRITICAL, "  rip 0%x cs 0%x rsp 0%x ss 0%x",
                 stack_frame->rip, stack_frame->cs, stack_frame->rsp, stack_frame->ss);
+
+        if(stack_frame->interrupt_no >= INT_IRQ_0 && stack_frame->interrupt_no <= INT_IRQ_15)
+        {
+            irq_end(stack_frame->interrupt_no);
+            return stack_frame;
+        }
 
         while(1){}
     }

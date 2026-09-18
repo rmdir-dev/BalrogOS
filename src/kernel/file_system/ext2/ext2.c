@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "klib/data_structure/rbt.h"
+
 /*
     UTILITIES
 */
@@ -1299,7 +1301,7 @@ static int __ext2_remove(fs_device_t* dev, char* filename, enum ext2_dir_entry_t
     itable->inode.nbr_sectors = 0;
     __ext2_update_inode_table(dev, inode_nbr, &itable->inode);
     __ext2_free_alloc_inode(dev, inode_nbr);
-    ext2_cache_delete_inode(inode_nbr);
+    ext2_cache_delete_inode(dev, inode_nbr);
 
     /*  ".." inside the directory counted as a link on its parent, and the
         block group keeps a directory count of its own.
@@ -1516,6 +1518,7 @@ int ext2_probe(fs_device_t* dev)
     dev->fs->rmdir = ext2_rmdir;
     dev->fs->fs_data = fs_data;
     dev->mountable = 1;
+    ext2_cache_init(dev);
 
     return 0;
 }

@@ -149,6 +149,6 @@ void serial_irq_init()
 
     kernel_debug_output(KDB_LVL_INFO, "serial : irq %d unmasked, rx interrupts on", INT_IRQ_4);
     register_interrupt_handler(INT_IRQ_4, &__serial_int_handler);
-    irq_pic_toggle_mask_bit(INT_IRQ_4);
+    irq_pic_unmask(INT_IRQ_4);
     out_byte(COM1 + 1, IER_RX_AVAILABLE); // Enable interrupts
 }

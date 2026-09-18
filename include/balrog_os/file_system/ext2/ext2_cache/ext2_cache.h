@@ -2,12 +2,20 @@
 
 #include "balrog_os/file_system/filesystem.h"
 #include "balrog_os/file_system/ext2/ext2.h"
+#include "klib/data_structure/rbt.h"
+
+typedef struct _ext2_cache_t
+{
+    uint8_t* block_bitmap;
+    uint8_t* inode_bitmap;
+    rbt_tree inode_tree;
+} ext2_cache_t;
 
 /**
  * @brief 
  * 
  */
-void ext2_cache_init();
+void ext2_cache_init(fs_device_t* dev);
 
 /**
  * @brief 
@@ -33,7 +41,7 @@ ext2_idata* ext2_cache_search_inode(fs_device_t* dev, uint32_t inode_nbr);
  * @param inode_nbr 
  * @return int 
  */
-int ext2_cache_delete_inode(uint32_t inode_nbr);
+int ext2_cache_delete_inode(fs_device_t* dev, uint32_t inode_nbr);
 
 /**
  * @brief add a new file to the file system cache.
@@ -67,4 +75,4 @@ int ext2_close_file_from_cache(ext2_idata* inode, fs_fd* fd);
  * 
  * @return int 
  */
-int ext2_clear_cache();
+int ext2_clear_cache(fs_device_t* dev);

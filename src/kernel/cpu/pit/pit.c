@@ -91,7 +91,7 @@ int pit_compare(timespec* time) {
 void init_pit(pit_event scheduler)
 {
     kernel_debug_output(KDB_LVL_INFO, "pit : driving the scheduler on irq %d", INT_IRQ_0);
-    irq_pic_toggle_mask_bit(INT_IRQ_0);
+    irq_pic_unmask(INT_IRQ_0);
     register_interrupt_handler(INT_IRQ_0, &irq0_handler);
     timer_set_event(scheduler);
 

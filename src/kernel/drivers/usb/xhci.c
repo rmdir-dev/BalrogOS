@@ -31,7 +31,28 @@ control endpoint takes 0.
 */
 #define XHCI_MAX_DCI        32
 
-static xhci_ring_t xhci_ep_ring[XHCI_MAX_SLOTS][XHCI_MAX_DCI];
+typedef struct __xhci_controller_t
+{
+    volatile uint8_t* cap;
+    volatile uint8_t* op;
+    volatile uint8_t* rt;
+    volatile uint32_t* db;
+
+    uint64_t* dcbaa;
+
+    /*
+    How many bytes the controller gives each context, from HCCPARAMS1.CSZ.
+    */
+    uint32_t ctx_size;
+
+    xhci_ring_t cmd;
+    xhci_ring_t event;
+    xhci_erst_entry_t* erst;
+
+    xhci_ring_t ep_ring[XHCI_MAX_SLOTS][XHCI_MAX_DCI];
+} xhci_controller_t;
+
+static xhci_controller_t* xhci = 0;
 
 static list_t xhci_devices;
 list_t usb_devices;
@@ -40,38 +61,31 @@ char usb_device_id = 'a';
 int __usb_enumerate(uint8_t port, list_t* usb_devices);
 int __scsi_read_capacity(usb_disk_t* disk);
 
-static volatile uint8_t* xhci_cap = 0;
-static volatile uint8_t* xhci_op = 0;
-static volatile uint8_t* xhci_rt = 0;
-static volatile uint32_t* xhci_db = 0;
-
-static uint64_t* xhci_dcbaa = 0;
-
 extern int __scsi_rw10(usb_disk_t* disk, uint64_t lba, uint16_t blocks, void* buffer, uint8_t write);
 extern int __usb_read(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
 extern int __usb_write(fs_device_t* dev, uint8_t* buffer, uint64_t lba, uint64_t len);
 
-/*
-How many bytes the controller gives each context, from HCCPARAMS1.CSZ.
-*/
-static uint32_t xhci_ctx_size = 32;
+void xhci_select(void* controller)
+{
+    xhci = (xhci_controller_t*) controller;
+}
 
-
-static xhci_ring_t xhci_cmd;
-static xhci_ring_t xhci_event;
-static xhci_erst_entry_t* xhci_erst = 0;
+void* xhci_current()
+{
+    return xhci;
+}
 
 static uint8_t usb_bounce[USB_BOUNCE_SIZE] __attribute__((aligned(PAGE_SIZE)));
 
 
 static xhci_slot_context_t* __xhci_in_slot(void* in)
 {
-    return (xhci_slot_context_t*)((uint8_t*) in + xhci_ctx_size);
+    return (xhci_slot_context_t*)((uint8_t*) in + xhci->ctx_size);
 }
 
 static xhci_endpoint_context_t* __xhci_in_ep(void* in, uint8_t dci)
 {
-    return (xhci_endpoint_context_t*)((uint8_t*) in + xhci_ctx_size * (dci + 1));
+    return (xhci_endpoint_context_t*)((uint8_t*) in + xhci->ctx_size * (dci + 1));
 }
 
 static uint64_t __xhci_get_bar(pci_device_t* dev)
@@ -82,39 +96,39 @@ static uint64_t __xhci_get_bar(pci_device_t* dev)
 
 static uint32_t __xhci_op_read(uint32_t reg)
 {
-    return *(volatile uint32_t*)(xhci_op + reg);
+    return *(volatile uint32_t*)(xhci->op + reg);
 }
 
 static void __xhci_op_write(uint32_t reg, uint32_t value)
 {
-    *(volatile uint32_t*)(xhci_op + reg) = value;
+    *(volatile uint32_t*)(xhci->op + reg) = value;
 }
 
 static void __xhci_op_write64(uint32_t reg, uint64_t value)
 {
-    *(volatile uint32_t*)(xhci_op + reg) = (uint32_t) value;
-    *(volatile uint32_t*)(xhci_op + reg + 4) = (uint32_t)(value >> 32);
+    *(volatile uint32_t*)(xhci->op + reg) = (uint32_t) value;
+    *(volatile uint32_t*)(xhci->op + reg + 4) = (uint32_t)(value >> 32);
 }
 
 static uint32_t __xhci_rt_read(uint32_t reg)
 {
-    return *(volatile uint32_t*)(xhci_rt + reg);
+    return *(volatile uint32_t*)(xhci->rt + reg);
 }
 
 static void __xhci_rt_write(uint32_t reg, uint32_t value)
 {
-    *(volatile uint32_t*)(xhci_rt + reg) = value;
+    *(volatile uint32_t*)(xhci->rt + reg) = value;
 }
 
 static void __xhci_rt_write64(uint32_t reg, uint64_t value)
 {
-    *(volatile uint32_t*)(xhci_rt + reg) = (uint32_t) value;
-    *(volatile uint32_t*)(xhci_rt + reg + 4) = (uint32_t)(value >> 32);
+    *(volatile uint32_t*)(xhci->rt + reg) = (uint32_t) value;
+    *(volatile uint32_t*)(xhci->rt + reg + 4) = (uint32_t)(value >> 32);
 }
 
 static uint32_t __xhci_cap_read(uint32_t reg)
 {
-    return *(volatile uint32_t*)((xhci_cap + XHCI_CAP_CAPLENGTH) + reg);
+    return *(volatile uint32_t*)((xhci->cap + XHCI_CAP_CAPLENGTH) + reg);
 }
 
 static int __xhci_ring_alloc(xhci_ring_t* ring)
@@ -147,6 +161,16 @@ static int __xhci_map(pci_device_t* dev)
 {
     uint64_t bar = __xhci_get_bar(dev);
 
+    xhci = (xhci_controller_t*) vmalloc(sizeof(xhci_controller_t));
+
+    if(!xhci)
+    {
+        return -1;
+    }
+
+    memset(xhci, 0, sizeof(xhci_controller_t));
+    xhci->ctx_size = 32;
+
     /*
     bar = 0x00000002F7C0000C
     0x00000002F7C0000C & 0xFFFFFFFFFFFFFFF0
@@ -168,20 +192,20 @@ static int __xhci_map(pci_device_t* dev)
        dell puts both of its controllers at 389GiB. */
     static size_t mapped = 0;
 
-    xhci_cap = (volatile uint8_t*)(XHCI_VIRTUAL_BASE + (mapped * XHCI_BAR_PAGES * PAGE_SIZE));
+    xhci->cap = (volatile uint8_t*)(XHCI_VIRTUAL_BASE + (mapped * XHCI_BAR_PAGES * PAGE_SIZE));
 
     mapped++;
 
     for(size_t i = 0; i < XHCI_BAR_PAGES; i++)
     {
-        vmm_set_page(0, (void*)((uintptr_t)xhci_cap + i * PAGE_SIZE),
+        vmm_set_page(0, (void*)((uintptr_t)xhci->cap + i * PAGE_SIZE),
                 (void*)(uintptr_t)(bar + i * PAGE_SIZE),
                 PAGE_PRESENT | PAGE_WRITE | PAGE_NOCACHE);
     }
     /* CAPLENGTH is one byte at 0 */
-    xhci_op = xhci_cap + (*xhci_cap);
-    xhci_rt = xhci_cap + (__xhci_cap_read(XHCI_CAP_RTSOFF) & ~0x1FU);
-    xhci_db = (volatile uint32_t*) (xhci_cap + (__xhci_cap_read(XHCI_CAP_DBOFF) & ~0x3U));
+    xhci->op = xhci->cap + (*xhci->cap);
+    xhci->rt = xhci->cap + (__xhci_cap_read(XHCI_CAP_RTSOFF) & ~0x1FU);
+    xhci->db = (volatile uint32_t*) (xhci->cap + (__xhci_cap_read(XHCI_CAP_DBOFF) & ~0x3U));
 
     /* the controller does dma, so it needs bus master. the firmware usually
        left it on, usually is not always. bit 2, see the warning below. */
@@ -193,7 +217,7 @@ static int __xhci_map(pci_device_t* dev)
        top half of a 32 bit read at 0. reading it at 2 would be unaligned. */
     kernel_debug_output(KDB_LVL_INFO, "xhci : version 0%x, %d ports, %d slots, caplength %d",
             __xhci_cap_read(XHCI_CAP_CAPLENGTH) >> 16,
-            XHCI_HCS1_MAX_PORTS(hcs1), XHCI_HCS1_MAX_SLOTS(hcs1), *xhci_cap);
+            XHCI_HCS1_MAX_PORTS(hcs1), XHCI_HCS1_MAX_SLOTS(hcs1), *xhci->cap);
 
     return 0;
 }
@@ -272,7 +296,7 @@ static int __xhci_take_ownership()
 
     while(offset)
     {
-        volatile uint32_t* cap = (volatile uint32_t*)(xhci_cap + offset * 4);
+        volatile uint32_t* cap = (volatile uint32_t*)(xhci->cap + offset * 4);
         uint32_t value = *cap;
 
         if(XHCI_XECP_ID(value) == XHCI_XECP_LEGACY)
@@ -322,9 +346,9 @@ static int __xhci_setup()
     uint32_t slots = XHCI_HCS1_MAX_SLOTS(hcs1);
 
     /* before any context is built */
-    xhci_ctx_size = (__xhci_cap_read(XHCI_CAP_HCCPARAMS1) & XHCI_HCC1_CSZ) ? 64 : 32;
+    xhci->ctx_size = (__xhci_cap_read(XHCI_CAP_HCCPARAMS1) & XHCI_HCC1_CSZ) ? 64 : 32;
 
-    kernel_debug_output(KDB_LVL_INFO, "xhci : %d slots, %d byte contexts", slots, xhci_ctx_size);
+    kernel_debug_output(KDB_LVL_INFO, "xhci : %d slots, %d byte contexts", slots, xhci->ctx_size);
 
     /* tell it how many slots we will actually use. leaving CONFIG at 0 makes
        every Enable Slot fail with no slots available. */
@@ -332,9 +356,9 @@ static int __xhci_setup()
 
     /* the dcbaa is indexed by slot number, so it needs slots + 1 entries :
        entry 0 is not a slot, it is where the scratchpad array goes. */
-    xhci_dcbaa = (uint64_t*) P2V(pmm_calloc());
+    xhci->dcbaa = (uint64_t*) P2V(pmm_calloc());
 
-    if(!xhci_dcbaa)
+    if(!xhci->dcbaa)
     {
         return -1;
     }
@@ -353,31 +377,31 @@ static int __xhci_setup()
             array[i] = (uintptr_t) pmm_calloc();
         }
 
-        xhci_dcbaa[0] = V2P(array);
+        xhci->dcbaa[0] = V2P(array);
         kernel_debug_output(KDB_LVL_INFO, "xhci : %d scratchpad pages", pads);
     }
 
-    __xhci_op_write64(XHCI_OP_DCBAAP, V2P(xhci_dcbaa));
+    __xhci_op_write64(XHCI_OP_DCBAAP, V2P(xhci->dcbaa));
 
     /* the command ring, and RCS has to match the cycle we stamp */
-    if(__xhci_ring_alloc(&xhci_cmd) != 0 || __xhci_ring_alloc(&xhci_event) != 0)
+    if(__xhci_ring_alloc(&xhci->cmd) != 0 || __xhci_ring_alloc(&xhci->event) != 0)
     {
         return -1;
     }
 
-    __xhci_op_write64(XHCI_OP_CRCR, xhci_cmd.physical | XHCI_CRCR_RCS);
+    __xhci_op_write64(XHCI_OP_CRCR, xhci->cmd.physical | XHCI_CRCR_RCS);
 
     /* the event ring is described to the controller by a table, not by a
        pointer : one segment is enough for us. */
-    xhci_erst = (xhci_erst_entry_t*) P2V(pmm_calloc());
-    xhci_erst[0].ring_base = xhci_event.physical;
-    xhci_erst[0].ring_size = XHCI_RING_TRBS;
+    xhci->erst = (xhci_erst_entry_t*) P2V(pmm_calloc());
+    xhci->erst[0].ring_base = xhci->event.physical;
+    xhci->erst[0].ring_size = XHCI_RING_TRBS;
 
     /* size before base! writing ERSTBA is what makes the controller read the
        table, so a size of 0 still in place means it reads nothing. */
     __xhci_rt_write(XHCI_RT_IR_BASE + XHCI_IR_ERSTSZ, 1);
-    __xhci_rt_write64(XHCI_RT_IR_BASE + XHCI_IR_ERDP, xhci_event.physical);
-    __xhci_rt_write64(XHCI_RT_IR_BASE + XHCI_IR_ERSTBA, V2P(xhci_erst));
+    __xhci_rt_write64(XHCI_RT_IR_BASE + XHCI_IR_ERDP, xhci->event.physical);
+    __xhci_rt_write64(XHCI_RT_IR_BASE + XHCI_IR_ERSTBA, V2P(xhci->erst));
 
     return 0;
 }
@@ -435,17 +459,15 @@ static int __xhci_probe_device(pci_device_t* dev)
         return -1;
     }
 
-    if(__xhci_take_ownership() != 0 || __xhci_reset() != 0)
+    if(__xhci_take_ownership() != 0 || __xhci_reset() != 0
+            || __xhci_setup() != 0 || __xhci_start() != 0)
     {
+        vmfree(xhci);
+        xhci = 0;
         return -1;
     }
 
-    if (__xhci_setup() != 0)
-    {
-        return -1;
-    }
-
-    return __xhci_start();
+    return 0;
 }
 
 static uint8_t __xhci_dma_ok(void* buffer)
@@ -478,7 +500,7 @@ void __xhci_ring_push(xhci_ring_t* ring, xhci_trb_t* trb)
 void __xhci_doorbell(uint8_t slot, uint8_t dci)
 {
     /* one dword per slot, and slot 0 is the command ring. */
-    xhci_db[slot] = dci;
+    xhci->db[slot] = dci;
 }
 
 int __xhci_wait_event(xhci_trb_t* out, uint32_t type, uint64_t ms)
@@ -487,26 +509,26 @@ int __xhci_wait_event(xhci_trb_t* out, uint32_t type, uint64_t ms)
 
     while(1)
     {
-        xhci_trb_t* trb = &xhci_event.trbs[xhci_event.dequeue];
+        xhci_trb_t* trb = &xhci->event.trbs[xhci->event.dequeue];
 
-        if(!!(trb->control & XHCI_TRB_CYCLE) == xhci_event.cycle)
+        if(!!(trb->control & XHCI_TRB_CYCLE) == xhci->event.cycle)
         {
             *out = *trb;
 
-            xhci_event.dequeue++;
+            xhci->event.dequeue++;
 
             /* XHCI_RING_TRBS and not USABLE : an event ring has no link trb,
                the controller wraps it by size and so do we. */
-            if(xhci_event.dequeue == XHCI_RING_TRBS)
+            if(xhci->event.dequeue == XHCI_RING_TRBS)
             {
-                xhci_event.dequeue = 0;
-                xhci_event.cycle ^= 1;
+                xhci->event.dequeue = 0;
+                xhci->event.cycle ^= 1;
             }
 
             /* tell the controller where we stopped, and clear EHB in the same
                write. leaving EHB set means it never raises another event. */
             __xhci_rt_write64(XHCI_RT_IR_BASE + XHCI_IR_ERDP,
-                    (xhci_event.physical + xhci_event.dequeue * XHCI_TRB_SIZE)
+                    (xhci->event.physical + xhci->event.dequeue * XHCI_TRB_SIZE)
                     | XHCI_ERDP_EHB);
 
             if(XHCI_TRB_GET_TYPE(out->control) != type)
@@ -534,12 +556,12 @@ xhci_ring_t* __xhci_ring_for(uint8_t slot, uint8_t dci)
         return 0;
     }
 
-    return &xhci_ep_ring[slot][dci];
+    return &xhci->ep_ring[slot][dci];
 }
 
 int __xhci_command(xhci_trb_t* trb, xhci_trb_t* event)
 {
-    __xhci_ring_push(&xhci_cmd, trb);
+    __xhci_ring_push(&xhci->cmd, trb);
     __xhci_doorbell(0, 0);
 
     int code = __xhci_wait_event(event, XHCI_TRB_COMMAND_EVENT, 500);
@@ -591,7 +613,7 @@ int __xhci_address_device(uint8_t slot, uint32_t port)
         return -1;
     }
 
-    if(!xhci_dcbaa[slot])
+    if(!xhci->dcbaa[slot])
     {
         void* out = pmm_calloc();
 
@@ -600,7 +622,7 @@ int __xhci_address_device(uint8_t slot, uint32_t port)
             return -1;
         }
 
-        xhci_dcbaa[slot] = (uintptr_t) out;
+        xhci->dcbaa[slot] = (uintptr_t) out;
     }
 
     in->control.add_flags = 0x03;
@@ -879,6 +901,12 @@ int __xhci_bulk_in(usb_disk_t* disk, void* buffer, uint32_t len)
 int xhci_scan_devices()
 {
     uint16_t* buffer = vmalloc(ATA_SECTOR_SIZE);
+    int found = 0;
+
+    if(!buffer)
+    {
+        return -1;
+    }
 
     for(list_node_t* node = usb_devices.head; node; node = node->next)
     {
@@ -886,8 +914,7 @@ int xhci_scan_devices()
         if(!xhci_disk->block_size)
         {
             kernel_debug_output(KDB_LVL_ERROR, "xhci : no disk enumerated, no usb device");
-            vmfree(buffer);
-            return -1;
+            continue;
         }
 
         KERNEL_LOG_INFO("searching boot device. slot %d port %d", xhci_disk->slot, xhci_disk->port);
@@ -907,10 +934,11 @@ int xhci_scan_devices()
             device->drive = xhci_disk;
             device->first_lba = 0;
             fs_add_device(device);
+            found++;
         }
-
-        vmfree(buffer);
     }
 
-    return -1;
+    vmfree(buffer);
+
+    return found ? 0 : -1;
 }

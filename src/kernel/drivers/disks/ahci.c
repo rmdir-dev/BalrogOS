@@ -10,6 +10,7 @@
 #include "balrog_os/memory/pmm.h"
 #include "balrog_os/memory/memory.h"
 #include "balrog_os/cpu/interrupts/interrupt.h"
+#include "balrog_os/cpu/interrupts/irq.h"
 #include "balrog_os/file_system/fs_devices.h"
 #include <string.h>
 
@@ -35,6 +36,8 @@ interrupt_regs* ahci_handler(interrupt_regs* stack_frame)
         device->port->is = device->port->is;
         hba->is = 1 << device->port_no;
     }
+
+    irq_end(stack_frame->interrupt_no);
 
     return stack_frame;
 }
@@ -557,7 +560,15 @@ static int __ahci_probe_device(pci_device_t* dev)
 
             if(__ahci_check_device(dev, hba) == 0)
             {
-                register_interrupt_handler(dev->interrupt_line, ahci_handler);
+                if(dev->interrupt_line > (INT_IRQ_15 - INT_IRQ_0))
+                {
+                    kernel_debug_output(KDB_LVL_ERROR,
+                            "ahci : interrupt line 0%x is not a legacy irq, no handler installed",
+                            dev->interrupt_line);
+                } else
+                {
+                    register_interrupt_handler(INT_IRQ_0 + dev->interrupt_line, ahci_handler);
+                }
             }
         }
     }

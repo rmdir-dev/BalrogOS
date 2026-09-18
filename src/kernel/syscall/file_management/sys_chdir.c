@@ -15,7 +15,7 @@ extern int __check_file_permission(fs_fd* fd, uint16_t mode);
 
 int sys_chdir(interrupt_regs* stack_frame)
 {
-    fs_fd fd;
+    fs_fd fd = {};
 
     const char* user_path = (const char*) stack_frame->rdi;
 
@@ -43,6 +43,12 @@ int sys_chdir(interrupt_regs* stack_frame)
     if(fs_open(path, &fd) != 0)
     {
         kernel_debug_output(KDB_LVL_ERROR, "chdir : %s does not open, pid %d", path, current_running->pid);
+
+        if(fd.absolute_path)
+        {
+            vmfree(fd.absolute_path);
+        }
+
         vmfree(path);
         *current_running->error_no = ENOENT;
         return -1;
@@ -51,16 +57,36 @@ int sys_chdir(interrupt_regs* stack_frame)
     if(__check_file_permission(&fd, 01) != 0)
     {
         kernel_debug_output(KDB_LVL_ERROR, "chdir : %s is not executable by pid %d", path, current_running->pid);
+        vmfree(fd.absolute_path);
         fs_close(&fd);
         vmfree(path);
         return -1;
     }
 
+    size_t cwd_len = strlen(fd.absolute_path);
+    char* cwd = (char*) vmalloc(cwd_len + 1);
+
+    if(!cwd)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "chdir : no memory for a cwd of %d bytes", cwd_len + 1);
+        vmfree(fd.absolute_path);
+        fs_close(&fd);
+        vmfree(path);
+        *current_running->error_no = ENOMEM;
+        return -1;
+    }
+
+    memcpy(cwd, fd.absolute_path, cwd_len + 1);
+
+    vmfree(fd.absolute_path);
     fs_close(&fd);
-    vmfree(current_running->cwd);
-    // TODO : path should always be absolute path.
-    current_running->cwd = (char*) vmalloc(len + 1);
-    memcpy(current_running->cwd, path, len + 1);
+
+    if(current_running->cwd)
+    {
+        vmfree(current_running->cwd);
+    }
+
+    current_running->cwd = cwd;
 
     kernel_debug_output(KDB_LVL_VERBOSE, "chdir : pid %d cwd is now %s", current_running->pid, current_running->cwd);
 

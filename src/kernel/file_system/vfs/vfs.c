@@ -5,6 +5,7 @@
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/file_system/ext2/ext2.h"
 #include "balrog_os/memory/kheap.h"
+#include "balrog_os/tasking/process.h"
 
 typedef struct __vfs_insert_node_out_t
 {
@@ -13,6 +14,7 @@ typedef struct __vfs_insert_node_out_t
 } vfs_find_node_out_t;
 
 fs_device_t vfs_device;
+extern process* current_running;
 
 static size_t __vfs_get_next_path_part_len(const char* path, size_t max_path_len)
 {
@@ -113,10 +115,28 @@ static inline void __vfs_guard_release(vfs_root_t* vfs_root)
 static inline int __vfs_guard_sanitized_init(vfs_root_t* vfs_root, const char* path, vfs_lookup_t* out)
 {
     kmutex_lock(&vfs_root->lock);
+
     vfs_node_t* root = vfs_root->root;
     size_t path_len = strlen(path);
-    out->sanitized_path = vmalloc(sizeof(char) * (path_len + 1));
-    vfs_sanitize_path(path, out->sanitized_path, path_len);
+
+    const char* cwd = (path[0] != '/' && current_running && current_running->cwd)
+            ? current_running->cwd : 0;
+    size_t cwd_len = cwd ? strlen(cwd) : 0;
+
+    out->sanitized_path = vmalloc(cwd_len + 1 + path_len + 1);
+
+    if(cwd)
+    {
+        memcpy(out->sanitized_path, cwd, cwd_len);
+        out->sanitized_path[cwd_len] = '/';
+        memcpy(out->sanitized_path + cwd_len + 1, path, path_len + 1);
+        vfs_sanitize_path(out->sanitized_path, out->sanitized_path, cwd_len + 1 + path_len);
+    }
+    else
+    {
+        vfs_sanitize_path(path, out->sanitized_path, path_len);
+    }
+
     out->sanitized_path_len = strlen(out->sanitized_path);
     out->node = __vfs_find_mount(root, out->sanitized_path, &out->vfs_find_node);
 
@@ -134,6 +154,34 @@ static inline void __vfs_guard_sanitize_release(vfs_root_t* vfs_root, vfs_lookup
 {
     vmfree(lookup->sanitized_path);
     kmutex_unlock(&vfs_root->lock);
+}
+
+static const char* __vfs_get_root_path(vfs_lookup_t* lookup)
+{
+    vfs_node_t* node = lookup->node;
+    char* sanitized_path = lookup->sanitized_path;
+    size_t sanitized_path_len = lookup->sanitized_path_len;
+    int ret = 0;
+
+    size_t shift = 0;
+
+    for (size_t i = 0; i < node->depth_from_root; i++)
+    {
+        if (sanitized_path[shift] == '/')
+        {
+            shift++;
+        }
+        shift += __vfs_get_next_path_part_len(sanitized_path + shift, sanitized_path_len - shift);
+    }
+
+    if (node->depth_from_root > 0 && shift == sanitized_path_len)
+    {
+        shift = 0;
+        sanitized_path[0] = '/';
+        sanitized_path[1] = 0;
+    }
+
+    return sanitized_path + shift;
 }
 
 static vfs_node_t* __vfs_insert_nodes(vfs_lookup_t* lookup)
@@ -358,33 +406,15 @@ static int __vfs_open(vfs_root_t* vfs_root, const char* path, fs_fd* fd)
 
     vfs_node_t* node = lookup.node;
     char* sanitized_path = lookup.sanitized_path;
-    size_t sanitized_path_len = lookup.sanitized_path_len;
     int ret = 0;
 
-    size_t shift = 0;
-
-    for (size_t i = 0; i < node->depth_from_root; i++)
-    {
-        if (sanitized_path[shift] == '/')
-        {
-            shift++;
-        }
-        shift += __vfs_get_next_path_part_len(sanitized_path + shift, sanitized_path_len - shift);
-    }
-
-    if (node->depth_from_root > 0 && shift == sanitized_path_len)
-    {
-        shift = 0;
-        sanitized_path[0] = '/';
-        sanitized_path[1] = 0;
-    }
-
-    ret = node->device->fs->open(node->device, sanitized_path + shift, fd);
-    fd->device = node->device;
-    fd->vfs_node = node;
     fd->absolute_path = vmalloc(lookup.sanitized_path_len + 1);
     memcpy(fd->absolute_path, sanitized_path, lookup.sanitized_path_len);
     fd->absolute_path[lookup.sanitized_path_len] = 0;
+
+    ret = node->device->fs->open(node->device, __vfs_get_root_path(&lookup), fd);
+    fd->device = node->device;
+    fd->vfs_node = node;
 
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 
@@ -444,7 +474,7 @@ static int __vfs_create(vfs_root_t* vfs_root, const char* path, uint64_t size)
         return -1;
     }
 
-    int ret = lookup.node->device->fs->create(lookup.node->device, lookup.sanitized_path, size);
+    int ret = lookup.node->device->fs->create(lookup.node->device, __vfs_get_root_path(&lookup), size);
 
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 
@@ -460,7 +490,7 @@ static int __vfs_list(vfs_root_t* vfs_root, const char* path, uint8_t* buffer)
         return -1;
     }
 
-    int ret = lookup.node->device->fs->list(lookup.node->device, lookup.sanitized_path, buffer);
+    int ret = lookup.node->device->fs->list(lookup.node->device, __vfs_get_root_path(&lookup), buffer);
 
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 
@@ -476,7 +506,7 @@ static int __vfs_mkdir(vfs_root_t* vfs_root, const char* path)
         return -1;
     }
 
-    int ret = lookup.node->device->fs->mkdir(lookup.node->device, lookup.sanitized_path);
+    int ret = lookup.node->device->fs->mkdir(lookup.node->device, __vfs_get_root_path(&lookup));
 
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 
@@ -492,7 +522,7 @@ static int __vfs_unlink(vfs_root_t* vfs_root, const char* path)
         return -1;
     }
 
-    int ret = lookup.node->device->fs->unlink(lookup.node->device, lookup.sanitized_path);
+    int ret = lookup.node->device->fs->unlink(lookup.node->device, __vfs_get_root_path(&lookup));
 
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 
@@ -508,7 +538,7 @@ static int __vfs_rmdir(vfs_root_t* vfs_root, const char* path)
         return -1;
     }
 
-    int ret = lookup.node->device->fs->rmdir(lookup.node->device, lookup.sanitized_path);
+    int ret = lookup.node->device->fs->rmdir(lookup.node->device, __vfs_get_root_path(&lookup));
 
     __vfs_guard_sanitize_release(vfs_root, &lookup);
 

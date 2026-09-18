@@ -17,6 +17,8 @@ extern int __xhci_enable_slot(uint8_t* out);
 extern int __xhci_address_device(uint8_t slot, uint32_t port);
 extern int __xhci_evaluate_context(uint8_t slot, uint16_t max_packet);
 extern int __xhci_port_reset(uint32_t port);
+extern void* xhci_current();
+extern void xhci_select(void* controller);
 extern int __scsi_read_capacity(usb_disk_t* disk);
 extern int __xhci_command(xhci_trb_t* trb, xhci_trb_t* event);
 extern xhci_ring_t* __xhci_ring_for(uint8_t slot, uint8_t dci);
@@ -95,6 +97,7 @@ static const char* __usb_enumerate_stage(uint8_t port, uint8_t* out_slot, list_t
     disk->slot = slot;
     disk->port = port;
     disk->lun = 0;
+    disk->controller = xhci_current();
 
     if(__usb_configure(disk) != 0)
     {
@@ -319,6 +322,8 @@ int __usb_bot_command(usb_disk_t* disk, uint8_t* cdb, uint8_t cdb_len,
 {
     usb_cbw_t cbw = {};
     usb_csw_t csw = {};
+
+    xhci_select(disk->controller);
 
     cbw.signature = USB_CBW_SIGNATURE;
     cbw.tag = ++usb_bot_tag;

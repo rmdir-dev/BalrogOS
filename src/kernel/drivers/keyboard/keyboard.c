@@ -80,7 +80,7 @@ int init_keyboard()
 {
     register_interrupt_handler(INT_IRQ_1, keyboard_int_handler);
 
-    irq_pic_toggle_mask_bit(INT_IRQ_1);
+    irq_pic_unmask(INT_IRQ_1);
 
     kernel_debug_output(KDB_LVL_INFO, "keyboard : irq %d unmasked, 8042 status 0%x",
             INT_IRQ_1, in_byte(0x64));

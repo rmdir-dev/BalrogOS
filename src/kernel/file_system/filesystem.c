@@ -126,6 +126,7 @@ int fs_mount(const char* mount_path, const char* name_or_uuid)
 
     if (!device->mountable)
     {
+        kernel_debug_output(KDB_LVL_ERROR, "device not mountable");
         return -1;
     }
 
@@ -350,11 +351,6 @@ int init_file_system()
 
     kmutex_init(&boot_dev.lock);
     kmutex_lock(&boot_dev.lock);
-
-    /*
-    Initialize ext2 cache datastructures.
-    */
-    ext2_cache_init();
 
     if(__scan_devices_and_initramdisk() != 0)
     {

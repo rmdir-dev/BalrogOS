@@ -45,7 +45,7 @@ typedef struct process_t
     int waiting[5];
     uint8_t child;
     uint8_t fd_size;
-    fs_fd fd_table[10];
+    fs_fd fd_table[99];
     uint8_t state;
     uint8_t forked_memory;
     char* cwd;

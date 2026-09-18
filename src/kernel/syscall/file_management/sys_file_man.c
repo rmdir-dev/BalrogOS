@@ -6,6 +6,7 @@
 #include "balrog_os/syscall/syscall_guard.h"
 #include "balrog_os/memory/kheap.h"
 #include "balrog_os/debug/debug_output.h"
+#include "klib/data_structure/rbt.h"
 #include "klib/io/kprint.h"
 #include <errno.h>
 #include <stdint.h>
@@ -65,7 +66,8 @@ int sys_open(interrupt_regs* stack_frame)
 {
     if(current_running)
     {
-        fs_fd* fd = &current_running->fd_table[3];
+        size_t index = current_running->fd_size++;
+        fs_fd* fd = &current_running->fd_table[index];
         char name[256] = {};
 
         if (__copy_user_path(stack_frame->rdi, name, sizeof(name)) != 0)
@@ -79,13 +81,14 @@ int sys_open(interrupt_regs* stack_frame)
             return -1;
         }
 
-        kernel_debug_output(KDB_LVL_VERBOSE, "open : %s on fd 3, pid %d", name, current_running->pid);
+        kernel_debug_output(KDB_LVL_VERBOSE, "open : %s on fd %d, pid %d", name, index, current_running->pid);
 
         if(__check_file_permission(fd, 04) != 0)
         {
             return -1;
         }
-        return 3;
+        // shift + 3 as 0 = stdin 1 = stdout 2 = stderr
+        return index + 3;
     }
 
     kernel_debug_output(KDB_LVL_ERROR, "open called with no running process");
@@ -96,7 +99,7 @@ void sys_close(interrupt_regs* stack_frame)
 {
     if(current_running)
     {
-        fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
+        fs_fd* fd = &current_running->fd_table[stack_frame->rdi - 3];
         fs_close(fd);
     }
 }
@@ -105,7 +108,7 @@ void sys_fstat(interrupt_regs* stack_frame)
 {
     if(current_running)
     {
-        fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
+        fs_fd* fd = &current_running->fd_table[stack_frame->rdi - 3];
 
         if(__check_file_permission(fd, 04) != 0)
         {
@@ -130,9 +133,13 @@ int sys_read(interrupt_regs* stack_frame)
             }
             return keyboard_read((struct input_event*) stack_frame->rsi);
 
+        case 1:
+        case 2:
+            break;
+
         default:
             {
-                fs_fd* fd = &current_running->fd_table[stack_frame->rdi];
+                fs_fd* fd = &current_running->fd_table[stack_frame->rdi - 3];
 
                 if(__check_file_permission(fd, 04) != 0)
                 {
@@ -228,7 +235,7 @@ void sys_write(interrupt_regs* stack_frame)
     */
     if(fd_id > 2 && current_running)
     {
-        fs_fd* fd = &current_running->fd_table[fd_id];
+        fs_fd* fd = &current_running->fd_table[fd_id - 3];
 
         if(__check_file_permission(fd, 02) != 0)
         {

@@ -62,7 +62,7 @@ int serial_init()
 
     serial_present = (ret == 0);
 
-    klog_set_default_handler(&serial_write, KLOG_SERIAL_LOG);
+    klog_set_default_handler(&serial_write, KDB_LVL_VERBOSE, KLOG_SERIAL_LOG);
 
     return ret;
 }

@@ -54,7 +54,7 @@ include_directories(
 ########################################################
 add_compile_definitions(
 	KDB_DEBUG
-	KDB_DEFAULT_LVL=3
+	KDB_DEFAULT_LVL=5
 	KDB_START_SEQ=0
 	__BALROG_VERSION__="0.0.1"
 )

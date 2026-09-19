@@ -63,7 +63,7 @@ void initialize_kernel(void* SMAP, void* size)
     set_debug_mode(KDB_DEFAULT_LVL);
 #elif KDB_START_SEQ == 0
     // show only critical errors
-    set_debug_mode(3);
+    set_debug_mode(5);
 #endif
 #endif
 #endif

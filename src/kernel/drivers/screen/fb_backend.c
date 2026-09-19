@@ -169,10 +169,9 @@ static void __fb_flush_log()
     }
 
     fb_logging = 1;
-    KERNEL_DEBUG_EXEC({
-        kdbprint("screen : %d write over %d flushes, %d each\n",
+
+    kernel_debug_output(KDB_LVL_VERBOSE, "screen : %d write over %d flushes, %d each\n",
             fb_writes, fb_flushes, fb_writes / fb_flushes);
-    });
     fb_logging = 0;
 
     fb_writes = 0;

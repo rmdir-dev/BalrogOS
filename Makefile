@@ -4,7 +4,7 @@
 PROJECT_NAME 	= OS
 OUTPUT_NAME 	= os-image
 SRC_BASE 		= .
-DEFINES 		= -DKDB_DEBUG -DKDB_DEFAULT_LVL=3 -DKDB_START_SEQ=0 -D__BALROG_VERSION__=\"0.0.1\"
+DEFINES 		= -DKDB_DEBUG -DKDB_DEFAULT_LVL=5 -DKDB_START_SEQ=0 -D__BALROG_VERSION__=\"0.0.1\"
 
 ########################################################
 #	BOOTLOADER LAYOUT
@@ -657,6 +657,7 @@ build_all:
 	$(MAKE) kernel
 	$(MAKE) esp
 	$(MAKE) os
+	$(MAKE) release_uefi
 	@echo "[  OK  ] build os with tools"
 
 build_all_debug:
@@ -689,6 +690,11 @@ build_debug:
 #	RELEASE
 ########################################################
 RELEASE_DIR = build/release
+
+#	defined here and not next to QEMU_USB where it is used : make expands a
+#	target name when it reads the rule, so a variable used as a target has to
+#	exist above it.
+USB_STICK_IMG = $(RELEASE_DIR)/balrog-uefi.img
 
 #	the esp holds the ramfs, so it has to be bigger than it. 64MiB leaves room
 #	for the ramfs to grow without touching this.
@@ -766,37 +772,67 @@ release:
 #	/EFI/BOOT/BOOTX64.EFI in it, so we build the whole disk and not just the
 #	tree : both a usb key and virtualbox want a partition table.
 #
-#	mkfs.vfat formats the partition in place with --offset, and mcopy fills it
-#	through the same offset. -s walks the tree and makes EFI/BOOT on its own.
-#	a loop mount would have needed root for what is an ordinary build step.
+#	release_uefi refreshes everything that goes in the image, then forces the
+#	assembly below by taking the image away first.
+#
+#	the assembly is a separate file rule on purpose : run_uefi needs the image
+#	and a plain make build never runs tools, so it has no build/bin for ramfs
+#	to stage from. Going through release_uefi there would fail on a cp of a
+#	directory that does not exist, on a target that only had to assemble files
+#	already sitting in build/esp.
 release_uefi:
 	$(MAKE) ramfs
 	$(MAKE) kernel
 	$(MAKE) esp
+	$(REMOVE) $(USB_STICK_IMG)
+	$(MAKE) $(USB_STICK_IMG)
+
+#	mkfs.vfat formats the partition in place with --offset, and mcopy fills it
+#	through the same offset. -s walks the tree and makes EFI/BOOT on its own.
+#	a loop mount would have needed root for what is an ordinary build step.
+#
+#	esp is an order only prerequisite, after the pipe : it has to have run so
+#	build/esp is there to copy from, but it must not make the image out of date.
+#	uefi relinks BOOTX64.EFI on every pass, so a normal prerequisite would
+#	rebuild the whole image at every make run_uefi.
+#
+#	so the image is built when it is missing and kept otherwise. that is enough
+#	here : the firmware boots off the build/esp directory, and this one is the
+#	stick the xhci driver enumerates. release_uefi is what forces a fresh one,
+#	and that is the target to run before dd'ing a key.
+$(USB_STICK_IMG): | esp
+#	mtools is not installed by default on debian, and without this the build
+#	dies on a bare "mcopy: not found" after it has already written a gpt, a
+#	fat and an ext2 -> an image that exists, that looks built, and whose esp is
+#	empty. Checked first so nothing is left behind.
+	@[ -x $(MCOPY) ] || { \
+		echo "[FAILED] $(MCOPY) is missing, the esp cannot be filled without it"; \
+		echo "         install it with : sudo apt install mtools"; \
+		exit 1; }
 	mkdir -p $(RELEASE_DIR)
-	$(REMOVE) $(RELEASE_DIR)/balrog-uefi.img
-	truncate -s $(ROOT_IMG_SIZE)M $(RELEASE_DIR)/balrog-uefi.img
+	$(REMOVE) $(USB_STICK_IMG)
+	truncate -s $(ROOT_IMG_SIZE)M $(USB_STICK_IMG)
 #	two partitions : U is the efi system partition, L a plain linux one. the
 #	root lba is not written down anywhere, it is the esp start plus its size
 #	so the two can never drift apart.
 	printf 'label: gpt\n,$(ESP_IMG_SIZE)MiB,U\n,,L\n' \
-		| $(SFDISK) $(RELEASE_DIR)/balrog-uefi.img > /dev/null
+		| $(SFDISK) $(USB_STICK_IMG) > /dev/null
 	$(MKFS_VFAT) -F 32 --offset $(ESP_IMG_LBA) -n BALROGOS \
-		$(RELEASE_DIR)/balrog-uefi.img > /dev/null
+		$(USB_STICK_IMG) > /dev/null
 #	-b 4096 is not a preference! it is the block size this ext2 driver
 #	assumes, and files/ramfs.img is built with it too. -F because we are
 #	formatting inside a plain file, and the size is what is left after the esp.
 	$(MKE2FS) -q -F -t ext2 -b 4096 \
 		-E offset=$$(( ($(ESP_IMG_LBA) + $(ESP_IMG_SIZE) * 2048) * 512 )) \
-		$(RELEASE_DIR)/balrog-uefi.img \
+		$(USB_STICK_IMG) \
 		$$(( $(ROOT_IMG_SIZE) * 2048 - $(ESP_IMG_LBA) - $(ESP_IMG_SIZE) * 2048 ))s \
 		> /dev/null
-	$(MCOPY) -s -i $(RELEASE_DIR)/balrog-uefi.img@@$$(( $(ESP_IMG_LBA) * 512 )) \
+	$(MCOPY) -s -i $(USB_STICK_IMG)@@$$(( $(ESP_IMG_LBA) * 512 )) \
 		$(ESP_DIR)/* ::/
-	@echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.img  -> dd on a usb key"
+	@echo "[  OK  ] $(USB_STICK_IMG)  -> dd on a usb key"
 	@if command -v $(VBOXMANAGE) > /dev/null; then \
 		$(REMOVE) $(RELEASE_DIR)/balrog-uefi.vdi; \
-		$(VBOXMANAGE) convertfromraw $(RELEASE_DIR)/balrog-uefi.img \
+		$(VBOXMANAGE) convertfromraw $(USB_STICK_IMG) \
 			$(RELEASE_DIR)/balrog-uefi.vdi --format VDI > /dev/null; \
 		echo "[  OK  ] $(RELEASE_DIR)/balrog-uefi.vdi  -> a vbox sata port, EFI on"; \
 	else \
@@ -839,10 +875,8 @@ QEMU_AHCI_ROOTFS = -drive id=rootfs,file=$(ROOTFS_TEST_IMG),format=raw,if=none \
 #	exactly like a machine that boots to nothing.
 #
 #	the stick is the release image because its layout is the one the xhci
-#	driver expects. Neither target builds it : release_uefi starts with
-#	clean_kernel_obj and would throw away the esp the dependency above just
-#	made.
-USB_STICK_IMG = $(RELEASE_DIR)/balrog-uefi.img
+#	driver expects. run_uefi asks for it as a file and not as a phony, so a
+#	plain make build is enough to get one -> see the $(USB_STICK_IMG) rule.
 
 QEMU_USB = -device qemu-xhci,id=xhci \
 		-drive if=none,id=stick,file=$(USB_STICK_IMG),format=raw \
@@ -850,8 +884,7 @@ QEMU_USB = -device qemu-xhci,id=xhci \
 
 #	OVMF is the free uefi firmware, we need it to test without hardware.
 #	the vars file has to be writable, so we copy it.
-run_uefi: esp
-	@test -f $(USB_STICK_IMG) || { echo "[FAILED] $(USB_STICK_IMG) is missing, run make release_uefi first"; exit 1; }
+run_uefi: esp $(USB_STICK_IMG)
 	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars.fd
 	-@mv $(OS_LOG_DIR)/kernel_uefi.log $(OS_LOG_DIR)/kernel_uefi.log.bak 2> /dev/null
 	qemu-system-x86_64 -monitor stdio -m 4096 -no-reboot -no-shutdown \
@@ -869,8 +902,7 @@ run_uefi: esp
 #	the firmware runs first here, which run_debug does not have to deal with :
 #	a breakpoint on kernel_main is reached only after OVMF has handed over, so
 #	setting one on efi_main needs BOOTX64.EFI and its own base address.
-run_debug_efi: esp
-	@test -f $(USB_STICK_IMG) || { echo "[FAILED] $(USB_STICK_IMG) is missing, run make release_uefi first"; exit 1; }
+run_debug_efi: esp $(USB_STICK_IMG)
 	cp $(OVMF_VARS) $(OS_BUILD_DIR)/ovmf_vars_debug.fd
 	-@mv $(OS_LOG_DIR)/kernel_debug_uefi.log $(OS_LOG_DIR)/kernel_debug_uefi.log.bak 2> /dev/null
 	qemu-system-x86_64 -s -S -monitor stdio -m 4096 -no-reboot -no-shutdown \

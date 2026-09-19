@@ -46,12 +46,12 @@
 #endif
 
 
-#define KERNEL_DEBUG_MODE_OFF       3
-#define KERNEL_DEBUG_MODE_ERROR     2
-#define KERNEL_DEBUG_MODE_INFO      1
+#define KERNEL_DEBUG_MODE_OFF       5
+#define KERNEL_DEBUG_MODE_ERROR     4
+#define KERNEL_DEBUG_MODE_INFO      3
 
 #ifndef KDB_DEFAULT_LVL
-#define KDB_DEFAULT_LVL 3
+#define KDB_DEFAULT_LVL 5
 #endif
 
 /**
@@ -60,7 +60,7 @@
  * @param ...
  * @return
  */
-int kdbprint(const char* __restrict format, ...);
+int kdbprint(enum klog_logging_level level, const char* __restrict format, ...);
 
 #ifdef KDB_DEBUG
 
@@ -70,8 +70,8 @@ int kdbprint(const char* __restrict format, ...);
             kprint(__VA_ARGS__); \
             kprint("\n"); \
         } else { \
-            kdbprint(__VA_ARGS__); \
-            kdbprint("\n"); \
+            kdbprint(level, __VA_ARGS__); \
+            kdbprint(level, "\n"); \
         }\
     } while(0)
 #define kernel_debug_output_no_ln(level, ...) \
@@ -79,7 +79,7 @@ int kdbprint(const char* __restrict format, ...);
         if(__kernel_debug_output(level)) { \
             kprint(__VA_ARGS__); \
         } else { \
-            kdbprint(__VA_ARGS__); \
+            kdbprint(level, __VA_ARGS__); \
         }\
     } while(0)
 
@@ -103,6 +103,6 @@ int kdbprint(const char* __restrict format, ...);
 
 #endif
 
-int __kernel_debug_output(int level);
+int __kernel_debug_output(enum klog_logging_level level);
 
 void set_debug_mode(int mode);

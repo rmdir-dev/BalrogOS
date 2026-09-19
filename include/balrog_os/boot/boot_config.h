@@ -15,4 +15,5 @@ typedef struct __boot_config_t
     uint32_t reserved;                      // buffer
 
     uint8_t root_guid[BOOT_GUID_BYTE_LEN];
+    uint8_t raw_debug_guid[BOOT_GUID_BYTE_LEN];
 } __attribute__((__packed__)) boot_config_t;

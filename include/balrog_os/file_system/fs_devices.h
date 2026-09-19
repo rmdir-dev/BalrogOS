@@ -4,6 +4,8 @@
 #include "klib/threading/kmutex.h"
 #include "balrog_os/file_system/gpt/gpt_struct.h"
 
+#define SECTOR_SIZE     512
+
 typedef struct _fs_device_t
 {
     char* name;

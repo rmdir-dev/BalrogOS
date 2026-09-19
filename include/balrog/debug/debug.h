@@ -3,9 +3,14 @@
 
 #define KDB_CALL            254
 
-#define KDB_LVL_VERBOSE     0
-#define KDB_LVL_INFO        1
-#define KDB_LVL_ERROR       2
-#define KDB_LVL_CRITICAL    3
+enum klog_logging_level
+{
+    KDB_NONE            = 0x00,
+    KDB_LVL_VERBOSE     = 0x01,
+    KDB_LVL_INFO        = 0x02,
+    KDB_LVL_WARNING     = 0x03,
+    KDB_LVL_ERROR       = 0x04,
+    KDB_LVL_CRITICAL    = 0x05,
+};
 
 #endif //BALROGOS_DEBUG_H

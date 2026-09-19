@@ -18,6 +18,7 @@
 #include "errno.h"
 #include "balrog_os/boot/boot_config.h"
 #include "balrog/uuid/uuid.h"
+#include "balrog_os/debug/klog.h"
 #include "balrog_os/file_system/gpt/gpt.h"
 #include "klib/io/kprint.h"
 
@@ -30,6 +31,7 @@ typedef struct __virtual_fs_t
 } virtual_fs_t;
 
 fs_device_t boot_dev;
+fs_device_t* raw_debug_dev;
 static vfs_root_t vfs_root;
 static virtual_fs_t* virtual_fs;
 list_t devices;
@@ -318,6 +320,22 @@ void __init_virtual_fs()
     __try_mount_virtual_fs(&virtual_fs->proc, "/proc");
 }
 
+static void __write_raw_debug(const char* str, size_t size)
+{
+    static size_t pos = 0;
+    static uint8_t* buffer = NULL;
+
+    if (pos == 0)
+    {
+        pos = raw_debug_dev->gpt_partition->first_lba;
+    }
+
+    if (buffer == NULL)
+    {
+        buffer = vmalloc(PAGE_SIZE);
+    }
+}
+
 int __load_boot_config()
 {
     boot_config_t* cfg = (boot_config_t*) P2V(BOOT_CONFIG_PHYS);
@@ -338,6 +356,15 @@ int __load_boot_config()
 
     fs_device_t* root_device = (fs_device_t*) node->value;
     vfs_root.mount(&vfs_root, "/", root_device);
+
+    node = list_custom_lookup(&devices, cfg->raw_debug_guid, &__fs_device_partuuid_lookup);
+
+    if (node)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "file system : found raw debug partition");
+        raw_debug_dev = (fs_device_t*) node->value;
+        klog_register_fs_device(raw_debug_dev, KDB_LVL_VERBOSE, KLOG_DISK_LOG);
+    }
 
     return 0;
 }

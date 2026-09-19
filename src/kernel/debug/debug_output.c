@@ -7,14 +7,15 @@
 #include "balrog/terminal/term.h"
 #include "balrog_os/drivers/serial/serial.h"
 
-#define _KBD_VERBOSE_MSG    "\e[0;91mINFO \e[0m : "
+#define _KBD_VERBOSE_MSG    "\e[0;91mVERBOSE\e[0m : "
 #define _KBD_INFO_MSG       "\e[0;97mINFO \e[0m : "
+#define _KDB_WARNING_MSG    "\e[0;96mWARNING\e[0m : "
 #define _KBD_ERROR_MSG      "\e[0;96mERROR\e[0m : "
 #define _KBD_CRITICAL_MSG   "\e[0;94mCRITICAL\e[0m : "
 
 int debug_mode = KDB_DEFAULT_LVL;
 
-int __kernel_debug_output(int level)
+int __kernel_debug_output(enum klog_logging_level level)
 {
     int debug_only = debug_mode > level && level != KDB_LVL_CRITICAL;
     const char* message = "";
@@ -26,6 +27,9 @@ int __kernel_debug_output(int level)
         case KDB_LVL_INFO:
             message = _KBD_INFO_MSG;
             break;
+        case KDB_LVL_WARNING:
+            message = _KDB_WARNING_MSG;
+            break;
         case KDB_LVL_ERROR:
             message = _KBD_ERROR_MSG;
             break;
@@ -36,7 +40,7 @@ int __kernel_debug_output(int level)
 
     if (debug_only)
     {
-        kdbprint(message);
+        kdbprint(level, message);
         return 0;
     }
 

@@ -606,6 +606,13 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* table)
                 __print("BALROG.CFG has no usable root_guid\r\n");
             }
 
+            __config_value(config_text, config_size, "raw_debug_guid", text, BOOT_GUID_TEXT_LEN);
+
+            if(str_to_uuid(cfg->raw_debug_guid, text) != 0)
+            {
+                __print("BALROG.CFG has no usable raw_debug_guid\r\n");
+            }
+
             __print("BALROG.CFG read\r\n");
         }
     } else

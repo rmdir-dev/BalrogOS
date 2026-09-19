@@ -75,7 +75,7 @@ void* xhci_current()
     return xhci;
 }
 
-static uint8_t usb_bounce[USB_BOUNCE_SIZE] __attribute__((aligned(PAGE_SIZE)));
+static uint8_t usb_bounce[USB_BOUNCE_SIZE] __attribute__((aligned(USB_BOUNCE_SIZE)));
 
 
 static xhci_slot_context_t* __xhci_in_slot(void* in)
@@ -131,7 +131,7 @@ static uint32_t __xhci_cap_read(uint32_t reg)
     return *(volatile uint32_t*)((xhci->cap + XHCI_CAP_CAPLENGTH) + reg);
 }
 
-static int __xhci_ring_alloc(xhci_ring_t* ring)
+static int __xhci_ring_alloc(xhci_ring_t* ring, uint8_t link)
 {
     ring->physical = (uintptr_t) pmm_calloc();
 
@@ -146,6 +146,11 @@ static int __xhci_ring_alloc(xhci_ring_t* ring)
 
     /* the controller starts its own cycle at 1, so we have to agree */
     ring->cycle = 1;
+
+    if(!link)
+    {
+        return 0;
+    }
 
     /* the last slot is the link back to the head, and TC tells the
        controller to flip its cycle when it follows it. XHCI_RING_USABLE is
@@ -384,7 +389,7 @@ static int __xhci_setup()
     __xhci_op_write64(XHCI_OP_DCBAAP, V2P(xhci->dcbaa));
 
     /* the command ring, and RCS has to match the cycle we stamp */
-    if(__xhci_ring_alloc(&xhci->cmd) != 0 || __xhci_ring_alloc(&xhci->event) != 0)
+    if(__xhci_ring_alloc(&xhci->cmd, 1) != 0 || __xhci_ring_alloc(&xhci->event, 0) != 0)
     {
         return -1;
     }
@@ -470,11 +475,16 @@ static int __xhci_probe_device(pci_device_t* dev)
     return 0;
 }
 
-static uint8_t __xhci_dma_ok(void* buffer)
+static uint8_t __xhci_dma_ok(void* buffer, uint32_t len)
 {
     uintptr_t addr = (uintptr_t) buffer;
 
-    return addr >= KERNEL_OFFSET && addr < FS_CACHE_OFFSET;
+    if(addr < KERNEL_OFFSET || addr >= FS_CACHE_OFFSET)
+    {
+        return 0;
+    }
+
+    return ((addr & 0xFFFF) + len) <= 0x10000;
 }
 
 void __xhci_ring_push(xhci_ring_t* ring, xhci_trb_t* trb)
@@ -601,7 +611,7 @@ int __xhci_address_device(uint8_t slot, uint32_t port)
     xhci_trb_t event = {};
     xhci_ring_t* ring = __xhci_ring_for(slot, XHCI_DCI_CONTROL);
 
-    if(!ring || __xhci_ring_alloc(ring) != 0)
+    if(!ring || __xhci_ring_alloc(ring, 1) != 0)
     {
         return -1;
     }
@@ -781,7 +791,7 @@ int __xhci_configure_endpoints(usb_disk_t* disk)
     {
         xhci_ring_t* ring = __xhci_ring_for(disk->slot, dcis[i]);
 
-        if(!ring || __xhci_ring_alloc(ring) != 0)
+        if(!ring || __xhci_ring_alloc(ring, 1) != 0)
         {
             return -1;
         }
@@ -834,12 +844,11 @@ int init_xhci()
     return 0;
 }
 
-int __xhci_bulk(usb_disk_t* disk, uint8_t dci, void* buffer,
-        uint32_t len)
+int __xhci_bulk(usb_disk_t* disk, uint8_t dci, void* buffer, uint32_t len)
 {
     xhci_trb_t trb = {};
     xhci_trb_t event = {};
-    uint8_t direct = __xhci_dma_ok(buffer);
+    uint8_t direct = __xhci_dma_ok(buffer, len);
     void* dma = buffer;
 
     if(!direct)

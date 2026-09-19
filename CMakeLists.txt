@@ -65,6 +65,7 @@ add_compile_definitions(
 add_compile_options(
 	-ffreestanding
 	-nostdlib
+	-mno-red-zone
 	-Werror=return-type
 	-Werror=implicit-int
 	-Wno-address-of-packed-member

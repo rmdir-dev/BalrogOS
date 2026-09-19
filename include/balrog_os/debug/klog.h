@@ -28,4 +28,8 @@ int klog_register_fs_device(fs_device_t* device, enum klog_logging_level log_lev
 
 void klog_claim_buffer();
 
+void klog_force_flush_buffers();
+
 int init_klog();
+
+void wormtongue();

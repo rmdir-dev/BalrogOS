@@ -7,7 +7,25 @@
 #include "klib/data_structure/list.h"
 #include "klib/data_structure/vector.h"
 
-#define MAX_BUFFER_SIZE (PAGE_SIZE * 16)    // 64KiB
+
+/*
+TODO :
+- wormtongue :
+    - clear the disabled handlers
+    - flush logs overtime on its own thread and thus avoiding auto flushing on running threads
+    - compress the logs
+ */
+
+// #define MAX_BUFFER_SIZE (PAGE_SIZE * 16)    // 64KiB
+#define MAX_BUFFER_SIZE (PAGE_SIZE * 16 * 8)    // 512KiB
+
+typedef struct __klog_device_buffer_t
+{
+    uint8_t require_flush;
+    uint8_t flushing;
+    size_t current_pos;
+    uint8_t* buffer;
+} klog_device_buffer_t;
 
 typedef struct __klog_debug_device_t
 {
@@ -15,9 +33,13 @@ typedef struct __klog_debug_device_t
     size_t start_lba;
     size_t end_lba;
     size_t current_lba;
-    uint8_t* buffer;
-    size_t current_buffer_pos;
+    kmutex_t write_lock;
+    int write_in_flight;
+    size_t selected_buffer;
+    klog_device_buffer_t buffers[2];
 } klog_debug_device_t;
+
+#define get_selected_buffer(kdb_device)     ((kdb_device)->buffers[(kdb_device)->selected_buffer])
 
 typedef struct __klog_handler_t
 {
@@ -34,6 +56,7 @@ static uint8_t* klog_vstart = 0;
 static uint8_t* klog_vend = 0;
 static klog_handler_t klog_default_handler = {};
 static size_t klog_area_index = 0;
+static kmutex_t klog_flush_lock;
 
 static vector_t klog_callbacks_vector = {
     .current_size = 0,
@@ -70,31 +93,43 @@ static int __klog_debug_device_write(klog_handler_t* handler, const char *str, s
     klog_debug_device_t* dbg_dev = handler->device;
     if (!dbg_dev)
     {
-        kernel_debug_output(KDB_LVL_ERROR, "klog: no device found !");
         handler->disabled = 1;
+        kernel_debug_output(KDB_LVL_ERROR, "klog: no device found !");
         return -1;
     }
 
-    if((dbg_dev->current_buffer_pos + size) < MAX_BUFFER_SIZE)
+    if((get_selected_buffer(dbg_dev).current_pos + size) < MAX_BUFFER_SIZE)
     {
-        memcpy(dbg_dev->buffer + dbg_dev->current_buffer_pos, str, size);
-        dbg_dev->current_buffer_pos += size;
+        memcpy(get_selected_buffer(dbg_dev).buffer + get_selected_buffer(dbg_dev).current_pos, str, size);
+        get_selected_buffer(dbg_dev).current_pos += size;
     } else
     {
         size_t i = 0;
+        klog_device_buffer_t* selected_buffer = &get_selected_buffer(dbg_dev);
 
-        while (dbg_dev->current_buffer_pos < MAX_BUFFER_SIZE && i < size)
+        if (selected_buffer->require_flush || selected_buffer->flushing)
         {
-            dbg_dev->buffer[dbg_dev->current_buffer_pos++] = str[i++];
+            return -1;
         }
 
-        __klog_safe_device_write(dbg_dev, dbg_dev->buffer, MAX_BUFFER_SIZE);
-        dbg_dev->current_buffer_pos = 0;
-
-        if (i < size)
+        while (selected_buffer->current_pos < MAX_BUFFER_SIZE && i < size)
         {
-            memcpy(dbg_dev->buffer, &str[i], size - i);
-            dbg_dev->current_buffer_pos = size - i;
+            selected_buffer->buffer[selected_buffer->current_pos++] = str[i++];
+        }
+        selected_buffer->require_flush = 1;
+        dbg_dev->selected_buffer = dbg_dev->selected_buffer == 0 ? 1 : 0;
+
+        size_t left = size - i;
+
+        if (left > MAX_BUFFER_SIZE)
+        {
+            left = MAX_BUFFER_SIZE;
+        }
+
+        if (left)
+        {
+            memcpy(get_selected_buffer(dbg_dev).buffer, &str[i], left);
+            get_selected_buffer(dbg_dev).current_pos = left;
         }
     }
 
@@ -182,6 +217,7 @@ int klog_register_fs_device(fs_device_t* device, enum klog_logging_level log_lev
         .write = 0,
         .log_method = method,
         .log_level = log_level,
+        .disabled = 1,
     };
 
     if (vector_push(&klog_callbacks_vector, &klog_callback) != 0)
@@ -200,30 +236,64 @@ int klog_register_fs_device(fs_device_t* device, enum klog_logging_level log_lev
         return -1;
     }
 
+    kmutex_init(&device_handler->device->write_lock);
+    device_handler->device->write_in_flight = 0;
     device_handler->device->device = device;
-    device_handler->device->current_buffer_pos = 0;
-    device_handler->device->current_lba = device->gpt_partition->first_lba;
-    device_handler->device->start_lba = device->gpt_partition->first_lba;
-    device_handler->device->end_lba = device->gpt_partition->last_lba;
-    device_handler->device->buffer = vmalloc(MAX_BUFFER_SIZE);
+    device_handler->device->current_lba = 0;
+    device_handler->device->start_lba = 0;
+    device_handler->device->end_lba = device->gpt_partition->last_lba - device->gpt_partition->first_lba;
+    device_handler->device->selected_buffer = 0;
+    device_handler->device->buffers[0].buffer = vmalloc(MAX_BUFFER_SIZE);
+    device_handler->device->buffers[0].current_pos = 0;
+    device_handler->device->buffers[0].require_flush = 0;
+    device_handler->device->buffers[0].flushing = 0;
 
-    if (!device_handler->device->buffer)
+    if (!device_handler->device->buffers[0].buffer)
     {
+        vector_pop(&klog_callbacks_vector, klog_callbacks_vector.current_size -1, device_handler);
+        vmfree(device_handler->device);
+        return -1;
+    }
+
+    device_handler->device->buffers[1].buffer = vmalloc(MAX_BUFFER_SIZE);
+    device_handler->device->buffers[1].current_pos = 0;
+    device_handler->device->buffers[1].require_flush = 0;
+    device_handler->device->buffers[1].flushing = 0;
+
+    if (!device_handler->device->buffers[1].buffer)
+    {
+        vmfree(device_handler->device->buffers[0].buffer);
+        vmfree(device_handler->device);
         vector_pop(&klog_callbacks_vector, klog_callbacks_vector.current_size -1, device_handler);
         return -1;
     }
 
-    __klog_safe_device_write(device_handler->device, klog_vstart, klog_area_index);
+    size_t copy_size = klog_area_index;
+
+    if (klog_area_index % SECTOR_SIZE != 0)
+    {
+        copy_size += SECTOR_SIZE - (klog_area_index % SECTOR_SIZE);
+    }
+
+    device_handler->disabled = 0;
+    if (__klog_safe_device_write(device_handler->device, klog_vstart, copy_size) != 0)
+    {
+        kernel_debug_output(KDB_LVL_ERROR, "klog : the boot log could not be replayed");
+    }
 
     // if not equal to sector size
     if (klog_area_index % SECTOR_SIZE != 0)
     {
         // remove an lba else we would have that part of the logs twice.
-        device_handler->device->current_lba--;
+        device_handler->device->current_lba = device_handler->device->current_lba == 0 ?
+            0
+                :
+            device_handler->device->current_lba - 1;
+
         size_t cpy_log_start = klog_area_index - (klog_area_index % SECTOR_SIZE);
         size_t cpy_log_size = klog_area_index - cpy_log_start;
-        memcpy(device_handler->device->buffer, klog_vstart + cpy_log_start, cpy_log_size);
-        device_handler->device->current_buffer_pos = cpy_log_size;
+        memcpy(get_selected_buffer(device_handler->device).buffer, klog_vstart + cpy_log_start, cpy_log_size);
+        get_selected_buffer(device_handler->device).current_pos = cpy_log_size;
     }
 
     return 0;
@@ -246,6 +316,65 @@ void klog_claim_buffer()
 int init_klog()
 {
     vector_init(&klog_callbacks_vector, sizeof(klog_handler_t), 5);
+    kmutex_init(&klog_flush_lock);
 
     return 0;
+}
+
+static void __klog_flush(klog_handler_t* handler, size_t buffer_index)
+{
+    klog_debug_device_t* dbg_dev = handler->device;
+    klog_device_buffer_t* selected_buffer = &dbg_dev->buffers[buffer_index];
+    selected_buffer->flushing = 1;
+    __klog_safe_device_write(dbg_dev, selected_buffer->buffer, selected_buffer->current_pos);
+
+    selected_buffer->flushing = 0;
+    selected_buffer->require_flush = 0;
+    selected_buffer->current_pos = 0;
+}
+
+void klog_force_flush_buffers()
+{
+    kmutex_lock(&klog_flush_lock);
+    for (size_t i = 0; i < klog_callbacks_vector.current_size; i++)
+    {
+        klog_handler_t* handler = vector_get(&klog_callbacks_vector, i);
+        klog_debug_device_t* dbg_dev = handler->device;
+        size_t unselected_buffer_index = dbg_dev->selected_buffer == 0 ? 1 : 0;
+        if (dbg_dev->buffers[unselected_buffer_index].require_flush)
+        {
+            __klog_flush(handler, unselected_buffer_index);
+        }
+        __klog_flush(handler, dbg_dev->selected_buffer);
+    }
+}
+
+void wormtongue()
+{
+    while (1)
+    {
+        for (size_t i = 0; i < klog_callbacks_vector.current_size; i++)
+        {
+            klog_handler_t* handler = vector_get(&klog_callbacks_vector, i);
+
+            if (!handler->device)
+            {
+                continue;
+            }
+
+            for (size_t j = 0; j < 2; j++)
+            {
+                kmutex_lock(&klog_flush_lock);
+                if (handler->device->buffers[j].require_flush)
+                {
+                    __klog_flush(handler, j);
+                }
+                kmutex_unlock(&klog_flush_lock);
+            }
+        }
+    }
+
+    // TODO : if this returns it crash the kernel
+    while (1)
+    {}
 }

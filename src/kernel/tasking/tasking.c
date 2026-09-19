@@ -132,7 +132,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
         SETUP THE STACK
     */
     kernel_debug_output(KDB_LVL_VERBOSE, "tasking : setting up process stack");
-    proc->stack_top = PROCESS_STACK_TOP - 1;
+    proc->stack_top = PROCESS_STACK_TOP - 8;
 
     proc->kernel_stack_top = P2V(phys) + 4095;
     virt = ((uint8_t*) proc->kernel_stack_top) - sizeof(task_register);

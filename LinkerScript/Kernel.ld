@@ -57,7 +57,7 @@ SECTIONS
   }
 
   /* kernel  logs space */
-  .klog (NOLOAD) : AT(ADDR(.klog) - KERNEL_OFFSET)
+  .klog (NOLOAD) : AT(ADDR(.klog) - KERNEL_OFFSET) ALIGN(0x10000)
   {
     klog_area = .;
     /* 1MiB Kheap */

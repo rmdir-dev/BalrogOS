@@ -338,6 +338,7 @@ int __usb_bot_command(usb_disk_t* disk, uint8_t* cdb, uint8_t cdb_len,
        log to say why. */
     if(__xhci_bulk_out(disk, &cbw, USB_CBW_SIZE) != 0)
     {
+        __usb_bot_clear_stall(disk, USB_CBW_DIR_OUT);
         return -1;
     }
 
@@ -356,6 +357,7 @@ int __usb_bot_command(usb_disk_t* disk, uint8_t* cdb, uint8_t cdb_len,
 
     if(__xhci_bulk_in(disk, &csw, USB_CSW_SIZE) != 0)
     {
+        __usb_bot_clear_stall(disk, USB_CBW_DIR_IN);
         return -1;
     }
 

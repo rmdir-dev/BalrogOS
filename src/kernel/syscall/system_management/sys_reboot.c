@@ -4,11 +4,15 @@
 #include "balrog/debug/debug.h"
 #include "balrog/system/reboot.h"
 #include "balrog_os/debug/debug_output.h"
+#include "balrog_os/debug/klog.h"
 
 extern void sys_reboot(interrupt_regs* stack_frame)
 {
     if (stack_frame->rdi == BALROG_REBOOT_MAGIC1 && stack_frame->rsi == BALROG_REBOOT_MAGIC2)
     {
+        // force flush
+        klog_force_flush_buffers();
+
         switch (stack_frame->rdx)
         {
         case BALROG_REBOOT_POWER_OFF:

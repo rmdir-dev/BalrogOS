@@ -288,7 +288,7 @@ GCC14_FLAGS = -Wno-error=incompatible-pointer-types\
 	-Wno-error=int-conversion\
 	-Wno-error=implicit-function-declaration
 
-CFLAGS = $(DEFINES) $(INCLUDE_DIR) $(GCC14_FLAGS) $(DEBUG_FLAGS) $(CODE_MODEL) -std=gnu17 -ffreestanding -nostdlib -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int -Wno-address-of-packed-member
+CFLAGS = $(DEFINES) $(INCLUDE_DIR) $(GCC14_FLAGS) $(DEBUG_FLAGS) $(CODE_MODEL) -std=gnu17 -ffreestanding -nostdlib -mno-red-zone -fdiagnostics-color=always -Werror=return-type -Werror=implicit-int -Wno-address-of-packed-member
 
 ########################################################
 #	LINKER

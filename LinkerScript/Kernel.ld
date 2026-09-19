@@ -61,7 +61,7 @@ SECTIONS
   {
     klog_area = .;
     /* 1MiB Kheap */
-    . = . + 1024K;
+    . = . + 4096K;
     klog_area_end = .;
 
     /* 4KiB buffer */

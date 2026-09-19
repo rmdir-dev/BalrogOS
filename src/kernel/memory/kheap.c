@@ -47,17 +47,17 @@ void* kmalloc(size_t size)
     uint8_t first_block = 1;
     size += sizeof(block_info) * 3; // add 72 bytes to the size to protect against heap corruption
 
-    kernel_debug_output(KDB_LVL_VERBOSE, "kheap current block = 0%p", current_block);
+    // kernel_debug_output(KDB_LVL_VERBOSE, "kheap current block = 0%p", current_block);
     while(1)
     {
         if(current_block < (block_info*)kheap_end)
         {
             void* ret = heap_alloc(size, current_block, prev_block, kheap_end, (uintptr_t*)&kfirst_free, first_block);
-            kernel_debug_output(KDB_LVL_VERBOSE, "found block = 0%p, first free = 0%p", ret, kfirst_free);
+            // kernel_debug_output(KDB_LVL_VERBOSE, "found block = 0%p, first free = 0%p", ret, kfirst_free);
             if(ret != 0)
             {
                 kheap_size += ((block_info*) (ret - sizeof(block_info)))->_size;
-                kernel_debug_output(KDB_LVL_VERBOSE, "kalloc size = %d/%d KiB added : %d", kheap_size, BYTE_TO_KiB(kheap_max_size), size);
+                kernel_debug_output(KDB_LVL_VERBOSE, "kalloc size = %d/%d KiB added : %d | first free = 0%p", kheap_size, BYTE_TO_KiB(kheap_max_size), size, kfirst_free);
                 return ret;
             }
             // current block = next block

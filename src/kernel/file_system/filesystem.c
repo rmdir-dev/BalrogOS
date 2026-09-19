@@ -361,7 +361,7 @@ int __load_boot_config()
 
     if (node)
     {
-        kernel_debug_output(KDB_LVL_CRITICAL, "file system : found raw debug partition");
+        kernel_debug_output(KDB_LVL_INFO, "file system : found raw debug partition");
         raw_debug_dev = (fs_device_t*) node->value;
         klog_register_fs_device(raw_debug_dev, KDB_LVL_VERBOSE, KLOG_DISK_LOG);
     }

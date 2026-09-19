@@ -168,10 +168,10 @@ void* pmm_calloc()
         return 0x0;
     }
 
-    if (disable_pmm_calloc_debuging == 0)
-    {
-        kernel_debug_output(KDB_LVL_VERBOSE, "pmm alloc 0%p", p);
-    }
+    // if (disable_pmm_calloc_debuging == 0)
+    // {
+    //     kernel_debug_output(KDB_LVL_VERBOSE, "pmm alloc 0%p", p);
+    // }
 
     // set the bits inside the page to 0.
     memset((void*)P2V(p), 0, PAGE_SIZE);

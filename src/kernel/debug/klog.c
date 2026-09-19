@@ -57,6 +57,7 @@ static uint8_t* klog_vend = 0;
 static klog_handler_t klog_default_handler = {};
 static size_t klog_area_index = 0;
 static kmutex_t klog_flush_lock;
+static int disable_device_logs = 0;
 
 static vector_t klog_callbacks_vector = {
     .current_size = 0,
@@ -69,7 +70,7 @@ static vector_t klog_callbacks_vector = {
 
 static int __klog_safe_device_write(klog_debug_device_t* dbg_dev, uint8_t* buffer, size_t size)
 {
-    size_t lba_len = (size / SECTOR_SIZE);
+    size_t lba_len = (size + SECTOR_SIZE - 1) / SECTOR_SIZE;
     uint32_t last_written_lba = dbg_dev->current_lba + lba_len;
     if (last_written_lba >= dbg_dev->end_lba)
     {
@@ -168,6 +169,11 @@ void klog_write(enum klog_logging_level log_level, const char *str, size_t size)
     }
 
     if (klog_callbacks_vector.current_size <= 0)
+    {
+        return;
+    }
+
+    if (disable_device_logs)
     {
         return;
     }
@@ -335,10 +341,18 @@ static void __klog_flush(klog_handler_t* handler, size_t buffer_index)
 
 void klog_force_flush_buffers()
 {
+    disable_device_logs = 1;
+    // this function is called at shutdown the lock should not be released.
     kmutex_lock(&klog_flush_lock);
     for (size_t i = 0; i < klog_callbacks_vector.current_size; i++)
     {
         klog_handler_t* handler = vector_get(&klog_callbacks_vector, i);
+
+        if (!handler->device)
+        {
+            continue;
+        }
+
         klog_debug_device_t* dbg_dev = handler->device;
         size_t unselected_buffer_index = dbg_dev->selected_buffer == 0 ? 1 : 0;
         if (dbg_dev->buffers[unselected_buffer_index].require_flush)
@@ -372,9 +386,6 @@ void wormtongue()
                 kmutex_unlock(&klog_flush_lock);
             }
         }
+        // TODO : add sleep
     }
-
-    // TODO : if this returns it crash the kernel
-    while (1)
-    {}
 }

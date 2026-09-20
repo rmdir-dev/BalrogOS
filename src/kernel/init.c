@@ -25,6 +25,7 @@
 #include "balrog_os/drivers/serial/serial.h"
 #include "balrog_os/cpu/acpi/acpi.h"
 #include "balrog_os/cpu/cpuid/cpuid.h"
+#include "balrog_os/cpu/rtc/rtc.h"
 #include "balrog_os/debug/klog.h"
 #include "balrog_os/drivers/disk/ahci/ahci.h"
 #include "balrog_os/drivers/disk/ata/ata.h"
@@ -127,6 +128,9 @@ void initialize_kernel(void* SMAP, void* size)
     ret_status = init_vmheap();
     KERNEL_LOG_ASSERT(ret_status, "Kernel virtual heap : ", "done", "not initialized");
     pmm_enable_alloc_logs();
+
+    /*    RTC            */
+    KERNEL_LOG_ASSERT(init_rtc(), "rtc : ", "done", "not initialized");
 
     /*    KLOG           */
     KERNEL_LOG_ASSERT(init_klog(), "klog : ", "done", "not initialized");

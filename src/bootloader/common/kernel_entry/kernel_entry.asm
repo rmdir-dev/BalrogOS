@@ -57,7 +57,7 @@ _PrepareKernel:
     ; window has to be wider than the image.
     ; bit 7 is PS, which makes the entry a 2MiB page rather than a pointer.
     mov edi, 0x3000 - KERNEL_OFFSET + 8 ; pdt entry 1, the first one past the pt
-    mov dword ebx, 0x00200083   ; 0x200000, present, writable, and PS
+    mov dword ebx, 0x00200183   ; 0x200000, present, writable, global, and PS
     mov ecx, 3                  ; three entries, so up to 0x800000
 
 .SetHugeEntry:

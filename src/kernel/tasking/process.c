@@ -122,18 +122,17 @@ static void __proc_kill(process* proc)
     _proc_remove_process(proc);
     uintptr_t proc_addr = (uintptr_t)proc;
 
+    // clean_process vmfree proc
+    int was_running = proc == current_running;
+
     // if proc is not a child then clean it.
     // or if the memory was copied then clean it.
     clean_process(proc, proc->child == 0 || !proc->forked_memory);
 
 
-    if(proc == current_running)
+    if(was_running)
     {
-        if(proc == current_running->next)
-        {
-            current_running = NULL;
-        }
-
+        current_running = NULL;
         kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill schedule");
         schedule(0, 0);
     }

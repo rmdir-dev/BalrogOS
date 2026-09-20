@@ -10,6 +10,9 @@ Contain the physical address of the kernel PML4T
 */
 page_table* KernelPML4T;
 
+// from linkerScript/Kernel.ld
+extern uintptr_t klog_guard_end;
+
 int init_vmm()
 {
     KernelPML4T = (void*)0x1000;
@@ -185,9 +188,8 @@ static int __vmm_clean(page_table* table, uint8_t level)
     for(int i = 0; i < 512; i++)
     {
         // if tab[i] has an address 
-        // and tab[i] is not the kernel address
-        // the kernel is at address 511 of the PML4T
-        if(tab[i] && (i < 511 || level < 4))
+        // and tab[i] is not global or shared
+        if(tab[i] && !(tab[i] & (PAGE_GLOBAL | PAGE_SHARED)))
         {
             // if the page table is a PML4T, PDPT, PDT
             // then clean the level below before cleaning it.
@@ -196,17 +198,8 @@ static int __vmm_clean(page_table* table, uint8_t level)
                 __vmm_clean((void*)tab[i], level - 1);
             }
 
-            uintptr_t vaddr = P2V(STRIP_FLAGS(tab[i]));
-
-            // if the page is a kernel page
-            // then do not free it. The kernel manage its own memory.
-            if(vaddr >= KERNEL_OFFSET)
-            {
-                kernel_debug_output(KDB_LVL_VERBOSE, "Trying to free kernel page at %p", vaddr);
-                continue;
-            }
-
             // free the page.
+            // kernel_debug_output(KDB_LVL_VERBOSE, "vmm : vmm clean level %d frees 0%p", level, STRIP_FLAGS(tab[i]));
             pmm_free((void*)STRIP_FLAGS(tab[i]));
             tab[i] = 0;
         }

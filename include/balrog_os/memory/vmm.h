@@ -57,7 +57,7 @@ int vmm_clean_page_table(page_table* PML4T);
  *
  * @param virt_addr the address whose translation must go
  */
-static inline void vmm_invalidate(void* virt_addr)
+static inline __attribute__((always_inline)) void vmm_invalidate(void* virt_addr)
 {
     asm volatile("invlpg (%0)" :: "r"(virt_addr) : "memory");
 }

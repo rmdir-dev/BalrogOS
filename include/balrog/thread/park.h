@@ -7,9 +7,8 @@
  */
 static inline void setpark()
 {
-    asm volatile("mov $0, %rdi");
-    asm volatile("mov $203, %rax");
-    asm volatile("int $0x80");
+    uint64_t call = 203;
+    asm volatile("int $0x80" : "+a"(call) : "D"(0UL) : "memory");
 }
 
 /**
@@ -18,9 +17,8 @@ static inline void setpark()
  */
 static inline void park()
 {
-    asm volatile("mov $0, %rdi");
-    asm volatile("mov $202, %rax");
-    asm volatile("int $0x80");
+    uint64_t call = 202;
+    asm volatile("int $0x80" : "+a"(call) : "D"(0UL) : "memory");
 }
 
 /**
@@ -30,7 +28,6 @@ static inline void park()
  */
 static inline void unpark(int pid)
 {
-    asm volatile("mov %%rax, %%rdi": :"a"(pid));
-    asm volatile("mov $202, %rax");
-    asm volatile("int $0x80");
+    uint64_t call = 202;
+    asm volatile("int $0x80" : "+a"(call) : "D"((uint64_t) pid) : "memory");
 }

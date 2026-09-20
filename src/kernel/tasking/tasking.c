@@ -78,7 +78,9 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     process* proc = new_process(name);
     proc->rip = mode == 3 ? PROCESS_TEXT : addr; 
     uintptr_t* virt = P2V(proc->PML4T); // Kernel space
-    virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE; // to change process won't be able to write into kernel space
+    // PAGE_GLOBAL is ignored on PM4T entries, but we use it to quickly ignore
+    // it on vmm_free
+    virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL;
     uint32_t user = mode == 3 ? PAGE_USER : 0;
     proc->uid = 0;
     proc->gid = 0;
@@ -238,8 +240,8 @@ static void copy_pages(page_table* src, page_table* dest, uint8_t level, uintptr
 
     for(size_t i = 0; i < 512; i++)
     {
-        // check if page exist and if it is not the kernel page (PML4T[511])
-        if(src[i] != 0 && (i < 511 || level < 4))
+        // check if page exist and if it is not the global or shared.
+        if(src[i] != 0 && !(src[i] & (PAGE_GLOBAL | PAGE_SHARED)))
         {
             uintptr_t caddr = vaddr;
             get_vaddr(i, level, &caddr);
@@ -338,7 +340,7 @@ int fork_process(process* proc, interrupt_regs* regs)
     // KERNEL STACK
     page_table* newkstack = P2V(new->PML4T);
     //Set kernel to new stack
-    newkstack[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE;
+    newkstack[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL;
 
     uintptr_t phys = kstack_alloc();
     new->kernel_stack_top = P2V(phys) + 4095;

@@ -89,21 +89,43 @@ A bar or a framebuffer up there needs a window of its own.
 #define PDT_TO_VIRT(addr)   (((uintptr_t)(addr)) << 21)
 #define PT_TO_VIRT(addr)    (((uintptr_t)(addr)) << 12)
 
-#define STRIP_FLAGS(addr)       (((uintptr_t)addr) & ~PAGE_FLAG_MASK)
-#define GET_FLAGS(addr)        (((uintptr_t)addr) & PAGE_FLAG_MASK)
-#define ADD_FLAGS(addr, flags)   (((uintptr_t)addr) | (flags & PAGE_FLAG_MASK))
+#define STRIP_FLAGS(addr)        (((uintptr_t)(addr)) & ~PAGE_FLAG_MASK)
+#define GET_FLAGS(addr)          (((uintptr_t)(addr)) & PAGE_FLAG_MASK)
+#define ADD_FLAGS(addr, flags)   (((uintptr_t)(addr)) | ((flags) & PAGE_FLAG_MASK))
 
 #define PAGE_FLAG_MASK      0xfff
 
-#define   PAGE_PRESENT        0x001
-#define   PAGE_WRITE          0x002
-#define   PAGE_USER           0x004
-#define   PAGE_WRITETHROUGH   0x008
-#define   PAGE_NOCACHE        0x010
-#define   PAGE_ACCESSED       0x020
-#define   PAGE_DIRTY          0x040
-#define   PAGE_HUGE           0x080
-#define   PAGE_GLOBAL         0x100 
+#define   PAGE_PRESENT          0x001
+#define   PAGE_WRITE            0x002
+#define   PAGE_USER             0x004
+#define   PAGE_WRITETHROUGH     0x008
+#define   PAGE_NOCACHE          0x010
+#define   PAGE_ACCESSED         0x020
+#define   PAGE_DIRTY            0x040
+#define   PAGE_HUGE             0x080
+// PAGE_GLOBAL is always ignored if the page is a PML4T
+// It is also ignored on PDPT and PDT except if the PAGE_HUGE flag is set
+#define   PAGE_GLOBAL           0x100
+
+
+/*
+    CUSTOM
+
+    Balrog OS flags (set after PAGE_GLOBAL as these are available flag bits 9 to 11).
+*/
+
+/*
+ *  Will be used for :
+ *      - user accessible kernel pages :
+ *          - framebuffer accessible from user space (not global but shared)
+ *          - vDSO (Virtual Dynamic Shared Object) kernel's code accessible in ring 3 (e.g. clock get_current_time
+ *              without interrupt).
+ *      - shared libraries : libraries are not loaded at the same address by every process thus marking them
+ *                           global would not clean the TLB of these translation and cause a process to crash
+ *                           or have unexpected behaviour if the content of the shared library's page should
+ *                           be something else.
+ */
+#define   PAGE_SHARED           0x200
 
 /*
 ----------------------------------------------------------------------------------

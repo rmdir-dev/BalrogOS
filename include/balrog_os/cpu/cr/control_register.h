@@ -12,7 +12,7 @@
  *
  * @return Control Register 0 value
  */
-static inline uintptr_t read_cr0()
+static inline __attribute__((always_inline)) uintptr_t read_cr0()
 {
     uintptr_t value;
     asm volatile("mov %%cr0, %0" : "=r"(value));
@@ -39,7 +39,7 @@ static inline uintptr_t read_cr0()
  *
  * @param value
  */
-static inline void write_cr0(uintptr_t value)
+static inline __attribute__((always_inline)) void write_cr0(uintptr_t value)
 {
     asm volatile ("mov %0, %%cr0" :: "r"(value));
 }
@@ -55,7 +55,7 @@ static inline void write_cr0(uintptr_t value)
  *
  * @return Control Register 2 value
  */
-static inline uintptr_t read_cr2()
+static inline __attribute__((always_inline)) uintptr_t read_cr2()
 {
     uintptr_t value;
     asm volatile("mov %%cr2, %0" : "=r"(value));
@@ -83,7 +83,7 @@ static inline uintptr_t read_cr2()
  *
  * @return Control Register 3 value
  */
-static inline uintptr_t read_cr3()
+static inline __attribute__((always_inline)) uintptr_t read_cr3()
 {
     uintptr_t value;
     asm volatile("mov %%cr3, %0" : "=r"(value));
@@ -116,7 +116,7 @@ static inline uintptr_t read_cr3()
  *
  * @param value
  */
-static inline void write_cr3(uintptr_t value)
+static inline __attribute__((always_inline)) void write_cr3(uintptr_t value)
 {
     asm volatile ("mov %0, %%cr3" :: "r"(value));
 }
@@ -130,7 +130,7 @@ static inline void write_cr3(uintptr_t value)
  *
  * @return Control Register 4 value
  */
-static inline uintptr_t read_cr4()
+static inline __attribute__((always_inline)) uintptr_t read_cr4()
 {
     uintptr_t value;
     asm volatile("mov %%cr4, %0" : "=r"(value));
@@ -181,7 +181,7 @@ static inline uintptr_t read_cr4()
  *
  * @param value
  */
-static inline void write_cr4(uintptr_t value)
+static inline __attribute__((always_inline)) void write_cr4(uintptr_t value)
 {
     asm volatile ("mov %0, %%cr4" :: "r"(value));
 }

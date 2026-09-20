@@ -8,7 +8,7 @@
  * @param new_val the new value of said variable.
  * @return uint64_t the old value contained into *addr
  */
-static inline uint64_t xchg(volatile uint64_t* addr, uint64_t new_val)
+static inline __attribute__((always_inline)) uint64_t xchg(volatile uint64_t* addr, uint64_t new_val)
 {
     uint64_t ret = 0;
     asm volatile("lock\n"

@@ -18,7 +18,7 @@ void* _kstack_find_free_pt(uintptr_t* virt_addr)
         if(PDPT[i] == 0)
         {
             PDPT[i] = (uintptr_t)pmm_calloc();
-            PDPT[i] |= PAGE_PRESENT | PAGE_WRITE;
+            PDPT[i] |= PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL;
         }
         page_table* PDT = (void*)P2V(STRIP_FLAGS(PDPT[i]));
         for(size_t j = 0; j < 512; j++)
@@ -26,7 +26,7 @@ void* _kstack_find_free_pt(uintptr_t* virt_addr)
             if(PDT[j] == 0)
             {
                 PDT[j] = (uintptr_t)pmm_calloc();
-                PDT[j] |= PAGE_PRESENT | PAGE_WRITE;
+                PDT[j] |= PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL;
                 *virt_addr |= PML4T_TO_VIRT(511);
                 *virt_addr |= PDPT_TO_VIRT(i);
                 *virt_addr |= PDT_TO_VIRT(j);

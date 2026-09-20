@@ -8,7 +8,7 @@
  * @param port port address
  * @param value value (in byte) to send
  */
-static inline void out_byte(uint16_t port, uint8_t value)
+static inline __attribute__((always_inline)) void out_byte(uint16_t port, uint8_t value)
 {
     /*
     * outb = out byte
@@ -24,7 +24,7 @@ static inline void out_byte(uint16_t port, uint8_t value)
  * @param port port address
  * @return uint8_t value send by the port
  */
-static inline uint8_t in_byte(uint16_t port)
+static inline __attribute__((always_inline)) uint8_t in_byte(uint16_t port)
 {
     uint8_t ret;
     /*
@@ -42,7 +42,7 @@ static inline uint8_t in_byte(uint16_t port)
  * @param port port address
  * @param value value (in word) to send
  */
-static inline void out_word(uint16_t port, uint16_t value)
+static inline __attribute__((always_inline)) void out_word(uint16_t port, uint16_t value)
 {
     /*
     * outw = out word
@@ -58,7 +58,7 @@ static inline void out_word(uint16_t port, uint16_t value)
  * @param port port address
  * @return uint16_t value send by the port
  */
-static inline uint16_t in_word(uint16_t port)
+static inline __attribute__((always_inline)) uint16_t in_word(uint16_t port)
 {
     uint16_t ret;
     /*
@@ -76,7 +76,7 @@ static inline uint16_t in_word(uint16_t port)
  * @param port port address
  * @param value value to send
  */
-static inline void out_dword(uint16_t port, uint32_t value)
+static inline __attribute__((always_inline)) void out_dword(uint16_t port, uint32_t value)
 {
     /*
     * outl = out double word
@@ -92,7 +92,7 @@ static inline void out_dword(uint16_t port, uint32_t value)
  * @param port port address
  * @return uint16_t value send by the port
  */
-static inline uint32_t in_dword(uint16_t port)
+static inline __attribute__((always_inline)) uint32_t in_dword(uint16_t port)
 {
     uint32_t ret;
     /*

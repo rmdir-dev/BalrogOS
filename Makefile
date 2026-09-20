@@ -216,7 +216,8 @@ OPTIMIZATION =
 #	The kernel is linked at 0xFFFFFF8000008000, far out of reach of the
 #	32 bit relocations the small code model emits, so it is built with the
 #	large model. The host gcc used to hide this by defaulting to PIE.
-CODE_MODEL = -mcmodel=large
+#CODE_MODEL = -mcmodel=large
+CODE_MODEL = -mcmodel=kernel
 
 ########################################################
 #	DEBUG
@@ -569,7 +570,7 @@ $(TEMP_DIR)/uefi_layout.h: $(OS_BUILD_DIR)/kernel.elf
 	mkdir -p $(TEMP_DIR)
 	@$(NM) $(OS_BUILD_DIR)/kernel.elf | python3 -c "\
 import sys; \
-base = 0xffffff8000008000; \
+base = 0xffffffff80008000; \
 want = {'LongMode':'LONGMODE','GDT64.Pointer':'GDT64_POINTER','MEMORY_INFO':'MEMORY_INFO','MEMORY_ENTRIES':'MEMORY_ENTRIES'}; \
 found = {}; \
 [found.__setitem__(want[p[2]], int(p[0],16) - base) for p in (l.split() for l in sys.stdin) if len(p)==3 and p[2] in want]; \

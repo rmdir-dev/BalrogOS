@@ -3,20 +3,21 @@
 /*
 ADDRESSES
 */
-#define KERNEL_OFFSET 0xFFFFFF8000000000
+#define KERNEL_MAP_BASE     0xFFFFFF8000000000
+#define KERNEL_TEXT_BASE    0xFFFFFFFF80000000
+
+#define KERNEL_OFFSET       KERNEL_MAP_BASE
 
 /*
 Balrog Memory Map :
     Start                           End                         Size            Use
     -----------------------------------------------------------------------
     0000000000000000    ffffff7fffffffff         255.5TiB       user
-    ffffff8000000000    ffffff8000017fff         95KiB          kernel stack, code
-    ffffff8000018000    ffffff800009fbff         542KiB         kernel logical heap
-    ffffff800009fc00    ffffff80000fffff         385KiB         RESERVED
-    ffffff8000100000    ffffff9fffffffff         128GiB         MEMORY (real size : 128GiB - 1MiB)
+    ffffff8000000000    ffffff9fffffffff         128GiB         MEMORY, the linear window
     ffffffa000000000    ffffffbfffffffff         128GiB         Kernel open files cache
     ffffffc000000000    ffffffdfffffffff         128GiB         Kernel virtual heap
-    ffffffe000000000    ffffffffffffffff         128GiB         Process kernel stack space
+    ffffffe000000000    ffffffff7fffffff         126GiB         Process kernel stack space
+    ffffffff80000000    ffffffffffffffff         2GiB           kernel text, rodata, data, bss and the NOLOAD areas
 
 Balrog Process memory map :
     Start                           End                         Size            Use
@@ -34,19 +35,30 @@ Max Memory size :
 #include <stdint.h>
 
 /*
-addr = 0x101000
-0x101000 & ~0xFFFFFF8000000000
-0x101000 & 7FFFFFFFFF
-= 0x101000
+the text window                                 the linear one
+addr = 0xffffffff80101000                       addr = 0xffffff8000101000
+0xffffffff80101000 - 0xffffffff80000000         0x101000 & ~0xFFFFFF8000000000
+= 0x101000                                      = 0x101000
 */
-#define V2P(addr) ((uintptr_t)addr & ~KERNEL_OFFSET)
+static inline __attribute__((always_inline)) uintptr_t V2P(uintptr_t addr)
+{
+    return addr >= KERNEL_TEXT_BASE ? addr - KERNEL_TEXT_BASE : addr & ~KERNEL_MAP_BASE;
+}
 
 /*
+Physical always goes back to the linear window and not the .text one
+So P2V(V2P(x)) is not equal to x but both are pointing to the same physical
+page as the first 8MiB are mapped in both windows, so both are valid and the same.
+(linux does the same thing).
+
 addr = 0x101000
 0x101000 | 0xFFFFFF8000000000
 = 0xFFFFFF8000101000
 */
-#define P2V(addr) ((uintptr_t)addr | KERNEL_OFFSET)
+static inline __attribute__((always_inline)) uintptr_t P2V(uintptr_t addr)
+{
+    return addr | KERNEL_MAP_BASE;
+}
 
 /*
 P2V is an or, not an addition, so it only holds while the address fits in the

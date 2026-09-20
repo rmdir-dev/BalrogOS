@@ -80,7 +80,7 @@ process* create_process(char* name, uintptr_t addr, uint8_t mode)
     uintptr_t* virt = P2V(proc->PML4T); // Kernel space
     // PAGE_GLOBAL is ignored on PM4T entries, but we use it to quickly ignore
     // it on vmm_free
-    virt[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL;
+    virt[511] = (uintptr_t) vmm_get_kernel_pdpt();
     uint32_t user = mode == 3 ? PAGE_USER : 0;
     proc->uid = 0;
     proc->gid = 0;
@@ -187,11 +187,8 @@ int clean_process(process* proc, uint8_t clean_memory)
 {
     kernel_debug_output(KDB_LVL_VERBOSE, "tasking : cleaning process %d", proc->pid);
 
-    if(clean_memory)
-    {
-        kernel_debug_output(KDB_LVL_VERBOSE, "tasking : cleaning process memory");
-        vmm_clean_page_table(proc->PML4T);
-    }
+    kernel_debug_output(KDB_LVL_VERBOSE, "tasking : cleaning process memory%s", clean_memory ? "" : ", tables only");
+    vmm_clean_page_table(proc->PML4T, !clean_memory);
 
     if(proc->cwd)
     {
@@ -340,7 +337,7 @@ int fork_process(process* proc, interrupt_regs* regs)
     // KERNEL STACK
     page_table* newkstack = P2V(new->PML4T);
     //Set kernel to new stack
-    newkstack[511] = 0x2000 | PAGE_PRESENT | PAGE_WRITE | PAGE_GLOBAL;
+    newkstack[511] = (page_table) vmm_get_kernel_pdpt();
 
     uintptr_t phys = kstack_alloc();
     new->kernel_stack_top = P2V(phys) + 4095;

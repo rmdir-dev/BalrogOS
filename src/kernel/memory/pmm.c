@@ -82,11 +82,10 @@ void pmm_free(void* addr)
 
         refused++;
 
-        if(!said)
+        if((refused & (refused - 1)) == 0)
         {
-            said = 1;
-            kernel_debug_output(KDB_LVL_ERROR, "pmm : 0%p is above the allocation front 0%p, not freed",
-                    addr, next_addr);
+            kernel_debug_output(KDB_LVL_ERROR, "pmm : 0%p is above the allocation front 0%p, not freed, %d so far",
+                    addr, next_addr, refused);
         }
         return;
     }

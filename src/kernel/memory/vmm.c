@@ -8,16 +8,26 @@
 /*
 Contain the physical address of the kernel PML4T
 */
-page_table* KernelPML4T;
+page_table* kernel_PML4T;
 
 // from linkerScript/Kernel.ld
 extern uintptr_t klog_guard_end;
 
 int init_vmm()
 {
-    KernelPML4T = (void*)0x1000;
+    kernel_PML4T = (void*)0x1000;
 
     return 0;
+}
+
+page_table* vmm_get_kernel_pml4t()
+{
+    return kernel_PML4T;
+}
+
+page_table* vmm_get_kernel_pdpt()
+{
+    return (page_table*) ((page_table*) P2V(kernel_PML4T))[511];
 }
 
 /**
@@ -107,7 +117,7 @@ void* vmm_get_page(page_table* PML4T, void* virt_addr)
 {
     if(!PML4T)
     {
-        PML4T = KernelPML4T;
+        PML4T = kernel_PML4T;
     }
     
     page_table* PT = vmm_find_page(PML4T, virt_addr, 0);
@@ -123,7 +133,7 @@ void* vmm_set_page(page_table* PML4T, void* virt_addr, void* phys_addr, uint32_t
 {
     if(!PML4T)
     {
-        PML4T = KernelPML4T;
+        PML4T = kernel_PML4T;
     }
     
     page_table* PT = vmm_find_page(PML4T, virt_addr, 1);
@@ -157,7 +167,7 @@ void vmm_free_page(page_table* PML4T, void* virt_addr)
 {
     if(!PML4T)
     {
-        PML4T = KernelPML4T;
+        PML4T = kernel_PML4T;
     }
 
     page_table* PT = vmm_find_page(PML4T, virt_addr, 1);
@@ -181,7 +191,7 @@ void vmm_free_page(page_table* PML4T, void* virt_addr)
     kernel_debug_output(KDB_LVL_VERBOSE, "vmm : 0%p freed but it was not mapped", virt_addr);
 }
 
-static int __vmm_clean(page_table* table, uint8_t level)
+static int __vmm_clean(page_table* table, uint8_t level, uint8_t table_only)
 {
     page_table* tab = (void*)P2V(STRIP_FLAGS(table));
     
@@ -195,7 +205,11 @@ static int __vmm_clean(page_table* table, uint8_t level)
             // then clean the level below before cleaning it.
             if(level > 1)
             {
-                __vmm_clean((void*)tab[i], level - 1);
+                __vmm_clean((void*)tab[i], level - 1, table_only);
+            }
+            else if (table_only)
+            {
+                continue;
             }
 
             // free the page.
@@ -207,12 +221,12 @@ static int __vmm_clean(page_table* table, uint8_t level)
     return 0;
 }
 
-int vmm_clean_page_table(page_table* PML4T)
+int vmm_clean_page_table(page_table* PML4T, uint8_t tables_only)
 {
     if(!PML4T)
     {
         return -1;
     }
     
-    return __vmm_clean(PML4T, 4);
+    return __vmm_clean(PML4T, 4, tables_only);
 }

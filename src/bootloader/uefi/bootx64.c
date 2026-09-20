@@ -25,8 +25,8 @@ static int uefi_firmware_is_gone = 0;
 
 #define KERNEL_PHYS     0x8000
 #define RAMFS_PHYS      0x10000000
-#define SMAP_PHYS       0x7000
-#define SMAP_COUNT_PHYS 0x6FFE
+#define SMAP_COUNT_PHYS 0x500
+#define SMAP_PHYS       0x600
 #define SMAP_MAX        64
 
 #define FRAMEBUFFER_PHYS  0x7600
@@ -431,16 +431,24 @@ static void __build_page_tables(void)
     uint64_t* pdpt = (uint64_t*) 0x2000;
     uint64_t* pdt = (uint64_t*) 0x3000;
     uint64_t* pt = (uint64_t*) 0x4000;
+    uint64_t* text_pdt = (uint64_t*) 0x6000;
 
-    for(int i = 0; i < 4096 / 8 * 4; i++)
+    /* clean the 0x1000 to 0x7000 */
+    for(int i = 0; i < 4096 / 8 * 6; i++)
     {
         ((uint64_t*) PML4T_PHYS)[i] = 0;
     }
 
     pml4t[0] = 0x2000 | PAGE_PRESENT_RW;
-    pml4t[511] = 0x2000 | PAGE_PRESENT_RW;
+    pml4t[511] = 0x2000 | PAGE_PRESENT_RW | PAGE_GLOBAL_BIT;
     pdpt[0] = 0x3000 | PAGE_PRESENT_RW;
+    pdpt[510] = 0x6000 | PAGE_PRESENT_RW;
     pdt[0] = 0x4000 | PAGE_PRESENT_RW;
+
+    for(uint64_t i = 0; i < 4; i++)
+    {
+        text_pdt[i] = (i * 0x200000) | PAGE_PRESENT_RW | 0x80 | PAGE_GLOBAL_BIT;
+    }
 
     for(uint64_t i = 0; i < 512; i++)
     {

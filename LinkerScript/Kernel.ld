@@ -1,28 +1,28 @@
 ENTRY(_PrepareKernel)
 
-KERNEL_OFFSET = 0xFFFFFF8000000000;
+KERNEL_TEXT_BASE = 0xFFFFFFFF80000000;
 KERNEL_START = 0x8000;
 
 SECTIONS
 {
-  . = KERNEL_START + KERNEL_OFFSET;
+  . = KERNEL_START + KERNEL_TEXT_BASE;
   kernel_start = .;
-  .text : AT(ADDR(.text) - KERNEL_OFFSET)
+  .text : AT(ADDR(.text) - KERNEL_TEXT_BASE)
   {
     *(.multiboot)
     *(.text)
   }
-  .rodata : AT(ADDR(.rodata) - KERNEL_OFFSET)
+  .rodata : AT(ADDR(.rodata) - KERNEL_TEXT_BASE)
   {
     *(.rodata*)
     *(.lrodata*)
   }
-  .data : AT(ADDR(.data) - KERNEL_OFFSET)
+  .data : AT(ADDR(.data) - KERNEL_TEXT_BASE)
   {
     *(.data)
     *(.ldata*)
   }
-  .bss (NOLOAD) : AT(ADDR(.bss) - KERNEL_OFFSET)
+  .bss (NOLOAD) : AT(ADDR(.bss) - KERNEL_TEXT_BASE)
   {
     bss_start = .;
     *(.COMMON)
@@ -35,8 +35,8 @@ SECTIONS
   /*
   kheap in NOLOAD, pmm_reserve this area during init.
   */
-  . = 0x100000 + KERNEL_OFFSET;
-  .kheap (NOLOAD) : AT(ADDR(.kheap) - KERNEL_OFFSET)
+  . = 0x100000 + KERNEL_TEXT_BASE;
+  .kheap (NOLOAD) : AT(ADDR(.kheap) - KERNEL_TEXT_BASE)
   {
     kheap_area = .;
     /* 1MiB Kheap */
@@ -48,7 +48,7 @@ SECTIONS
     kheap_guard_end = .;
   }
 
-  .screen (NOLOAD) : AT(ADDR(.screen) - KERNEL_OFFSET)
+  .screen (NOLOAD) : AT(ADDR(.screen) - KERNEL_TEXT_BASE)
   {
     screen_buffers = .;
     /* FB_BUFFERS_SIZE, and fb_init checks it fits */
@@ -57,7 +57,7 @@ SECTIONS
   }
 
   /* kernel  logs space */
-  .klog (NOLOAD) : AT(ADDR(.klog) - KERNEL_OFFSET) ALIGN(0x10000)
+  .klog (NOLOAD) : AT(ADDR(.klog) - KERNEL_TEXT_BASE) ALIGN(0x10000)
   {
     klog_area = .;
     /* 1MiB Kheap */

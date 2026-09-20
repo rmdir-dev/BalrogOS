@@ -50,7 +50,21 @@ void vmm_free_page(page_table* PML4T, void* virt_addr);
  * @param PML4T 
  * @return int 
  */
-int vmm_clean_page_table(page_table* PML4T);
+int vmm_clean_page_table(page_table* PML4T, uint8_t tables_only);
+
+/**
+ * @brief returns the kernel pml4t
+ *
+ * @return
+ */
+page_table* vmm_get_kernel_pml4t();
+
+/**
+ * @brief returns the kernel pdpt
+ *
+ * @return
+ */
+page_table* vmm_get_kernel_pdpt();
 
 /**
  * @brief drop one page out of the tlb

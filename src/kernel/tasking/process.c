@@ -2,12 +2,17 @@
 #include "klib/data_structure/rbt.h"
 #include <stdlib.h>
 #include "balrog_os/debug/debug_output.h"
-#include "balrog_os/memory/kheap.h"
+#include "balrog_os/memory/vmm.h"
+#include "balrog_os/cpu/cr/control_register.h"
+#include "balrog_os/memory/kstack.h"
+#include "balrog_os/memory/pmm.h"
+#include "klib/data_structure/queue.h"
 
 rbt_tree process_tree;
 rbt_tree sleeper_tree;
 process_list rdy_proc_list = { NULL, 0, NULL};
 extern process* current_running;
+extern queue_t kstack_to_clean;
 
 int init_process()
 {
@@ -120,22 +125,32 @@ static void __proc_kill(process* proc)
     }
 
     _proc_remove_process(proc);
-    uintptr_t proc_addr = (uintptr_t)proc;
 
     // clean_process vmfree proc
     int was_running = proc == current_running;
+    page_table* pml4t = proc->PML4T;
+    uintptr_t* kernel_stack_top = (uintptr_t*) proc->kernel_stack_top;
+
+    if (was_running)
+    {
+        write_cr3((uintptr_t) vmm_get_kernel_pml4t());
+    }
 
     // if proc is not a child then clean it.
     // or if the memory was copied then clean it.
     clean_process(proc, proc->child == 0 || !proc->forked_memory);
-
+    pmm_free(pml4t);
 
     if(was_running)
     {
+        queue_enqueue(&kstack_to_clean, (uint64_t) kernel_stack_top);
         current_running = NULL;
         kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill schedule");
         schedule(0, 0);
+        return;
     }
+
+    kstack_free(kernel_stack_top);
 }
 
 void proc_kill_process(int pid)

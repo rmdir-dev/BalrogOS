@@ -6,14 +6,13 @@
 #include "balrog_os/debug/debug_output.h"
 #include <stddef.h>
 
-extern page_table* KernelPML4T;
-
 void* _kstack_find_free_pt(uintptr_t* virt_addr)
 {
-    page_table* PML4T = (void*)P2V(KernelPML4T);
+    page_table* PML4T = (void*)P2V(vmm_get_kernel_pml4t());
 
     page_table* PDPT = (void*)P2V(STRIP_FLAGS(PML4T[511]));
-    for(size_t i = 384; i < 512; i++)
+    // 510 & 511 are kernel .text
+    for(size_t i = 384; i < 510; i++)
     {
         if(PDPT[i] == 0)
         {
@@ -35,7 +34,7 @@ void* _kstack_find_free_pt(uintptr_t* virt_addr)
         }
     }
 
-    kernel_debug_output(KDB_LVL_ERROR, "kstack : the 128 pdpt entries above 384 are all taken");
+    kernel_debug_output(KDB_LVL_ERROR, "kstack : the 126 pdpt entries above 384 are all taken");
     return 0;
 }
 
@@ -66,7 +65,7 @@ void* kstack_alloc()
 
 void kstack_free(uintptr_t* addr)
 {
-    page_table* PML4T = (void*)P2V(KernelPML4T);
+    page_table* PML4T = (void*)P2V(vmm_get_kernel_pml4t());
     page_table* PDPT = (void*)P2V(STRIP_FLAGS(PML4T[PML4T_OFFSET(addr)]));
     page_table* PDT = (void*)P2V(STRIP_FLAGS(PDPT[PDPT_OFFSET(addr)]));
     page_table* PT = (void*)P2V(STRIP_FLAGS(PDT[PDT_OFFSET(addr)]));
@@ -84,7 +83,7 @@ void kstack_free(uintptr_t* addr)
         }
     }
 
-    if(PDT != 0)
+    if(PDT[PDT_OFFSET(addr)] != 0)
     {
         pmm_free((void*)STRIP_FLAGS(PDT[PDT_OFFSET(addr)]));
         PDT[PDT_OFFSET(addr)] = 0;

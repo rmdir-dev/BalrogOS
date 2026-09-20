@@ -1,6 +1,6 @@
 [bits 16]                       ; switching to 64bit
 
-%define KERNEL_OFFSET 0xFFFFFF8000000000
+%define KERNEL_OFFSET 0xFFFFFFFF80000000
 
 section .text
     global _PrepareKernel
@@ -10,12 +10,14 @@ _PrepareKernel:
     mov [MEMORY_INFO - KERNEL_OFFSET], word ax ; recover memory map
     mov [MEMORY_ENTRIES - KERNEL_OFFSET], word bx
     
-    mov edi, 0x1000 - KERNEL_OFFSET        ; set the destination index to 0x1000
+    mov edi, 0x1000        ; set the destination index to 0x1000
     mov cr3, edi            ; set control register 3 to destination
     xor eax, eax            ; nullify eax
-    mov ecx, 4096           ; set ecx to 4096 (will be use as a counter)
-    rep stosd               ; clear the memory from 0x1000 to 0x5000
-    mov edi, 0x1000 - KERNEL_OFFSET         ; set edi back to 0x1000 (PML4T)
+    mov ecx, 5120           ; set ecx to 5120 (will be use as a counter)
+    rep stosd               ; clear the memory from 0x1000 to 0x6000 only !
+                            ; the e820 count lives at 0x6FFE, the text pdt
+                            ; clears itself below.
+    mov edi, 0x1000         ; set edi back to 0x1000 (PML4T)
     
     ; PAGING                                                    total paging cover 256TiB of memory
     ; PML4T address 0x1000 pointing to PDPT                     each PML4T hold 512GiB / entry total 256TiB
@@ -23,17 +25,18 @@ _PrepareKernel:
     ; PDT   address 0x3000 pointing to PT                       each PDT hold 2MiB / entry total 1024MiB
     ; PT    address 0x4000 pointing to the pages                each PT hold 4kiB / entry total 2MiB
 
-    mov dword [edi], 0x2003 - KERNEL_OFFSET     ; Set the addres of the begining 
+    mov dword [edi], 0x2003     ; Set the addres of the begining 
                                                 ; of PDPT to the first address of PML4T
-    mov edi, 0x2000 - 8 - KERNEL_OFFSET
-    mov dword [edi], 0x2003 - KERNEL_OFFSET     ; set the last PML4T for higher half kernel
-    mov edi, 0x1000 - KERNEL_OFFSET             ; set edi back to 0x1000 (PML4T)
+    mov edi, 0x2000 - 8
+    mov dword [edi], 0x2103     ; set the last PML4T for higher half kernel
+    mov edi, 0x1000             ; set edi back to 0x1000 (PML4T)
                                 ; the two first bytes are the pointer to the next table
-                                ; 2003 3 is for 0b11 = present and writable
+                                ; 2103 3 is for 0b11 = present and writable
+                                ; 100 is for page global
     add edi, 0x1000             ; add 0x1000 to edi so now edi point to 0x2000
-    mov dword [edi], 0x3003 - KERNEL_OFFSET     ; Set the addres of the begining of PDPT to PDT
+    mov dword [edi], 0x3003     ; Set the addres of the begining of PDPT to PDT
     add edi, 0x1000             ; add 0x1000 to edi so now edi point to 0x3000
-    mov dword [edi], 0x4003 - KERNEL_OFFSET     ; Set the addres of the begining of PDT to PT
+    mov dword [edi], 0x4003     ; Set the addres of the begining of PDT to PT
     add edi, 0x1000             ; add 0x1000 to edi so now edi point to 0x4000
     
 
@@ -56,7 +59,7 @@ _PrepareKernel:
     ; that happens before init_vmm has built anything of its own, so the
     ; window has to be wider than the image.
     ; bit 7 is PS, which makes the entry a 2MiB page rather than a pointer.
-    mov edi, 0x3000 - KERNEL_OFFSET + 8 ; pdt entry 1, the first one past the pt
+    mov edi, 0x3000 + 8 ; pdt entry 1, the first one past the pt
     mov dword ebx, 0x00200183   ; 0x200000, present, writable, global, and PS
     mov ecx, 3                  ; three entries, so up to 0x800000
 
@@ -66,6 +69,29 @@ _PrepareKernel:
     add ebx, 0x200000           ; walk one 2MiB page forward
     add edi, 8                  ; and one entry forward
     loop .SetHugeEntry
+
+    ; KERNEL_TEXT_BASE is 0xFFFFFFFF80000000, pdpt entry 510 of the same
+    ; PML4T[511] slot. bootx64.c builds the very same window, keep them equal.
+    mov edi, 0x2000 + 510 * 8   ; pdpt entry 510
+    mov dword [edi], 0x6003     ; the text pdt at 0x6000
+
+    ; the rep stosd above stopped at 0x6000, so this one clears itself
+    mov edi, 0x6000             ; the text pdt
+    xor eax, eax                ; nullify eax
+    mov ecx, 1024               ; 512 entries of 8 bytes
+    rep stosd
+
+    ; four 2MiB pages cover the first 8MiB, where the image sits
+    mov edi, 0x6000 ; the text pdt
+    mov dword ebx, 0x00000183   ; 0x0, present, writable, global, and PS
+    mov ecx, 4                  ; four entries, so up to 0x800000
+
+.SetTextEntry:
+    mov dword [edi], ebx        ; the high half stays zero, the rep stosd just
+                                ; above cleared the whole table
+    add ebx, 0x200000           ; walk one 2MiB page forward
+    add edi, 8                  ; and one entry forward
+    loop .SetTextEntry
 
     mov eax, cr4                ; set the cr4 register to eax
     or eax, 1 << 5              ; set the PAE-bit to 1

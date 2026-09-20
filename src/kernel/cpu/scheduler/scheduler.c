@@ -12,8 +12,12 @@
 #include "klib/io/kprint.h"
 #include <stddef.h>
 
+#include "balrog_os/memory/kstack.h"
+#include "klib/data_structure/queue.h"
+
 extern process_list rdy_proc_list;
 process* current_running = NULL;
+queue_t kstack_to_clean;
 
 extern tss_entry tss;
 
@@ -103,6 +107,18 @@ void schedule(size_t tick, uint16_t ms)
 
     if(current_running != NULL)
     {
+        if (!queue_empty(&kstack_to_clean))
+        {
+            do
+            {
+                uintptr_t kstack;
+                if (queue_dequeue(&kstack_to_clean, &kstack) != -1)
+                {
+                    kstack_free((uintptr_t*) kstack);
+                }
+            } while (!queue_empty(&kstack_to_clean));
+        }
+
         __round_robin();
         return;
     }
@@ -130,6 +146,7 @@ int init_scheduler()
 
     // TODO set the pit speed faster to 10 000 or more
     init_pit(&schedule);
+    queue_init(&kstack_to_clean);
 
     return 0;
 }

@@ -7,6 +7,7 @@
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/debug/klog.h"
 #include "balrog_os/drivers/serial/serial.h"
+#include "balrog_os/memory/kheap.h"
 
 static size_t __int_to_string(unsigned long val, uint8_t base, char* str, uint8_t isSigned)
 {
@@ -53,7 +54,7 @@ static size_t __int_to_string(unsigned long val, uint8_t base, char* str, uint8_
 
 extern int debug_mode;
 
-static int __print_string(const char* str, size_t size, enum klog_logging_level log_level)
+int __print_string(const char* str, size_t size, enum klog_logging_level log_level)
 {
     if (log_level == KDB_NONE || log_level >= debug_mode)
     {
@@ -73,16 +74,29 @@ static int __print_data(const char* str, size_t size, size_t maxsize, enum klog_
     return __print_string(str, size, log_level);
 }
 
-int __kernel_print(const char* format, va_list parameters, enum klog_logging_level log_level)
+static size_t __sprint_data(char* out, size_t pos, const char* str, size_t size, size_t maxsize)
 {
-    int written = 0;
+    for(size_t i = 0; i < size && pos + 1 < maxsize; i++)
+    {
+        out[pos++] = str[i];
+    }
 
+    return pos;
+}
+
+int __kernel_sprint(char* out, size_t maxsize, const char* format, va_list parameters)
+{
+    size_t pos = 0;
     size_t index = 0;
     size_t base_index = 0;
 
+    if (maxsize == 0)
+    {
+        return 0;
+    }
+
     while(format[index] != 0)
     {
-        size_t maxsize = INT_MAX - written;
         size_t length = 0;
 
         if(format[index] != '%')
@@ -92,9 +106,11 @@ int __kernel_print(const char* format, va_list parameters, enum klog_logging_lev
                 index++;
                 length++;
             }
-            __print_data(&format[base_index], length, maxsize, log_level);
+
+            pos = __sprint_data(out, pos, &format[base_index], length, maxsize);
         } else
         {
+            char tmp_str[128];
             index++;
 
             switch (format[index])
@@ -102,87 +118,80 @@ int __kernel_print(const char* format, va_list parameters, enum klog_logging_lev
             case 'b':
                 {
                     long nbr = va_arg(parameters, long);
-                    __print_string("b", 1, log_level);
-                    char str[128];
-                    length = __int_to_string(nbr, 2, str, 0);
-                    __print_data(str, length, maxsize, log_level);
+                    pos = __sprint_data(out, pos, "b", 1, maxsize);
+                    length = __int_to_string(nbr, 2, tmp_str, 0);
+                    pos = __sprint_data(out, pos, tmp_str, length, maxsize);
                     index++;
                 }
                 break;
             case 'd':
                 {
+                    int nbr = va_arg(parameters, int);
+                    length = __int_to_string(nbr, 10, tmp_str, 1);
+                    pos = __sprint_data(out, pos, tmp_str, length, maxsize);
+                    index++;
+                }
+                break;
+            case 'l':
+                {
                     long nbr = va_arg(parameters, long);
-                    char str[128];
-                    length = __int_to_string(nbr, 10, str, 1);
-                    __print_data(str, length, maxsize, log_level);
+                    length = __int_to_string(nbr, 10, tmp_str, 1);
+                    pos = __sprint_data(out, pos, tmp_str, length, maxsize);
                     index++;
                 }
                 break;
             case 'u':
                 {
                     long nbr = va_arg(parameters, unsigned long);
-                    char str[128];
-                    length = __int_to_string(nbr, 10, str, 0);
-                    __print_data(str, length, maxsize, log_level);
+                    length = __int_to_string(nbr, 10, tmp_str, 0);
+                    pos = __sprint_data(out, pos, tmp_str, length, maxsize);
                     index++;
                 }
                 break;
             case 'x': case 'p':
                 {
                     unsigned long nbr = va_arg(parameters, unsigned long);
-                    __print_string("x", 1, log_level);
-                    char str[128];
-                    length = __int_to_string(nbr, 16, str, 0);
-                    __print_data(str, length, maxsize, log_level);
+                    pos = __sprint_data(out, pos, "x", 1, maxsize);
+                    length = __int_to_string(nbr, 16, tmp_str, 0);
+                    pos = __sprint_data(out, pos, tmp_str, length, maxsize);
                     index++;
                 }
                 break;
 
             case 'c':
-                length = 1;
                 char c = (char) va_arg(parameters, int);
-                __print_data(&c, 1, maxsize, log_level);
+                pos = __sprint_data(out, pos, &c, 1, maxsize);
                 index++;
                 break;
             case 's':
                 {
-                    const char* str = va_arg(parameters, const char*);
-                    length = strlen(str);
-                    __print_data(str, length, maxsize, log_level);
+                    const char* arg = va_arg(parameters, const char*);
+                    pos = __sprint_data(out, pos, arg, strlen(arg), maxsize);
                     index++;
                 }
                 break;
 
             default:
-                length = 1;
-                __print_string("%", length, log_level);
+                pos = __sprint_data(out, pos, "%", 1, maxsize);
                 break;
             }
         }
         base_index = index;
-        written += length;
     }
 
-    return written;
-}
+    out[pos] = 0;
 
-int kdbprint(enum klog_logging_level level, const char* __restrict format, ...)
-{
-    va_list parameters;
-    va_start(parameters, format);
-    __kernel_print(format, parameters, level);
-    va_end(parameters);
-
-    // Must return 0, else it breaks debug_output.h macros !
-    return 0;
+    return pos;
 }
 
 int kprint(const char* __restrict format, ...)
 {
     va_list parameters;
     va_start(parameters, format);
-    int ret = __kernel_print(format, parameters, KDB_NONE);
+    char str[512];
+    int size = __kernel_sprint(str, 512, format, parameters);
+    __print_string(str, size, KDB_NONE);
     va_end(parameters);
 
-    return ret;
+    return size;
 }

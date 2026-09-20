@@ -29,7 +29,7 @@ make tools
 For UEFI :
 
 ```shell
-make kernel esp                                                                                                                                                          
+make kernel esp
 make run_uefi
 ```
 

@@ -90,7 +90,7 @@ void initialize_kernel(void* SMAP, void* size)
     fb_claim_memory();
     /*    CPU    */
     int ret_status = init_cpu_info();
-    KERNEL_LOG_ASSERT(ret_status, "CPU identification : ", "done", "not available");
+    KERNEL_LOG_RESULT(ret_status, "CPU identification : ", "done", "not available");
 
     /*    GDT and TSS    */
     KERNEL_LOG_ASSERT(init_gdt(), "GDT and TSS : ", "done", "not initialized");
@@ -114,7 +114,7 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    Kernel Heap     */
     ret_status = init_kheap();
-    KERNEL_LOG_ASSERT(ret_status, "Kernel logical heap : ", "done", "not initialized");
+    KERNEL_LOG_RESULT(ret_status, "Kernel logical heap : ", "done", "not initialized");
 
     /*    Virtual Memory  */
     KERNEL_LOG_ASSERT(init_vmm(), "Virtual memory : ", "done", "not initialized");
@@ -122,11 +122,11 @@ void initialize_kernel(void* SMAP, void* size)
     /*    Physical Memory */
     pmm_disable_alloc_logs();
     ret_status = init_pmm(SMAPinfo, SMAPsize);
-    KERNEL_LOG_ASSERT(ret_status, "Physical memory : ", "done", "not initialized");
+    KERNEL_LOG_RESULT(ret_status, "Physical memory : ", "done", "not initialized");
 
     /*    Kernel Heap    */
     ret_status = init_vmheap();
-    KERNEL_LOG_ASSERT(ret_status, "Kernel virtual heap : ", "done", "not initialized");
+    KERNEL_LOG_RESULT(ret_status, "Kernel virtual heap : ", "done", "not initialized");
     pmm_enable_alloc_logs();
 
     /*    RTC            */
@@ -136,16 +136,16 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_ASSERT(init_klog(), "klog : ", "done", "not initialized");
 
     /*    PSTORE        */
-    int pstore_ret = init_pstore();
-    KERNEL_LOG_ASSERT(pstore_ret, "PSTORE : ", "done", "not initialized");
+    ret_status = init_pstore();
+    KERNEL_LOG_RESULT(ret_status, "PSTORE : ", "done", "not initialized");
 
     /*    PCI BUS        */
     ret_status = init_pci();
-    KERNEL_LOG_ASSERT(ret_status, "PCI bus : ", "done", "not initialized");
+    KERNEL_LOG_RESULT(ret_status, "PCI bus : ", "done", "not initialized");
 
     /*    SCHEDULER      */
     ret_status = init_scheduler();
-    KERNEL_LOG_ASSERT(ret_status, "CPU scheduler : ", "done", "not initialized");
+    KERNEL_LOG_RESULT(ret_status, "CPU scheduler : ", "done", "not initialized");
 
     /*    PROCESS        */
     KERNEL_LOG_ASSERT(init_process(), "Process table : ", "done", "not initialized");
@@ -162,14 +162,14 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*    USB           */
     ret_status = init_xhci();
-    KERNEL_LOG_ASSERT(ret_status, "XHCI controller : ", "done", "not found");
+    KERNEL_LOG_RESULT(ret_status, "XHCI controller : ", "done", "not found");
 
     /*    KEYBOARD       */
     KERNEL_LOG_ASSERT(init_keyboard(), "Keyboard : ", "done", "not initialized");
 
     /*    FILE SYSTEM    */
     ret_status = init_file_system();
-    KERNEL_LOG_ASSERT(ret_status, "File system : ", "done", "not mounted");
+    KERNEL_LOG_RESULT(ret_status, "File system : ", "done", "not mounted");
 
     /*    USER MANAGER   */
     KERNEL_LOG_ASSERT(init_user_manager(), "User manager : ", "done", "not initialized");

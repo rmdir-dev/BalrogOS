@@ -8,17 +8,21 @@
 #include "balrog_os/drivers/serial/serial.h"
 #include "balrog_os/cpu/acpi/acpi.h"
 #include "balrog_os/debug/klog.h"
+#include "balrog_os/memory/kheap.h"
 
-#define _KBD_VERBOSE_MSG    "\e[0;91mVERBOSE\e[0m : "
-#define _KBD_INFO_MSG       "\e[0;97mINFO \e[0m : "
-#define _KDB_WARNING_MSG    "\e[0;96mWARNING\e[0m : "
-#define _KBD_ERROR_MSG      "\e[0;96mERROR\e[0m : "
-#define _KBD_CRITICAL_MSG   "\e[0;94mCRITICAL\e[0m : "
-#define _KBD_FATAL_MSG      "\e[0;94mFATAL\e[0m : "
+#define _KDB_VERBOSE_MSG    "\e[0;97m[\e[0;90mVERBOSE \e[0m] "
+#define _KDB_INFO_MSG       "\e[0;97m[\e[0;97m  INFO  \e[0m] "
+#define _KDB_WARNING_MSG    "\e[0;97m[\e[0;96mWARNING \e[0m] "
+#define _KDB_ERROR_MSG      "\e[0;97m[\e[0;94m ERROR  \e[0m] "
+#define _KDB_CRITICAL_MSG   "\e[0;97m[\e[0;34mCRITICAL\e[0m] "
+#define _KDB_FATAL_MSG      "\e[0;97m[\e[0;96m\e[0;44m FATAL  \e[0m] "
+
+#define KDB_LINE_MAX 512
 
 int debug_mode = KDB_DEFAULT_LVL;
 
-extern int __kernel_print(const char* format, va_list parameters, enum klog_logging_level log_level);
+extern int __kernel_sprint(char* out, size_t maxsize, const char* format, va_list parameters);
+extern int __print_string(const char* str, size_t size, enum klog_logging_level log_level);
 
 void __kernel_debug_output(enum klog_logging_level level, int next_line, const char* __restrict format, ...)
 {
@@ -27,43 +31,44 @@ void __kernel_debug_output(enum klog_logging_level level, int next_line, const c
 
     switch (level) {
         case KDB_LVL_VERBOSE:
-            message = _KBD_VERBOSE_MSG;
+            message = _KDB_VERBOSE_MSG;
             break;
         case KDB_LVL_INFO:
-            message = _KBD_INFO_MSG;
+            message = _KDB_INFO_MSG;
             break;
         case KDB_LVL_WARNING:
             message = _KDB_WARNING_MSG;
             break;
         case KDB_LVL_ERROR:
-            message = _KBD_ERROR_MSG;
+            message = _KDB_ERROR_MSG;
             break;
         case KDB_LVL_CRITICAL:
-            message = _KBD_CRITICAL_MSG;
+            message = _KDB_CRITICAL_MSG;
             break;
         case KDB_LVL_FATAL:
-            message = _KBD_FATAL_MSG;
+            message = _KDB_FATAL_MSG;
             break;
     }
 
-    // force print with critical.
-    __kernel_print(message, 0, debug_only ? level : KDB_LVL_CRITICAL);
+    char str[KDB_LINE_MAX];
+    int pos = __kernel_sprint(str, KDB_LINE_MAX, message, 0);
     va_list parameters;
     va_start(parameters, format);
-    __kernel_print(format, parameters, level);
+    pos += __kernel_sprint(str + pos, KDB_LINE_MAX - pos, format, parameters);
     va_end(parameters);
 
     if (next_line != 0)
     {
-        __kernel_print("\n", 0, debug_only ? level : KDB_LVL_CRITICAL);
+        pos += __kernel_sprint(str + pos, KDB_LINE_MAX - pos, "\n", 0);
     }
+
+    __print_string(str, pos, level);
 
     if (level == KDB_LVL_FATAL)
     {
         // force
-        __kernel_print(message, 0, KDB_LVL_FATAL);
-        __kernel_print("kdb : fatal error rebooting system !", 0, KDB_LVL_FATAL);
-        __kernel_print("\n", 0, KDB_LVL_FATAL);
+        const char* fatal_msg = "FATAL ERROR: kdb : fatal error rebooting system !";
+        __print_string(fatal_msg, strlen(fatal_msg), KDB_LVL_FATAL);
         // force flush
         klog_force_flush_buffers();
 

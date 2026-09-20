@@ -26,7 +26,7 @@ void proc_insert_to_ready_queue(process* proc)
     {
         if(rdy_proc_list.tail != NULL)
         {
-            while(1){}
+            kernel_debug_fatal("tasking : the ready list has a tail but no head");
         }
         rdy_proc_list.head = proc;
         rdy_proc_list.tail = proc;

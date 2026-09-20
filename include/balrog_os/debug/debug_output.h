@@ -15,7 +15,7 @@
 #define KERNEL_LOG_INFO(...) kprint(_KERNEL_LOG_INFO_MSG); kprint(__VA_ARGS__); kprint("\n")
 #define KERNEL_LOG_OK(...) kprint(_KERNEL_LOG_OK_MSG); kprint(__VA_ARGS__); kprint("\n")
 #define KERNEL_LOG_FAIL(...) kprint(_KERNEL_LOG_FAILURE_MSG); kprint(__VA_ARGS__); kprint("\n")
-#define KERNEL_LOG_FATAL(...) kprint(_KERNEL_LOG_FATAL_MSG); kprint(__VA_ARGS__); kprint("\n"); while(1){}
+#define KERNEL_LOG_FATAL(...) kprint(_KERNEL_LOG_FATAL_MSG); kernel_debug_fatal(__VA_ARGS__)
 #define KERNEL_LOG(...) kprint(__VA_ARGS__); kprint("\n")
 
 #define _KERNEL_LOG_RESET_LINE   "\r\e[K" // Reset the line with \r -> rewrite the line
@@ -64,45 +64,18 @@ int kdbprint(enum klog_logging_level level, const char* __restrict format, ...);
 
 #ifdef KDB_DEBUG
 
-#define kernel_debug_output(level, ...) \
-    do { \
-        if(__kernel_debug_output(level)) { \
-            kprint(__VA_ARGS__); \
-            kprint("\n"); \
-        } else { \
-            kdbprint(level, __VA_ARGS__); \
-            kdbprint(level, "\n"); \
-        }\
-    } while(0)
-#define kernel_debug_output_no_ln(level, ...) \
-    do { \
-        if(__kernel_debug_output(level)) { \
-            kprint(__VA_ARGS__); \
-        } else { \
-            kdbprint(level, __VA_ARGS__); \
-        }\
-    } while(0)
+#define kernel_debug_output(level, ...)         __kernel_debug_output(level, 1, __VA_ARGS__)
+#define kernel_debug_output_no_ln(level, ...)   __kernel_debug_output(level, 0, __VA_ARGS__)
+#define kernel_debug_fatal(...)                 __kernel_debug_output(KDB_LVL_FATAL, 1, __VA_ARGS__)
 
 #else
 
-#define kernel_debug_output(level, ...) \
-      do { \
-          if((level) == KDB_LVL_CRITICAL) \
-          { \
-              __kernel_debug_output(level); kprint(__VA_ARGS__); kprint("\n"); \
-          } \
-      } while(0)
-
-#define kernel_debug_output_no_ln(level, ...) \
-      do { \
-          if((level) == KDB_LVL_CRITICAL) \
-          { \
-              __kernel_debug_output(level); kprint(__VA_ARGS__); \
-          } \
-      } while(0)
+#define kernel_debug_output(level, ...) if((level) >= KDB_LVL_CRITICAL && __kernel_debug_output(level, 1, __VA_ARGS__)) {}
+#define kernel_debug_output_no_ln(level, ...) if((level) >= KDB_LVL_CRITICAL && __kernel_debug_output(level, 0, __VA_ARGS__)) {}
+#define kernel_debug_fatal(...)                 __kernel_debug_output(KDB_LVL_FATAL, 1, __VA_ARGS__)
 
 #endif
 
-int __kernel_debug_output(enum klog_logging_level level);
+void __kernel_debug_output(enum klog_logging_level level, int next_line, const char* __restrict format, ...);
 
 void set_debug_mode(int mode);

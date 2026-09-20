@@ -130,7 +130,7 @@ interrupt_regs* kernel_interrupt_handler(interrupt_regs* stack_frame)
             return stack_frame;
         }
 
-        while(1){}
+        kernel_debug_fatal("interrupt %d has no handler", stack_frame->interrupt_no);
     }
     /* execute ISR */
     int_handlers[stack_frame->interrupt_no](stack_frame);

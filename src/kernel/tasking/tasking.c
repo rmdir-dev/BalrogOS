@@ -474,6 +474,11 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
         if(!proc->cwd) {
             user_data* user = usm_get_user_data(proc->uid);
+            if (user == NULL)
+            {
+                kernel_debug_output(KDB_LVL_ERROR, "tasking : failed to get current user data");
+                return -1;
+            }
             proc->cwd = vmalloc(strlen(user->home) + 1);
             memcpy(proc->cwd, user->home, strlen(user->home) + 1);
         }

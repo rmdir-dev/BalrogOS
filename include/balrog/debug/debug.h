@@ -10,6 +10,7 @@ enum klog_logging_level
     KDB_LVL_WARNING     = 0x03,
     KDB_LVL_ERROR       = 0x04,
     KDB_LVL_CRITICAL    = 0x05,
+    KDB_LVL_FATAL       = 0x06,
     KDB_NONE            = 0x10,
 };
 

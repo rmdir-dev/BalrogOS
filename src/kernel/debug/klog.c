@@ -355,12 +355,16 @@ void klog_force_flush_buffers()
 
         klog_debug_device_t* dbg_dev = handler->device;
         size_t unselected_buffer_index = dbg_dev->selected_buffer == 0 ? 1 : 0;
+
         if (dbg_dev->buffers[unselected_buffer_index].require_flush)
         {
             __klog_flush(handler, unselected_buffer_index);
         }
+
         __klog_flush(handler, dbg_dev->selected_buffer);
+        handler->disabled = 1;
     }
+    kmutex_unlock(&klog_flush_lock);
 }
 
 void wormtongue()

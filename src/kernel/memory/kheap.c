@@ -80,10 +80,8 @@ void kfree(void* ptr)
 
     if(!block->_is_mmapped)
     {
-        kernel_debug_output(KDB_LVL_ERROR, "double kfree() 0%p", block);
-        while(1)
-        {
-        }
+        kernel_debug_output(KDB_LVL_CRITICAL, "double kfree() 0%p from 0%p", block, __builtin_return_address(0));
+        return;
     }
 
     heap_free(block, next_block, kheap_end, (uintptr_t*)&kfirst_free, kheap_end - kheap_start);

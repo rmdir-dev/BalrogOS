@@ -15,6 +15,8 @@ acpi_rsdt_t* rsdt = 0;
 
 static int acpi_is_up = 0;
 
+#define ACPI_8042_WAIT      100000
+
 
 // source : https://wiki.osdev.org/RSDT#Checksum
 int __acpi_rsdp_checksum(acpi_xsdp_t *candidate)
@@ -182,7 +184,7 @@ void acpi_reboot()
     }
 
     // wait
-    while(in_byte(0x64) & 0x02)
+    for(uint32_t i = 0; i < ACPI_8042_WAIT && (in_byte(0x64) & 0x02); i++)
     {
     }
 

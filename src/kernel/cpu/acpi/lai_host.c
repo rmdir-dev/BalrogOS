@@ -176,11 +176,8 @@ void laihost_log(int level, const char* msg)
 
 void laihost_panic(const char* msg)
 {
-    kernel_debug_output(KDB_LVL_CRITICAL, "lai panic : %s", msg);
-
-    while(1)
-    {
-    }
+    kernel_debug_fatal("lai panic : %s", msg);
+    __builtin_unreachable();
 }
 
 /*

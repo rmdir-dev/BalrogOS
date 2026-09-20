@@ -183,10 +183,8 @@ void vmfree(void* ptr)
 
     if(!block->_is_mmapped)
     {
-        kernel_debug_output(KDB_LVL_ERROR, "double vmfree() 0%p", block);
-        while(1)
-        {
-        }
+        kernel_debug_output(KDB_LVL_CRITICAL, "double vmfree() 0%p from 0%p", block, __builtin_return_address(0));
+        return;
     }
 
     //kernel_debug_output(KDB_LVL_VERBOSE, "vm free c %d start 0%p -> 0%p", free_count, block, first_free);

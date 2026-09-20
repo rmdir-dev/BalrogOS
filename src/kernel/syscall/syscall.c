@@ -3,6 +3,7 @@
 #include "balrog/debug/debug.h"
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/tasking/tasking.h"
+#include "balrog_os/tasking/process.h"
 
 extern process* current_running;
 
@@ -86,14 +87,16 @@ static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
     {
         kernel_debug_output(KDB_LVL_CRITICAL, "syscall %d is out of the table, pid %d",
                 stack_frame->rax, current_running->pid);
-        while(1) {}
+
+        proc_kill_process(current_running->pid);
         return stack_frame;
     }
 
     if(!syscall[stack_frame->rax])
     {
-        kernel_debug_output(KDB_LVL_CRITICAL, "Unknown syscall %d\n", stack_frame->rax);
-        while(1) {}
+        kernel_debug_output(KDB_LVL_CRITICAL, "Unknown syscall %d", stack_frame->rax);
+
+        proc_kill_process(current_running->pid);
         return stack_frame;
     }
 

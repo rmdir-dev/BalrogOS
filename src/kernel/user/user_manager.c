@@ -22,8 +22,7 @@ user_data* usm_get_user_data(uint32_t uid) {
     rbt_node* node = rbt_search(&user_tree, uid);
 
     if(node == NULL) {
-        kernel_debug_output(KDB_LVL_ERROR, "user does not exist !");
-        while(1){}
+        return NULL;
     }
 
     return node->value;

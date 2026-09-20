@@ -382,8 +382,7 @@ int init_file_system()
     if(__scan_devices_and_initramdisk() != 0)
     {
         kmutex_unlock(&boot_dev.lock);
-        KERNEL_LOG_FAIL("file system : No suitable drive found!");
-        while(1){}
+        kernel_debug_fatal("file system : No suitable drive found!");
     }
 
     kernel_debug_output(KDB_LVL_INFO, "file system : loading boot device from configuration");

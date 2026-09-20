@@ -96,7 +96,7 @@ static void __round_robin(process* current_running)
     __resume(current_running);
 }
 
-void schedule(size_t tick, uint16_t ms)
+void gothmog_schedule(size_t tick, uint16_t ms)
 {
     if(rdy_proc_list.head == NULL)
     {
@@ -147,13 +147,13 @@ void schedule(size_t tick, uint16_t ms)
 
 int init_scheduler()
 {
-    if(lapic_timer_init(SCHEDULER_HZ, &schedule) == 0)
+    if(lapic_timer_init(SCHEDULER_HZ, &gothmog_schedule) == 0)
     {
         return 0;
     }
 
     // TODO set the pit speed faster to 10 000 or more
-    init_pit(&schedule);
+    init_pit(&gothmog_schedule);
     queue_init(&kstack_to_clean);
 
     return 0;

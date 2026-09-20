@@ -52,6 +52,8 @@ init:
     mov [BOOT_DRIVE], dl    ; the bios store our boot drive id into dl
                             ; so we store it into BOOT_DRIVE to be able to use it.
 
+    PrintStringNextLine UTUMNO_MSG
+
     mov dl, [BOOT_DRIVE]    ; put the boot drive into dl, to say we want to read it.
     mov dh, STAGE2_SECTORS  ; we want to read STAGE2_SECTORS sectors from it
                             ; 16 * 512B = 8KiB (the value lives in layout.inc)
@@ -86,6 +88,9 @@ init:
 
 %include "src/bootloader/bios/io/bios/print.asm"
 %include "src/bootloader/bios/io/bios/disk.asm"
+
+UTUMNO_MSG:
+    db "Starting Utumno BIOS",0
 
 BOOT_DRIVE:
     db 0

@@ -4,6 +4,9 @@
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/memory/kheap.h"
 #include "balrog_os/memory/pmm.h"
+#include "balrog_os/cpu/pit/pit.h"
+#include "balrog_os/cpu/state/cpu_state.h"
+#include "balrog_os/tasking/proc_sleep.h"
 #include "klib/data_structure/list.h"
 #include "klib/data_structure/vector.h"
 
@@ -11,13 +14,15 @@
 /*
 TODO :
 - wormtongue :
-    - clear the disabled handlers
-    - flush logs overtime on its own thread and thus avoiding auto flushing on running threads
+    - clear the disabled handlers : done
+    - flush logs overtime on its own thread and thus avoiding auto flushing on running threads : done
     - compress the logs
  */
 
 // #define MAX_BUFFER_SIZE (PAGE_SIZE * 16)    // 64KiB
 #define MAX_BUFFER_SIZE (PAGE_SIZE * 16 * 8)    // 512KiB
+
+#define WORMTONGUE_PERIOD_MS        200
 
 typedef struct __klog_device_buffer_t
 {
@@ -256,8 +261,8 @@ int klog_register_fs_device(fs_device_t* device, enum klog_logging_level log_lev
 
     if (!device_handler->device->buffers[0].buffer)
     {
-        vector_pop(&klog_callbacks_vector, klog_callbacks_vector.current_size -1, device_handler);
         vmfree(device_handler->device);
+        vector_pop(&klog_callbacks_vector, klog_callbacks_vector.current_size -1, &klog_callback);
         return -1;
     }
 
@@ -270,7 +275,7 @@ int klog_register_fs_device(fs_device_t* device, enum klog_logging_level log_lev
     {
         vmfree(device_handler->device->buffers[0].buffer);
         vmfree(device_handler->device);
-        vector_pop(&klog_callbacks_vector, klog_callbacks_vector.current_size -1, device_handler);
+        vector_pop(&klog_callbacks_vector, klog_callbacks_vector.current_size -1, &klog_callback);
         return -1;
     }
 
@@ -375,6 +380,22 @@ void wormtongue()
         {
             klog_handler_t* handler = vector_get(&klog_callbacks_vector, i);
 
+            if (handler->disabled)
+            {
+                klog_handler_t dead = {};
+
+                vector_pop(&klog_callbacks_vector, i, &dead);
+
+                if (dead.device)
+                {
+                    vmfree(dead.device->buffers[0].buffer);
+                    vmfree(dead.device->buffers[1].buffer);
+                    vmfree(dead.device);
+                }
+
+                break;
+            }
+
             if (!handler->device)
             {
                 continue;
@@ -390,6 +411,11 @@ void wormtongue()
                 kmutex_unlock(&klog_flush_lock);
             }
         }
-        // TODO : add sleep
+
+        timespec delay = { 0, MS_TO_TICK(WORMTONGUE_PERIOD_MS) };
+        timespec wake_at = { 0, 0 };
+
+        get_relative_time(&delay, &wake_at);
+        sleep(&wake_at, get_current_process());
     }
 }

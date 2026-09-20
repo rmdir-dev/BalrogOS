@@ -4,6 +4,8 @@
 #include "balrog/time/time.h"
 #include "balrog_os/cpu/interrupts/interrupt.h"
 
+#define MS_TO_TICK(ms)              ((ms) / 10)
+
 typedef void (*pit_event)(size_t tick, uint16_t ms);
 
 /**
@@ -14,6 +16,8 @@ typedef void (*pit_event)(size_t tick, uint16_t ms);
 void init_pit(pit_event scheduler);
 
 void get_relative_time(timespec* time, timespec* relative_time);
+
+void get_current_time(timespec* time);
 
 /**
  * @brief compare if the time specified is before the current time

@@ -9,8 +9,9 @@
 
 
 #define FREQUENCY 100
-static unsigned long timer_ticks = 0;
-static unsigned char timer_ms = 0;
+// written by intterupts and read in .text, volatile to make sure it is written properly
+static volatile unsigned long timer_ticks = 0;
+static volatile unsigned char timer_ms = 0;
 static pit_event scheduler_event = NULL;
 extern void wake_up(size_t tick, uint16_t ms);
 
@@ -81,6 +82,14 @@ void get_relative_time(timespec* time, timespec* relative_time)
         relative_time->sec += 1;
         relative_time->msec = relative_time->msec % FREQUENCY;
     }
+}
+
+void get_current_time(timespec* time)
+{
+    do {
+        time->sec = timer_ticks;
+        time->msec = timer_ms;
+    } while(time->sec != timer_ticks);
 }
 
 int pit_compare(timespec* time) {

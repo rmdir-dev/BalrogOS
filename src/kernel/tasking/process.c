@@ -51,7 +51,7 @@ void proc_insert_to_ready_queue(process* proc)
     proc->state = PROCESS_STATE_READY;
 }
 
-extern void schedule(size_t tick, uint16_t ms);
+extern void gothmog_schedule(size_t tick, uint16_t ms);
 
 static int __proc_transfert_to_wait(process* proc)
 {
@@ -147,7 +147,7 @@ static void __proc_kill(process* proc)
         current_running = NULL;
         set_current_process(current_running);
         kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill schedule");
-        schedule(0, 0);
+        gothmog_schedule(0, 0);
         return;
     }
 
@@ -181,7 +181,7 @@ void proc_kill(process* proc, uint8_t force_schedule)
         __proc_kill(proc);
         if(force_schedule)
         {
-            schedule(0, 0);
+            gothmog_schedule(0, 0);
         }
     }
 }
@@ -226,7 +226,7 @@ void proc_to_sleep(int pid, uint8_t set_state)
                 set_current_process(current_running);
             }
 
-            schedule(0, 0);
+            gothmog_schedule(0, 0);
         }
     }
 }

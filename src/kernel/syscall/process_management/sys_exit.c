@@ -4,7 +4,7 @@
 #include "balrog_os/tasking/process.h"
 #include "balrog_os/debug/debug_output.h"
 
-extern void schedule(size_t tick, uint16_t ms);
+extern void gothmog_schedule(size_t tick, uint16_t ms);
 
 void sys_exit(interrupt_regs* stack_frame)
 {

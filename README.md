@@ -92,12 +92,14 @@ Then connect the remote debugger with the following configuration :
 
 * RAMFS : done
 * shutdown : done
-  * should be ISO exportable to run on real hardware after this. (done BIOS TODO : UEFI -currently not working on test laptop 2-)
+  * should be exportable to run on real hardware after this. (done BIOS TODO : UEFI -currently not working on test laptop 2-)
+* proper shutdown : done (I used lai as I wanted to do it properly, most kernel don't write their own AML interpreter or they botch it)
 * USB driver : done
-* USB persistance : wip need to finish pstore fully to debug on real hardware
+* USB persistance : done
+* Better logging : WIP 
+* pstore compatible : WIP (compatible with linux's pstore/ramoops)
 * signal
 * improve shell (besh add pipe/redirect/signal)
-* proper shutdown
 * procfs (/proc)
 * mmap
 * cow fork

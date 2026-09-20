@@ -574,7 +574,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* table)
     system_table = table;
     boot = table->boot_services;
 
-    __print("\r\nBalrogOS uefi loader\r\n");
+    __print("\r\nStarting Utumno UEFI\r\n");
 
     EFI_FILE_PROTOCOL* root = __open_volume(image);
 

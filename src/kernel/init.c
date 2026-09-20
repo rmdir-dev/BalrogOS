@@ -24,6 +24,7 @@
 #include "balrog_os/cpu/fpu/fpu.h"
 #include "balrog_os/drivers/serial/serial.h"
 #include "balrog_os/cpu/acpi/acpi.h"
+#include "balrog_os/cpu/cpuid/cpuid.h"
 #include "balrog_os/debug/klog.h"
 #include "balrog_os/drivers/disk/ahci/ahci.h"
 #include "balrog_os/drivers/disk/ata/ata.h"
@@ -86,6 +87,10 @@ void initialize_kernel(void* SMAP, void* size)
     KERNEL_LOG_RESULT(serial_status, "Serial driver : ", "done", "not initialized");
 
     fb_claim_memory();
+    /*    CPU    */
+    int ret_status = init_cpu_info();
+    KERNEL_LOG_ASSERT(ret_status, "CPU identification : ", "done", "not available");
+
     /*    GDT and TSS    */
     KERNEL_LOG_ASSERT(init_gdt(), "GDT and TSS : ", "done", "not initialized");
 
@@ -107,7 +112,7 @@ void initialize_kernel(void* SMAP, void* size)
 	uint16_t* SMAPsize = P2V(size);
 
     /*    Kernel Heap     */
-    int ret_status = init_kheap();
+    ret_status = init_kheap();
     KERNEL_LOG_ASSERT(ret_status, "Kernel logical heap : ", "done", "not initialized");
 
     /*    Virtual Memory  */

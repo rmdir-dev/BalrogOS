@@ -12,16 +12,16 @@
 #include "klib/io/kprint.h"
 #include <stddef.h>
 
+#include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/memory/kstack.h"
 #include "klib/data_structure/queue.h"
 
 extern process_list rdy_proc_list;
-process* current_running = NULL;
 queue_t kstack_to_clean;
 
 extern tss_entry tss;
 
-static inline __attribute__((always_inline)) void __suspend()
+static inline __attribute__((always_inline)) void __suspend(process* current_running)
 {
     asm volatile("push %rax");
     asm volatile("push %rbx");
@@ -42,14 +42,18 @@ static inline __attribute__((always_inline)) void __suspend()
     asm volatile("mov %%rbp, %%rax":"=a"(current_running->stack_top));
 }
 
-static inline __attribute__((always_inline)) void __resume()
+static inline __attribute__((always_inline)) void __resume(process* current_running)
 {
     tss.rsp0 = current_running->kernel_stack_top;
 
     // Context restoration !!
     // DO NOT USE write_cr3 here it might break the restoration cycle.
-    asm volatile("mov %%rax, %%cr3": :"a"(current_running->cr3));
-    asm volatile("mov %%rax, %%rsp": :"a"(current_running->rsp));
+    asm volatile(
+            "mov %0, %%cr3\n"
+            "mov %1, %%rsp"
+            :
+            : "r"(current_running->cr3), "r"(current_running->rsp)
+            : "memory");
     asm volatile("pop %rbp");
     asm volatile("pop %r15");
     asm volatile("pop %r14");
@@ -67,28 +71,29 @@ static inline __attribute__((always_inline)) void __resume()
     asm volatile("pop %rax");
 }
 
-static void __exec()
+static void __exec(process* current_running)
 {
     // kernel_debug_output(KDB_LVL_VERBOSE, "scheduler : exec pid %d, exec %d, rsp 0%p, rip 0%p, cr3 0%p",
     //         current_running->pid, current_running->exec, current_running->rsp,
     //         current_running->rip, current_running->cr3);
     current_running->exec = 1;
-    __resume();
+    __resume(current_running);
     asm volatile("iretq");
 }
 
-static void __round_robin()
+static void __round_robin(process* current_running)
 {
-    __suspend();
+    __suspend(current_running);
     current_running = current_running->next;
+    set_current_process(current_running);
 
     if(!current_running->exec)
     {
-        __exec();
+        __exec(current_running);
         return;
     }
 
-    __resume();
+    __resume(current_running);
 }
 
 void schedule(size_t tick, uint16_t ms)
@@ -105,6 +110,8 @@ void schedule(size_t tick, uint16_t ms)
         return;
     }
 
+    process* current_running = get_current_process();
+
     if(current_running != NULL)
     {
         if (!queue_empty(&kstack_to_clean))
@@ -119,19 +126,20 @@ void schedule(size_t tick, uint16_t ms)
             } while (!queue_empty(&kstack_to_clean));
         }
 
-        __round_robin();
+        __round_robin(current_running);
         return;
     }
 
     current_running = rdy_proc_list.head;
+    set_current_process(current_running);
 
     if (!current_running->exec)
     {
-        __exec();
+        __exec(current_running);
         return;
     }
 
-    __resume();
+    __resume(current_running);
 }
 
 /*  the same hundred ticks a second the pit was programmed for  */

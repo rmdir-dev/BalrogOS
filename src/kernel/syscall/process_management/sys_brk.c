@@ -6,13 +6,13 @@
 #include "balrog_os/memory/pmm.h"
 #include "balrog_os/memory/vmm.h"
 #include "balrog/memory/proc_mem.h"
+#include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/debug/debug_output.h"
-
-extern process* current_running;
 
 int sys_brk(interrupt_regs* stack_frame)
 {
     uintptr_t requested =  PAGE_ALIGN_UP(stack_frame->rdi);
+    process* current_running = get_current_process();
 
     if (!user_ptr_ok(requested) || requested > PROCESS_HEAP_END)
     {

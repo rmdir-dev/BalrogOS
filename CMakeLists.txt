@@ -111,7 +111,9 @@ file(GLOB_RECURSE ALL_HEADERS	CONFIGURE_DEPENDS include/*.h)
 #	gives it one | listing it in two targets only makes CLion pick one of
 #	them at random, so kernel owns them all, the flags are the same anyway.
 add_library(kernel		OBJECT ${C_SRCS} ${SHARED_SRCS} ${ALL_HEADERS}
-		src/klib/data_structure/vector.c)
+		src/klib/data_structure/vector.c
+		include/balrog_os/cpu/cpuid/cpuid.h
+		src/kernel/cpu/cpuid/cpuid.c)
 
 #	its own target, so we don't mix its warnings with ours. CLion still
 #	indexes lai_enter_sleep and the rest of it.

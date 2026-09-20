@@ -5,8 +5,7 @@
 #include "balrog_os/tasking/process.h"
 #include "balrog/terminal/term.h"
 #include "balrog_os/cpu/cr/control_register.h"
-
-extern process* current_running;
+#include "balrog_os/cpu/state/cpu_state.h"
 
 static void __dump_context(interrupt_regs* stack_frame)
 {
@@ -86,6 +85,7 @@ static interrupt_regs* __page_fault_handler(interrupt_regs* stack_frame)
     // as the address register contain the address that cause the page fault
     uintptr_t address = read_cr2();
     uint64_t error = stack_frame->error_code;
+    process* current_running = get_current_process();
 
     // protection fault in user mode on forked process
     // Currently lazy fork TODO : COW (Copy On Write) fork.

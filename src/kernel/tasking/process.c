@@ -4,6 +4,7 @@
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/memory/vmm.h"
 #include "balrog_os/cpu/cr/control_register.h"
+#include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/memory/kstack.h"
 #include "balrog_os/memory/pmm.h"
 #include "klib/data_structure/queue.h"
@@ -11,7 +12,6 @@
 rbt_tree process_tree;
 rbt_tree sleeper_tree;
 process_list rdy_proc_list = { NULL, 0, NULL};
-extern process* current_running;
 extern queue_t kstack_to_clean;
 
 int init_process()
@@ -126,7 +126,7 @@ static void __proc_kill(process* proc)
 
     _proc_remove_process(proc);
 
-    // clean_process vmfree proc
+    process* current_running = get_current_process();
     int was_running = proc == current_running;
     page_table* pml4t = proc->PML4T;
     uintptr_t* kernel_stack_top = (uintptr_t*) proc->kernel_stack_top;
@@ -145,6 +145,7 @@ static void __proc_kill(process* proc)
     {
         queue_enqueue(&kstack_to_clean, (uint64_t) kernel_stack_top);
         current_running = NULL;
+        set_current_process(current_running);
         kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill schedule");
         schedule(0, 0);
         return;
@@ -207,6 +208,8 @@ void proc_transfert_to_waiting(int pid)
 
 void proc_to_sleep(int pid, uint8_t set_state)
 {
+    process* current_running = get_current_process();
+
     kernel_debug_output(KDB_LVL_VERBOSE, "proc_to_sleep %d", pid);
     process* proc = proc_get_process(pid);
 
@@ -220,6 +223,7 @@ void proc_to_sleep(int pid, uint8_t set_state)
             if(proc == current_running->next)
             {
                 current_running = NULL;
+                set_current_process(current_running);
             }
 
             schedule(0, 0);

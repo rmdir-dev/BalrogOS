@@ -1,11 +1,10 @@
 #include "balrog_os/syscall/syscall.h"
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include "balrog/debug/debug.h"
+#include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/tasking/tasking.h"
 #include "balrog_os/tasking/process.h"
-
-extern process* current_running;
 
 extern int sys_read(interrupt_regs* stack_frame);
 extern void sys_write(interrupt_regs* stack_frame);
@@ -83,6 +82,7 @@ static const char* syscall_name[SYSCALL_MAX] =
 
 static interrupt_regs* syscall_handler(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
     if(stack_frame->rax >= SYSCALL_MAX)
     {
         kernel_debug_output(KDB_LVL_CRITICAL, "syscall %d is out of the table, pid %d",

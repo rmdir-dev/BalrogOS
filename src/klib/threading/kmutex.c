@@ -2,8 +2,7 @@
 #include "balrog/arch/x86_64/x86.h"
 #include "balrog_os/tasking/process.h"
 #include "balrog/thread/park.h"
-
-extern process* current_running;
+#include "balrog_os/cpu/state/cpu_state.h"
 
 int kmutex_init(kmutex_t* lock)
 {
@@ -44,6 +43,7 @@ int kmutex_lock(kmutex_t* lock)
         /*
         add process to parked list.
         */
+        process* current_running = get_current_process();
         mtx_queue_enqueue(&lock->wait_queue, current_running->pid);
         setpark();
         xchg(&lock->lock, 0);

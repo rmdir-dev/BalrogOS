@@ -16,6 +16,8 @@
 #include "balrog_os/debug/debug_output.h"
 #include <string.h>
 
+#include "balrog_os/cpu/state/cpu_state.h"
+
 uint64_t next_pid = 0;
 
 typedef struct task_register_t
@@ -303,8 +305,6 @@ static void share_pages(page_table* src, page_table* dest, uint8_t level, uintpt
     copy_pages(STRIP_FLAGS(src), STRIP_FLAGS(dest), level, vaddr, 0, 0);
 }
 
-extern process* current_running;
-
 int fork_process(process* proc, interrupt_regs* regs)
 {
     /*
@@ -462,6 +462,8 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
     process* proc = create_process(name, file.data, 3);
 
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         proc->uid = current_running->uid;
@@ -540,6 +542,7 @@ int exec_process(const char* name, char** argv, uint8_t kill)
 
 int wait_process(int pid_to_wait)
 {
+    process* current_running = get_current_process();
     /*
     1 add process to waiting proc list  : V
         waiting proc list should use the proc_to_wait pid as key

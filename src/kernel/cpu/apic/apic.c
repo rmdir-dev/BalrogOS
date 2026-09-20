@@ -1,4 +1,5 @@
 #include "balrog_os/cpu/apic/apic.h"
+#include "balrog_os/cpu/cpuid/cpuid.h"
 #include "balrog_os/cpu/tsc/tsc.h"
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include "balrog_os/memory/memory.h"
@@ -88,18 +89,11 @@ Find the local apic and map it.
 */
 static int __lapic_find()
 {
-    uint32_t eax = 0;
-    uint32_t ebx = 0;
-    uint32_t ecx = 0;
-    uint32_t edx = 0;
+    uint32_t features_edx = cpu_get_info()->features_edx;
 
-    asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(1), "c"(0));
-
-    /*  the bit 9 of edx on the leaf 1 is the local apic  */
-    if(!(edx & (1 << 9)))
+    if(!(features_edx & CPUID_EDX_APIC))
     {
-        kernel_debug_output(KDB_LVL_INFO, "lapic : cpuid leaf 1 edx 0%x has no local apic bit", edx);
+        kernel_debug_output(KDB_LVL_INFO, "lapic : cpuid leaf 1 edx 0%x has no local apic bit", features_edx);
         return -1;
     }
 

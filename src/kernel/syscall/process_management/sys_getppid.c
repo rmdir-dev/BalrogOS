@@ -2,10 +2,12 @@
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include <stdint.h>
 
-extern process* current_running;
+#include "balrog_os/cpu/state/cpu_state.h"
 
 int sys_getppid(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(!current_running->parent)
     {
         return 0;

@@ -14,13 +14,12 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "balrog_os/cpu/state/cpu_state.h"
 #include "klib/data_structure/rbt.h"
 
 /*
     UTILITIES
 */
-
-extern process* current_running;
 
 typedef struct _entry_read_dir_entries
 {
@@ -770,6 +769,7 @@ static uint32_t __ext2_create_new_dir_entry(fs_device_t* dev, ext2_dir_entry* di
 */
 static uint32_t __ext2_get_start_inode(fs_device_t* dev, uint8_t from_root)
 {
+    process* current_running = get_current_process();
     if(from_root || current_running == 0 || current_running->cwd == 0)
     {
         return EXT2_ROOT_INODE;

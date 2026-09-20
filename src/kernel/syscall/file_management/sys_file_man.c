@@ -12,36 +12,41 @@
 #include <stdint.h>
 #include <string.h>
 
-extern process* current_running;
+#include "balrog_os/cpu/state/cpu_state.h"
+#include "balrog_os/debug/klog.h"
+#include "balrog_os/drivers/serial/serial.h"
 
 static int __copy_user_path(uintptr_t user, char* dst, size_t dst_size)
 {
-  if(!user_ptr_ok(user))
-  {
+    process* current_running = get_current_process();
+    if(!user_ptr_ok(user))
+    {
       kernel_debug_output(KDB_LVL_ERROR, "path 0%p is not a user pointer, pid %d",
               user, current_running->pid);
       *current_running->error_no = EFAULT;
       return -1;
-  }
+    }
 
-  size_t len = strlen((const char*)user);
+    size_t len = strlen((const char*)user);
 
-  if(len >= dst_size)
-  {
+    if(len >= dst_size)
+    {
       kernel_debug_output(KDB_LVL_ERROR, "path is %d long, the buffer holds %d, pid %d",
               len, dst_size, current_running->pid);
       *current_running->error_no = ENAMETOOLONG;
       return -1;
-  }
+    }
 
-  memcpy(dst, (const char*)user, len);
-  dst[len] = 0;
-  return 0;
+    memcpy(dst, (const char*)user, len);
+    dst[len] = 0;
+    return 0;
 }
 
 int __check_file_permission(fs_fd* fd, uint16_t mode) {
     fs_file_stat current_file_stat;
     fs_fstat(fd, &current_file_stat);
+
+    process* current_running = get_current_process();
 
     // if the user is not the owner of the file or root
     if(current_file_stat.uid != current_running->uid && current_running->uid != 0)
@@ -64,6 +69,8 @@ int __check_file_permission(fs_fd* fd, uint16_t mode) {
 
 int sys_open(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         size_t index = current_running->fd_size++;
@@ -97,6 +104,8 @@ int sys_open(interrupt_regs* stack_frame)
 
 void sys_close(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         fs_fd* fd = &current_running->fd_table[stack_frame->rdi - 3];
@@ -106,6 +115,8 @@ void sys_close(interrupt_regs* stack_frame)
 
 void sys_fstat(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         fs_fd* fd = &current_running->fd_table[stack_frame->rdi - 3];
@@ -121,6 +132,8 @@ void sys_fstat(interrupt_regs* stack_frame)
 
 int sys_read(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         switch (stack_frame->rdi)
@@ -158,6 +171,8 @@ int sys_read(interrupt_regs* stack_frame)
 
 int sys_creat(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         char name[256] = {};
@@ -175,6 +190,8 @@ int sys_creat(interrupt_regs* stack_frame)
 
 int sys_mkdir(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         char name[256] = {};
@@ -192,6 +209,8 @@ int sys_mkdir(interrupt_regs* stack_frame)
 
 int sys_unlink(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         char name[256] = {};
@@ -209,6 +228,8 @@ int sys_unlink(interrupt_regs* stack_frame)
 
 int sys_rmdir(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         char name[256] = {};
@@ -229,6 +250,7 @@ void sys_write(interrupt_regs* stack_frame)
     unsigned fd_id = stack_frame->rdi;
     const char* str = stack_frame->rsi;
     size_t count = stack_frame->rdx;
+    process* current_running = get_current_process();
 
     /*  0, 1 and 2 are the console, every descriptor above has been handed
         out by sys_open() and goes through the file system.
@@ -247,15 +269,14 @@ void sys_write(interrupt_regs* stack_frame)
     }
 
     vga_write(str, count);
-    KERNEL_DEBUG_EXEC({
-        serial_write(str, count);
-    });
 }
 
 // %rax     System call             %rdi                %rsi                        %rdx                %r10                    %r8             %r9
 // 165	    sys_mount	            char *dev_name	    char *dir_name	        char *type	        unsigned long flags	void *data
 int sys_mount(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     if(current_running)
     {
         char dev_name[256] = {};
@@ -281,5 +302,7 @@ int sys_mount(interrupt_regs* stack_frame)
 
 int sys_umount(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
+
     return 0;
 }

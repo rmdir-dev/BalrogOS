@@ -2,9 +2,10 @@
 #include "balrog_os/cpu/interrupts/interrupt.h"
 #include <stdint.h>
 
-extern process* current_running;
+#include "balrog_os/cpu/state/cpu_state.h"
 
 int sys_getpid(interrupt_regs* stack_frame)
 {
+    process* current_running = get_current_process();
     return current_running->pid;
 }

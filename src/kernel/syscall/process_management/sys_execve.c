@@ -3,8 +3,6 @@
 #include "balrog_os/tasking/tasking.h"
 #include "balrog_os/debug/debug_output.h"
 
-extern process* current_running;
-
 int sys_execve(interrupt_regs* stack_frame)
 {
     exec_process(stack_frame->rdi, stack_frame->rsi, stack_frame->rdx);

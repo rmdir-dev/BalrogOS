@@ -5,7 +5,7 @@
 #include "balrog_os/debug/debug_output.h"
 #include <errno.h>
 
-extern process* current_running;
+#include "balrog_os/cpu/state/cpu_state.h"
 
 int sys_kill(interrupt_regs* stack_frame)
 {
@@ -25,6 +25,7 @@ int sys_kill(interrupt_regs* stack_frame)
         return 0;
     } else
     {
+        process* current_running = get_current_process();
         *current_running->error_no = ESRCH;
     }
     return -1;

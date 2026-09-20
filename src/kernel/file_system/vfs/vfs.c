@@ -2,6 +2,7 @@
 #include "balrog_os/file_system/filesystem.h"
 #include <string.h>
 
+#include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/file_system/ext2/ext2.h"
 #include "balrog_os/memory/kheap.h"
@@ -14,7 +15,6 @@ typedef struct __vfs_insert_node_out_t
 } vfs_find_node_out_t;
 
 fs_device_t vfs_device;
-extern process* current_running;
 
 static size_t __vfs_get_next_path_part_len(const char* path, size_t max_path_len)
 {
@@ -119,6 +119,7 @@ static inline int __vfs_guard_sanitized_init(vfs_root_t* vfs_root, const char* p
     vfs_node_t* root = vfs_root->root;
     size_t path_len = strlen(path);
 
+    process* current_running = get_current_process();
     const char* cwd = (path[0] != '/' && current_running && current_running->cwd)
             ? current_running->cwd : 0;
     size_t cwd_len = cwd ? strlen(cwd) : 0;

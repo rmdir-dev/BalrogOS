@@ -77,7 +77,7 @@ void get_relative_time(timespec* time, timespec* relative_time)
 {
     relative_time->sec = timer_ticks + time->sec;
     relative_time->msec = timer_ms + time->msec;
-    if(relative_time->msec > FREQUENCY) {
+    if(relative_time->msec >= FREQUENCY) {
         relative_time->sec += 1;
         relative_time->msec = relative_time->msec % FREQUENCY;
     }

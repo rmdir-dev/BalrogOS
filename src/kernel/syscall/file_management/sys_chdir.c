@@ -8,15 +8,15 @@
 #include <errno.h>
 #include <string.h>
 
+#include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/memory/memory.h"
 
-extern process* current_running;
 extern int __check_file_permission(fs_fd* fd, uint16_t mode);
 
 int sys_chdir(interrupt_regs* stack_frame)
 {
     fs_fd fd = {};
-
+    process* current_running = get_current_process();
     const char* user_path = (const char*) stack_frame->rdi;
 
     if (!user_ptr_ok((uintptr_t) user_path))

@@ -1,4 +1,5 @@
 #include "balrog_os/cpu/tsc/tsc.h"
+#include "balrog_os/cpu/cpuid/cpuid.h"
 #include "balrog_os/cpu/ports/ports.h"
 #include "balrog_os/debug/debug_output.h"
 
@@ -67,29 +68,23 @@ Documentation : intel sdm, cpuid leaf 0x16
 */
 static uint64_t __tsc_from_cpuid()
 {
-    uint32_t eax = 0;
-    uint32_t ebx = 0;
-    uint32_t ecx = 0;
-    uint32_t edx = 0;
+    cpuid_regs_t regs;
+    uint32_t max_leaf = cpu_get_info()->max_leaf;
 
-    asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(0), "c"(0));
-
-    if(eax < 0x16)
+    if(max_leaf < CPUID_LEAF_TSC)
     {
-        kernel_debug_output(KDB_LVL_INFO, "tsc : cpuid stops at leaf 0%x, no leaf 0x16 to ask", eax);
+        kernel_debug_output(KDB_LVL_INFO, "tsc : cpuid stops at leaf 0%x, no leaf 0x16 to ask", max_leaf);
         return 0;
     }
 
-    asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(0x16), "c"(0));
+    cpuid(CPUID_LEAF_TSC, 0, &regs);
 
     kernel_debug_output(KDB_LVL_INFO, "tsc : cpuid leaf 0x16 says %d MHz base, %d MHz max, %d MHz bus",
-            eax, ebx, ecx);
+            regs.eax, regs.ebx, regs.ecx);
 
     /*  eax is megahertz. a megahertz is a million cycles a second, and a
         second holds ten million times 100ns, so the ratio is just /10.  */
-    return eax / 10;
+    return regs.eax / 10;
 }
 
 static void __tsc_calibrate()

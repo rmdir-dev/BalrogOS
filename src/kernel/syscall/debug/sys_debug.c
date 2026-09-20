@@ -6,12 +6,12 @@
 #include <errno.h>
 #include <string.h>
 
-extern process* current_running;
+#include "balrog_os/cpu/state/cpu_state.h"
 
 void sys_debug(interrupt_regs* stack_frame)
 {
 #ifdef KDB_DEBUG
-    if(current_running->uid != 0)
+    if(get_current_process()->uid != 0)
     {
         return;
     }

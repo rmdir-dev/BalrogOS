@@ -82,12 +82,16 @@ void initialize_kernel(void* SMAP, void* size)
 
     /*      SCREEN        */
     klog_claim_buffer();
+    fb_claim_memory();
+
 
     KERNEL_LOG_OK("Kernel loading :");
     KERNEL_LOG_RESULT(vga_status,    "VGA driver : ",    "done", "not initialized");
     KERNEL_LOG_RESULT(serial_status, "Serial driver : ", "done", "not initialized");
 
-    fb_claim_memory();
+    /*      RTC           */
+    KERNEL_LOG_ASSERT(rtc_cmos_sync(), "rtc : ", "done", "not initialized");
+
     /*    CPU    */
     int ret_status = init_cpu_info();
     KERNEL_LOG_RESULT(ret_status, "CPU identification : ", "done", "not available");
@@ -128,9 +132,6 @@ void initialize_kernel(void* SMAP, void* size)
     ret_status = init_vmheap();
     KERNEL_LOG_RESULT(ret_status, "Kernel virtual heap : ", "done", "not initialized");
     pmm_enable_alloc_logs();
-
-    /*    RTC            */
-    KERNEL_LOG_ASSERT(init_rtc(), "rtc : ", "done", "not initialized");
 
     /*    KLOG           */
     KERNEL_LOG_ASSERT(init_klog(), "klog : ", "done", "not initialized");
@@ -194,8 +195,16 @@ void initialize_kernel(void* SMAP, void* size)
     set_debug_mode(KDB_DEFAULT_LVL);
 #endif
 
-    /*    ENABLE INTERRUPT   */
+    /*    CLEAR SCREEN       */
     vga_clear();
 
+    /*    REFRESH UNIXTIME   */
+    // if we don't refresh the rtc here, the __rtc_boot_epoch will always
+    // stay at the previous value and __rtc_boot_epoch + now.sec would always be off
+    // by the time in sec of the boot sequence. So we refretch the values
+    // from the CMOS one last time here to sync it before enabling the interrupts.
+    rtc_cmos_sync();
+
+    /*    ENABLE INTERRUPT   */
     enable_interrupt();
 }

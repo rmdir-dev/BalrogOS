@@ -5,10 +5,12 @@
 #include "balrog_os/memory/kheap.h"
 #include "balrog_os/memory/pmm.h"
 #include "balrog_os/cpu/pit/pit.h"
+#include "balrog_os/cpu/rtc/rtc.h"
 #include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/tasking/proc_sleep.h"
 #include "klib/data_structure/list.h"
 #include "klib/data_structure/vector.h"
+#include "klib/io/kprint.h"
 
 
 /*
@@ -23,6 +25,15 @@ TODO :
 #define MAX_BUFFER_SIZE (PAGE_SIZE * 16 * 8)    // 512KiB
 
 #define WORMTONGUE_PERIOD_MS        200
+
+#define KLOG_SANITIZED_STR_SIZE     512
+
+enum klog_ansi_state
+{
+    KLOG_ANSI_TEXT  = 0,
+    KLOG_ANSI_ESC   = 1,
+    KLOG_ANSI_CSI   = 2,
+};
 
 typedef struct __klog_device_buffer_t
 {
@@ -164,7 +175,7 @@ static void __klog_klog_area_write(const uint8_t* str, size_t size)
     klog_area_index += size;
 }
 
-void klog_write(enum klog_logging_level log_level, const char *str, size_t size)
+static void __klog_emit(enum klog_logging_level log_level, const char *str, size_t size)
 {
     __klog_klog_area_write((const uint8_t*) str, size);
 
@@ -191,6 +202,63 @@ void klog_write(enum klog_logging_level log_level, const char *str, size_t size)
             handler->write ? handler->write(str, size) : __klog_debug_device_write(handler, str, size);
         }
     }
+}
+
+static size_t __klog_sanitize(const char *str, char* out, size_t size, size_t maxsize)
+{
+    enum klog_ansi_state state = KLOG_ANSI_TEXT;
+    size_t pos = 0;
+
+    for (size_t i = 0; i < size; i++)
+    {
+        uint8_t c = (uint8_t) str[i];
+
+        if (state == KLOG_ANSI_ESC)
+        {
+            // \e[0;97m ANSI CSI = \e[...
+            state = c == '[' ? KLOG_ANSI_CSI : KLOG_ANSI_TEXT;
+            continue;
+        }
+
+        if (state == KLOG_ANSI_CSI)
+        {
+            //  cleanig \e[0;97m
+            if (c == 'm')
+            {
+                state = KLOG_ANSI_TEXT;
+            }
+            continue;
+        }
+
+        // if ANSI escape char
+        if (c == '\e')
+        {
+            state = KLOG_ANSI_ESC;
+            continue;
+        }
+
+        // convert \r to \n
+        out[pos++] = c == '\r' ? '\n' : c;
+
+        if (pos >= maxsize)
+        {
+            break;
+        }
+    }
+
+    out[pos] = '\0';
+
+    return pos;
+}
+
+void klog_write(enum klog_logging_level log_level, const char *str, size_t size)
+{
+    char sanitized[KLOG_SANITIZED_STR_SIZE];
+    size = KLOG_SANITIZED_STR_SIZE;
+    time_t time = get_unix_time();
+    size = ksprint(sanitized, KLOG_SANITIZED_STR_SIZE, "[%l] %s", time, str);
+    size_t sanitized_size = __klog_sanitize(sanitized, sanitized, strlen(sanitized), size);
+    __klog_emit(log_level, sanitized, sanitized_size);
 }
 
 int klog_set_default_handler(klog_write_callback write_callback, enum klog_logging_level log_level, enum klog_logging_method method)

@@ -21,7 +21,7 @@
 
 int debug_mode = KDB_DEFAULT_LVL;
 
-extern int __kernel_sprint(char* out, size_t maxsize, const char* format, va_list parameters);
+extern int __ksprint(char* out, size_t maxsize, const char* format, va_list parameters);
 extern int __print_string(const char* str, size_t size, enum klog_logging_level log_level);
 
 void __kernel_debug_output(enum klog_logging_level level, int next_line, const char* __restrict format, ...)
@@ -51,15 +51,15 @@ void __kernel_debug_output(enum klog_logging_level level, int next_line, const c
     }
 
     char str[KDB_LINE_MAX];
-    int pos = __kernel_sprint(str, KDB_LINE_MAX, message, 0);
+    int pos = __ksprint(str, KDB_LINE_MAX, message, 0);
     va_list parameters;
     va_start(parameters, format);
-    pos += __kernel_sprint(str + pos, KDB_LINE_MAX - pos, format, parameters);
+    pos += __ksprint(str + pos, KDB_LINE_MAX - pos, format, parameters);
     va_end(parameters);
 
     if (next_line != 0)
     {
-        pos += __kernel_sprint(str + pos, KDB_LINE_MAX - pos, "\n", 0);
+        pos += __ksprint(str + pos, KDB_LINE_MAX - pos, "\n", 0);
     }
 
     __print_string(str, pos, level);

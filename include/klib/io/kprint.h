@@ -1,5 +1,19 @@
 #pragma once
 
+#include <stddef.h>
+#include <stdarg.h>
+
+/**
+ * @brief
+ *
+ * @param out
+ * @param maxsize
+ * @param format
+ * @param parameters
+ * @return
+ */
+int ksprint(char* out, size_t maxsize, const char* format, ...);
+
 /**
  * @brief 
  * 

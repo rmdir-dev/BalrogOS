@@ -17,9 +17,6 @@
 #define KERNEL_LOG_FAIL(...) __kernel_debug_output(KDB_NONE, 1, _KERNEL_LOG_FAILURE_MSG __VA_ARGS__)
 #define KERNEL_LOG_FATAL(...) kernel_debug_fatal(_KERNEL_LOG_FATAL_MSG __VA_ARGS__)
 
-#define _KERNEL_LOG_RESET_LINE   "\r\e[K" // Reset the line with \r -> rewrite the line
-
-
 #define KERNEL_LOG_RESULT(status, message, ok_out, fail_out)            \
       do {                                                              \
           if((status) == 0) { KERNEL_LOG_OK(message "%s", ok_out); }    \

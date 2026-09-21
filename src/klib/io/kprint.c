@@ -84,7 +84,7 @@ static size_t __sprint_data(char* out, size_t pos, const char* str, size_t size,
     return pos;
 }
 
-int __kernel_sprint(char* out, size_t maxsize, const char* format, va_list parameters)
+int __ksprint(char* out, size_t maxsize, const char* format, va_list parameters)
 {
     size_t pos = 0;
     size_t index = 0;
@@ -184,12 +184,22 @@ int __kernel_sprint(char* out, size_t maxsize, const char* format, va_list param
     return pos;
 }
 
+int ksprint(char* out, size_t maxsize, const char* format, ...)
+{
+    va_list parameters;
+    va_start(parameters, format);
+    int size = __ksprint(out, maxsize, format, parameters);
+    va_end(parameters);
+
+    return size;
+}
+
 int kprint(const char* __restrict format, ...)
 {
     va_list parameters;
     va_start(parameters, format);
     char str[512];
-    int size = __kernel_sprint(str, 512, format, parameters);
+    int size = __ksprint(str, 512, format, parameters);
     __print_string(str, size, KDB_NONE);
     va_end(parameters);
 

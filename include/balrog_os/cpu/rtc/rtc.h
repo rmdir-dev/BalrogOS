@@ -50,4 +50,4 @@ time_t rtc_boot_epoch();
  */
 time_t get_unix_time();
 
-int init_rtc();
+int rtc_cmos_sync();

@@ -170,7 +170,7 @@ time_t get_unix_time()
     return __rtc_boot_epoch + now.sec;
 }
 
-int init_rtc()
+int rtc_cmos_sync()
 {
     rtc_time_t now = {};
 

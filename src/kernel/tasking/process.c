@@ -4,15 +4,15 @@
 #include "balrog_os/debug/debug_output.h"
 #include "balrog_os/memory/vmm.h"
 #include "balrog_os/cpu/cr/control_register.h"
+#include "balrog_os/cpu/scheduler/scheduler.h"
 #include "balrog_os/cpu/state/cpu_state.h"
 #include "balrog_os/memory/kstack.h"
 #include "balrog_os/memory/pmm.h"
 #include "klib/data_structure/queue.h"
 
-rbt_tree process_tree;
+static rbt_tree process_tree;
 rbt_tree sleeper_tree;
 process_list rdy_proc_list = { NULL, 0, NULL};
-extern queue_t kstack_to_clean;
 
 int init_process()
 {
@@ -143,7 +143,7 @@ static void __proc_kill(process* proc)
 
     if(was_running)
     {
-        queue_enqueue(&kstack_to_clean, (uint64_t) kernel_stack_top);
+        queue_enqueue(sched_get_kstack_queue(), (uint64_t) kernel_stack_top);
         current_running = NULL;
         set_current_process(current_running);
         kernel_debug_output(KDB_LVL_VERBOSE, "proc_kill schedule");

@@ -357,3 +357,15 @@ typedef struct __fadt_t
 } __attribute__((packed)) fadt_t;
 
 #endif
+
+static inline __attribute__((always_inline)) acpi_xsdt_t* acpi_get_xsdt()
+{
+    extern acpi_xsdt_t* xsdt;
+    return xsdt;
+}
+
+static inline __attribute__((always_inline)) acpi_rsdt_t* acpi_get_rsdt()
+{
+    extern acpi_rsdt_t* rsdt;
+    return rsdt;
+}

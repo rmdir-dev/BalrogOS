@@ -4,7 +4,7 @@
 #include "balrog_os/tasking/process.h"
 
 #include "klib/io/kprint.h"
-uint64_t park_loop = 0;
+static uint64_t park_loop = 0;
 
 static uint64_t about_to_park;
 

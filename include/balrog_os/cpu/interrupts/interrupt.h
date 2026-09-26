@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "balrog_os/cpu/rflags/rflag.h"
 
 #define IDT_CALL        0x0c // 0b0000 1100
 #define IDT_INTERRUPT   0x0e // 0b0000 1110
@@ -137,8 +138,15 @@ interrupt_handler register_interrupt_handler(uint32_t id, interrupt_handler hand
  */
 void set_interrupt_flag(uint32_t id, uint8_t flag);
 
-extern uint8_t interrupt_enabled;
+static inline __attribute__((always_inline)) uint8_t arch_irq_enabled()
+{
+    uint64_t rflags;
 
-#define disable_interrupt() asm volatile("cli"); interrupt_enabled = 0;
+    asm volatile("pushfq; popq %0" : "=r"(rflags) :: "memory");
 
-#define enable_interrupt() asm volatile("sti"); interrupt_enabled = 1;
+    return (rflags & RFLAG_IF) != 0;
+}
+
+#define disable_interrupt() asm volatile("cli" ::: "memory")
+
+#define enable_interrupt() asm volatile("sti" ::: "memory")

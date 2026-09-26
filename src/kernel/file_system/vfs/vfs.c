@@ -14,7 +14,7 @@ typedef struct __vfs_insert_node_out_t
     vfs_node_t* last_device_node;
 } vfs_find_node_out_t;
 
-fs_device_t vfs_device;
+static fs_device_t vfs_device;
 
 static size_t __vfs_get_next_path_part_len(const char* path, size_t max_path_len)
 {

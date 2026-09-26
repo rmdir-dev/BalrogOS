@@ -5,12 +5,9 @@
 #include "balrog_os/memory/pmm.h"
 #include "balrog_os/memory/vmm.h"
 
-// The top of the 32bit address map declared in pmm.c
-extern void* top_32_addr;
-
-uintptr_t pstore_start_addr;
-uintptr_t pstore_end_addr;
-pstore_info_t* pstore_info;
+static uintptr_t pstore_start_addr;
+static uintptr_t pstore_end_addr;
+static pstore_info_t* pstore_info;
 
 pstore_info_t* get_pstore_info()
 {
@@ -20,7 +17,7 @@ pstore_info_t* get_pstore_info()
 int init_pstore()
 {
      // page aligned top 32bit addr
-    pstore_start_addr = PAGE_ALIGN_DOWN((uintptr_t) top_32_addr - PSTORE_RAM_SIZE);
+    pstore_start_addr = PAGE_ALIGN_DOWN((uintptr_t) pmm_get_top_32() - PSTORE_RAM_SIZE);
     pstore_end_addr = pstore_start_addr + PSTORE_RAM_SIZE;
     pmm_reserve((void*) pstore_start_addr, PSTORE_RAM_SIZE);
 

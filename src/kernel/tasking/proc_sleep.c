@@ -11,8 +11,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-extern rbt_tree sleeper_tree;
-
 typedef struct sleeper_data_t {
     process* process;
     timespec time;
@@ -25,7 +23,7 @@ sleeper_data* get_sleeper_data(rbt_node* node)
 
 void wake_up(size_t tick, uint16_t ms)
 {
-    rbt_node* node = rbt_minimum(&sleeper_tree);
+    rbt_node* node = rbt_minimum(proc_get_sleeper_tree());
 
     while(node != NULL)
     {
@@ -33,8 +31,8 @@ void wake_up(size_t tick, uint16_t ms)
 
         if(!slpr)
         {
-            rbt_delete(&sleeper_tree, node);
-            node = rbt_minimum(&sleeper_tree);
+            rbt_delete(proc_get_sleeper_tree(), node);
+            node = rbt_minimum(proc_get_sleeper_tree());
             continue;
         }
 
@@ -61,9 +59,9 @@ void wake_up(size_t tick, uint16_t ms)
             process->sleeper_node = NULL;
         }
 
-        rbt_delete(&sleeper_tree, node);
+        rbt_delete(proc_get_sleeper_tree(), node);
         vmfree(slpr);
-        node = rbt_minimum(&sleeper_tree);
+        node = rbt_minimum(proc_get_sleeper_tree());
     }
 }
 
@@ -76,7 +74,7 @@ void sleep(timespec* time, process* proc)
 {
     size_t key = get_tree_key(time);
 
-    rbt_node* node = rbt_insert(&sleeper_tree, key);
+    rbt_node* node = rbt_insert(proc_get_sleeper_tree(), key);
     sleeper_data* slpr = vmalloc(sizeof(sleeper_data));
     proc->sleeper_node = node;
     slpr->process = proc;
@@ -92,6 +90,6 @@ void remove_sleeper(process* proc)
         return;
     }
 
-    rbt_delete(&sleeper_tree, (rbt_node*) proc->sleeper_node);
+    rbt_delete(proc_get_sleeper_tree(), (rbt_node*) proc->sleeper_node);
     proc->sleeper_node = NULL;
 }

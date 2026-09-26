@@ -6,7 +6,7 @@
 #include "balrog_os/file_system/ext2/ext2.h"
 #include "balrog_os/memory/kheap.h"
 
-file_system_t vfs_file_system;
+static file_system_t vfs_file_system;
 
 int __vfs_device_open(fs_device_t* device, const char* filename, fs_fd* fd)
 {

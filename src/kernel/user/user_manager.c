@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-rbt_tree user_tree;
+static rbt_tree user_tree;
 
 user_data* usm_get_user_data(uint32_t uid) {
     rbt_node* node = rbt_search(&user_tree, uid);

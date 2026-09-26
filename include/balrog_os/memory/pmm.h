@@ -47,3 +47,9 @@ void pmm_disable_alloc_logs();
 void pmm_enable_alloc_logs();
 
 int init_pmm(SMAP_entry* SMAPinfo, uint16_t* SMAPsize);
+
+static inline __attribute__((always_inline)) void* pmm_get_top_32()
+{
+    extern void* top_32_addr;
+    return top_32_addr;
+}

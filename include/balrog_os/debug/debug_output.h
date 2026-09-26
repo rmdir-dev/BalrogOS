@@ -66,3 +66,9 @@
 void __kernel_debug_output(enum klog_logging_level level, int next_line, const char* __restrict format, ...);
 
 void set_debug_mode(int mode);
+
+static inline __attribute__((always_inline)) int debug_get_mode()
+{
+    extern int debug_mode;
+    return debug_mode;
+}

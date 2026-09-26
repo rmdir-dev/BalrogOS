@@ -9,7 +9,7 @@
 #include "balrog_os/file_system/gpt/gpt.h"
 
 char ata_disk_id = 'a';
-ata_drive drives[4];
+static ata_drive drives[4];
 
 static inline void __ata_read_buffer(uint16_t io_bus, uint16_t* buf)
 {

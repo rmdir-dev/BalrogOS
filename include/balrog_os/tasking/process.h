@@ -1,5 +1,6 @@
 #pragma once
 #include "tasking.h"
+#include "klib/data_structure/rbt.h"
 
 typedef struct _process_list
 {
@@ -81,3 +82,16 @@ void proc_transfert_to_ready(int pid, uint8_t expected_state);
  * @return process* the process of the given ID
  */
 process* proc_get_process(int pid);
+
+
+static inline __attribute__((always_inline)) process_list* sched_get_ready_list()
+{
+    extern process_list rdy_proc_list;
+    return &rdy_proc_list;
+}
+
+static inline __attribute__((always_inline)) rbt_tree* proc_get_sleeper_tree()
+{
+    extern rbt_tree sleeper_tree;
+    return &sleeper_tree;
+}

@@ -3,11 +3,11 @@
 #include "balrog_os/memory/pmm.h"
 #include "balrog_os/debug/debug_output.h"
 
-void* kheap_start = 0;
-void* kheap_end = 0;
-void* kfirst_free = 0;
-size_t kheap_max_size = 0;
-size_t kheap_size = 0;
+static void* kheap_start = 0;
+static void* kheap_end = 0;
+static void* kfirst_free = 0;
+static size_t kheap_max_size = 0;
+static size_t kheap_size = 0;
 
 int init_kheap()
 {

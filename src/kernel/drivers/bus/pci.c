@@ -7,7 +7,7 @@
 #include "klib/data_structure/rbt.h"
 #include "klib/data_structure/hash_table.h"
 
-list_t pci_devices[PCI_MAX_CLASS];
+static list_t pci_devices[PCI_MAX_CLASS];
 
 static void __pci_probe_bus(pci_t bus);
 

@@ -19,3 +19,9 @@ typedef struct tss_entry_t
     uint16_t r4;
     uint16_t io_mba;
 } __attribute__((packed)) tss_entry;
+
+static inline __attribute__((always_inline)) void arch_set_kernel_stack(uint64_t top)
+{
+    extern tss_entry tss;
+    tss.rsp0 = top;
+}

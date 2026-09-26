@@ -1,6 +1,7 @@
 #include <lai/host.h>
 #include <lai/core.h>
 
+#include "balrog_os/cpu/acpi/acpi.h"
 #include "balrog_os/cpu/pit/pit.h"
 #include "balrog_os/cpu/tsc/tsc.h"
 #include "balrog_os/cpu/ports/ports.h"
@@ -21,12 +22,6 @@ References :
 LAI : https://wiki.osdev.org/LAI
 the list of functions : lai/include/lai/host.h
 */
-
-extern acpi_xsdp_t* rsdp;
-extern acpi_xsdt_t* xsdt;
-extern acpi_rsdt_t* rsdt;
-
-extern uint8_t interrupt_enabled;
 
 
 extern int __acpi_is_mapped(uintptr_t phys);
@@ -82,22 +77,22 @@ source : https://wiki.osdev.org/RSDT and https://wiki.osdev.org/XSDT
 */
 static size_t __acpi_entry_count()
 {
-    if(xsdt)
+    if(acpi_get_xsdt())
     {
-        return (xsdt->header.length - sizeof(acpi_header_t)) / 8;
+        return (acpi_get_xsdt()->header.length - sizeof(acpi_header_t)) / 8;
     }
 
-    return (rsdt->header.length - sizeof(acpi_header_t)) / 4;
+    return (acpi_get_rsdt()->header.length - sizeof(acpi_header_t)) / 4;
 }
 
 static uintptr_t __acpi_entry(size_t i)
 {
-    if(xsdt)
+    if(acpi_get_xsdt())
     {
-        return (uintptr_t) xsdt->tables[i];
+        return (uintptr_t) acpi_get_xsdt()->tables[i];
     }
 
-    return (uintptr_t) rsdt->tables[i];
+    return (uintptr_t) acpi_get_rsdt()->tables[i];
 }
 
 void* laihost_scan(const char* signature, size_t index)
@@ -124,7 +119,7 @@ void* laihost_scan(const char* signature, size_t index)
 
     size_t found = 0;
 
-    if(!xsdt && !rsdt)
+    if(!acpi_get_xsdt() && !acpi_get_rsdt())
     {
         return 0;
     }

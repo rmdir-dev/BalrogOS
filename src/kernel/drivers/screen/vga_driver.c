@@ -49,13 +49,13 @@ static inline uint16_t __vga_entry(unsigned char uc, uint8_t color)
     return (uint16_t) uc | (uint16_t) color << 8;
 }
 
-size_t VGA_WIDTH = 80;
-size_t VGA_HEIGHT = 25;
+static size_t VGA_WIDTH = 80;
+static size_t VGA_HEIGHT = 25;
 
-size_t vga_row;
-size_t vga_column;
-uint8_t vga_color;
-uint16_t* vga_buffer;
+static size_t vga_row;
+static size_t vga_column;
+static uint8_t vga_color;
+static uint16_t* vga_buffer;
 
 static screen_actions_t __screen_actions;
 

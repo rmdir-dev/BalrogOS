@@ -13,7 +13,7 @@
 extern void _EnableKeyboard();
 
 // Key event queue
-struct input_event key_eq[KEYBOARD_QUEUE_SIZE] = {};
+static struct input_event key_eq[KEYBOARD_QUEUE_SIZE] = {};
 static size_t key_eq_head = 0;
 static size_t key_eq_tail = 0;
 static size_t key_dropped = 0;

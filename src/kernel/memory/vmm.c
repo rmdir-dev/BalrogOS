@@ -8,7 +8,7 @@
 /*
 Contain the physical address of the kernel PML4T
 */
-page_table* kernel_PML4T;
+static page_table* kernel_PML4T;
 
 // from linkerScript/Kernel.ld
 extern uintptr_t klog_guard_end;

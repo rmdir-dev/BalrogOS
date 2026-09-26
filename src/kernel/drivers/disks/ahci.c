@@ -1,6 +1,7 @@
 #include "balrog_os/drivers/disk/ahci/ahci.h"
 #include "balrog_os/drivers/disk/ahci/ahci_command.h"
 #include "balrog_os/drivers/disk/ahci/ahci_structures.h"
+#include "balrog_os/drivers/disk/ata/ata.h"
 #include "balrog_os/drivers/disk/ata/ata_device.h"
 #include "balrog_os/drivers/bus/pci_class.h"
 #include "balrog_os/drivers/bus/pci.h"
@@ -15,7 +16,6 @@
 #include <string.h>
 
 static list_t ahci_devices;
-extern char ata_disk_id;
 
 /*
     INTERRUPT HANDLING
@@ -626,7 +626,7 @@ int ahci_scan_devices()
             device->name = vmalloc(4 + 1); // sda + NULL byte + 1 buffer byte
             device->type = FS_DEVICE_TYPE_AHCI;
             memcpy(device->name, "sd", 2);
-            device->name[2] = ata_disk_id++;
+            device->name[2] = ata_next_disk_id();
             device->name[3] = 0; // nullbyte
             device->first_lba = 0;
             device->unique_id = drive->key;

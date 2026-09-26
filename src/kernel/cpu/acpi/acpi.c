@@ -9,7 +9,7 @@
 #include "balrog_os/memory/memory.h"
 #include "balrog_os/memory/vmm.h"
 
-acpi_xsdp_t* rsdp = 0;
+static acpi_xsdp_t* rsdp = 0;
 acpi_xsdt_t* xsdt = 0;
 acpi_rsdt_t* rsdt = 0;
 

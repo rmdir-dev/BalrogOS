@@ -52,11 +52,9 @@ static size_t __int_to_string(unsigned long val, uint8_t base, char* str, uint8_
     return size;
 }
 
-extern int debug_mode;
-
 int __print_string(const char* str, size_t size, enum klog_logging_level log_level)
 {
-    if (log_level == KDB_NONE || log_level >= debug_mode)
+    if (log_level == KDB_NONE || log_level >= debug_get_mode())
     {
         vga_write(str, size);
     }

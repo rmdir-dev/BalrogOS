@@ -18,7 +18,7 @@
 
 #include "balrog_os/cpu/state/cpu_state.h"
 
-uint64_t next_pid = 0;
+static uint64_t next_pid = 0;
 
 typedef struct task_register_t
 {

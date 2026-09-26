@@ -30,11 +30,11 @@ typedef struct __virtual_fs_t
     vfs_node_t* proc;
 } virtual_fs_t;
 
-fs_device_t boot_dev;
-fs_device_t* raw_debug_dev;
+static fs_device_t boot_dev;
+static fs_device_t* raw_debug_dev;
 static vfs_root_t vfs_root;
 static virtual_fs_t* virtual_fs;
-list_t devices;
+static list_t devices;
 
 static const size_t fs_devices_lookout_len = 3;
 

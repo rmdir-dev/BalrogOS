@@ -6,14 +6,14 @@
 #include "klib/io/kprint.h"
 #include <string.h>
 
-uint64_t total_memory = 0;
-uint64_t total_memory_used = 0;
-uint64_t total_usable_memory = 0;
+static uint64_t total_memory = 0;
+static uint64_t total_memory_used = 0;
+static uint64_t total_usable_memory = 0;
 
 /*
 Pointer to last address allocated | increment this at each new alloc (if no memory was a freed)
 */
-void* next_addr = 0;
+static void* next_addr = 0;
 /*
 Pointer to the top most 32 bit address.
 */
@@ -21,14 +21,14 @@ void* top_32_addr = 0;
 /*
 Pointer to the top most address.
 */
-void* pmm_top_addr = 0;
+static void* pmm_top_addr = 0;
 /*
 Pointer to last address freed -> contain the last address freed before
 */
-void* last_free_addr = 0x0;
+static void* last_free_addr = 0x0;
 
 // freed address queue.
-queue_t last_free_q;
+static queue_t last_free_q;
 
 /*
 Physical range the bootloader already filled, that pmm_alloc must never hand

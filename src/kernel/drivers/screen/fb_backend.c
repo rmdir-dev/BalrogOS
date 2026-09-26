@@ -245,6 +245,7 @@ void fb_claim_memory()
         return;
     }
 
+    // from linkerScript
     extern uintptr_t screen_buffers;
 
     pmm_reserve((void*)V2P(&screen_buffers), FB_BUFFERS_SIZE);

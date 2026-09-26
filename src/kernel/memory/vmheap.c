@@ -14,14 +14,14 @@ Total kernel heap = 128GiB
 
 #define VMHEAP_MAX_BLOCK_SIZE (KERNEL_VIRTUAL_TOP - KERNEL_VIRTUAL_START)
 
-void* vmheap_start;
-void* vmheap_current_top;
-void* first_free;
-void* vmheap_end;
-size_t vmheap_size = 0;
-size_t vmheap_current_size = 0;
-size_t alloc_count = 0;
-size_t free_count = 0;
+static void* vmheap_start;
+static void* vmheap_current_top;
+static void* first_free;
+static void* vmheap_end;
+static size_t vmheap_size = 0;
+static size_t vmheap_current_size = 0;
+static size_t alloc_count = 0;
+static size_t free_count = 0;
 
 int init_vmheap()
 {

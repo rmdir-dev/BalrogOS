@@ -16,3 +16,9 @@ int ata_get_boot_device(fs_device_t* device);
  * 
  */
 int init_ata();
+
+static inline __attribute__((always_inline)) char ata_next_disk_id()
+{
+    extern char ata_disk_id;
+    return ata_disk_id++;
+}

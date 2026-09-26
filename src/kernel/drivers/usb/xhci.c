@@ -55,8 +55,8 @@ typedef struct __xhci_controller_t
 static xhci_controller_t* xhci = 0;
 
 static list_t xhci_devices;
-list_t usb_devices;
-char usb_device_id = 'a';
+static list_t usb_devices;
+static char usb_device_id = 'a';
 
 int __usb_enumerate(uint8_t port, list_t* usb_devices);
 int __scsi_read_capacity(usb_disk_t* disk);

@@ -16,10 +16,7 @@
 #include "balrog_os/memory/kstack.h"
 #include "klib/data_structure/queue.h"
 
-extern process_list rdy_proc_list;
 queue_t kstack_to_clean;
-
-extern tss_entry tss;
 
 static inline __attribute__((always_inline)) void __suspend(process* current_running)
 {
@@ -44,7 +41,7 @@ static inline __attribute__((always_inline)) void __suspend(process* current_run
 
 static inline __attribute__((always_inline)) void __resume(process* current_running)
 {
-    tss.rsp0 = current_running->kernel_stack_top;
+    arch_set_kernel_stack(current_running->kernel_stack_top);
 
     // Context restoration !!
     // DO NOT USE write_cr3 here it might break the restoration cycle.
@@ -98,7 +95,7 @@ static void __round_robin(process* current_running)
 
 void gothmog_schedule(size_t tick, uint16_t ms)
 {
-    if(rdy_proc_list.head == NULL)
+    if(sched_get_ready_list()->head == NULL)
     {
         static int said = 0;
 
@@ -130,7 +127,7 @@ void gothmog_schedule(size_t tick, uint16_t ms)
         return;
     }
 
-    current_running = rdy_proc_list.head;
+    current_running = sched_get_ready_list()->head;
     set_current_process(current_running);
 
     if (!current_running->exec)

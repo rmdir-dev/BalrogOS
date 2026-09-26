@@ -3,8 +3,8 @@
 #include "balrog_os/memory/memory.h"
 #include "klib/io/kprint.h"
 
-gdt_entry gdt[7];
-gdt_ptr gdtp;
+static gdt_entry gdt[7];
+static gdt_ptr gdtp;
 
 tss_entry tss;
 
